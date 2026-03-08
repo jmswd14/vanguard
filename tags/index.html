@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/shared.css">
 <link rel="stylesheet" href="../assets/css/tasks.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabase-client.js"></script>
 </head>
 <body>
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
@@ -92,12 +94,12 @@ const TAG_COLORS = [
   '#4E9BAC', '#A87860', '#A89060', '#628E92', '#9A5872', '#6A9660'
 ];
 
-function load(k, fb) { try { return JSON.parse(localStorage.getItem(k)) || fb; } catch { return fb; } }
-function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
-function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+const _sb = window.supabaseClient;
+let _uid = null;
+function uid() { return crypto.randomUUID(); }
 
-let tags = load('tags_v2', []);
-let tasks = load('tasks_v2', []);
+let tags = [];
+let tasks = [];
 let selectedTagColor = TAG_COLORS[0];
 let activeMenuId = null;
 
@@ -166,17 +168,18 @@ function closeContextMenu() {
 
 // ── ACTIONS ──
 
-function addTag() {
+async function addTag() {
   const nameEl = document.getElementById('new-tag-name');
   const name = nameEl.value.trim();
   if (!name) { nameEl.style.borderColor = 'var(--p-high)'; nameEl.focus(); return; }
   nameEl.style.borderColor = '';
-  tags.push({ id: uid(), name: name.toLowerCase(), color: selectedTagColor });
-  save('tags_v2', tags);
+  const newTag = { id: uid(), name: name.toLowerCase(), color: selectedTagColor };
+  tags.push(newTag);
   nameEl.value = '';
   selectedTagColor = TAG_COLORS[0];
   renderColorSwatches();
   renderTagList();
+  await _sb.from('tags').insert({ ...newTag, user_id: _uid });
 }
 
 function confirmTagDelete(tid, name) {
@@ -188,12 +191,11 @@ function confirmTagDelete(tid, name) {
   openModal('confirm-delete-modal');
 }
 
-function deleteTag(tid) {
+async function deleteTag(tid) {
   tags = tags.filter(t => t.id !== tid);
-  tasks = tasks.map(t => ({ ...t, tags: (t.tags || []).filter(x => x !== tid) }));
-  save('tags_v2', tags);
-  save('tasks_v2', tasks);
   renderTagList();
+  await _sb.from('tags').delete().eq('id', tid).eq('user_id', _uid);
+  await _sb.rpc('remove_tag_from_tasks', { p_tag_id: tid, p_user_id: _uid });
 }
 
 // ── MODAL ──
@@ -224,11 +226,26 @@ document.addEventListener('keydown', e => {
 
 // ── INIT ──
 
-const today = new Date();
-document.getElementById('sidebar-date-label').textContent =
-  today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-renderColorSwatches();
-renderTagList();
+async function init() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (!session) { window.location.href = '../login.html'; return; }
+  _uid = session.user.id;
+
+  const [tr, gr] = await Promise.all([
+    _sb.from('tasks').select('id, tags').eq('user_id', _uid),
+    _sb.from('tags').select('*').eq('user_id', _uid).order('created_at', { ascending: true }),
+  ]);
+  tasks = tr.data || [];
+  tags  = gr.data || [];
+
+  const today = new Date();
+  document.getElementById('sidebar-date-label').textContent =
+    today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  renderColorSwatches();
+  renderTagList();
+}
+
+init();
 </script>
 </body>
 </html>

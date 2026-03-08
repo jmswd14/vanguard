@@ -9,6 +9,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (!session) window.location.href = 'login.html';
+  });
+</script>
+</head>
 <style>
 /* ── PORTAL HOME ── */
 .portal-grid {

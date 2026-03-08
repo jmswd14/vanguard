@@ -1,5 +1,8 @@
-// ────────── DATA ──────────
-// Muted, editorial tag colors — desaturated from neon originals
+// ────────── SUPABASE ──────────
+const _sb = window.supabaseClient;
+let _uid = null;
+
+// ────────── COLORS ──────────
 const TAG_COLORS = [
   '#7B9EC4', // periwinkle blue
   '#B87A8A', // dusty rose
@@ -16,19 +19,12 @@ const TAG_COLORS = [
 ];
 const LIST_COLORS = ['#7C9EFF','#FF8FAB','#FFD166','#06D6A0','#CB9CF2','#FF9F68','#4DD9F0','#F4A261','#E76F51','#A8DADC'];
 
-function load(k, fb) { try { return JSON.parse(localStorage.getItem(k)) || fb; } catch { return fb; } }
-function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+// ────────── DATA (in-memory, loaded from Supabase) ──────────
+let tasks = [];
+let lists = [];
+let tags  = [];
 
-let tasks = load('tasks_v2', []);
-let lists = load('lists_v2', [
-  { id: 'personal', name: 'Personal', color: '#7C9EFF' },
-  { id: 'work', name: 'Work', color: '#06D6A0' }
-]);
-let tags = load('tags_v2', [
-  { id: 'urgent', name: 'urgent', color: '#FF6B6B' },
-  { id: 'errands', name: 'errands', color: '#FFD166' }
-]);
-
+// ────────── STATE ──────────
 let currentView = 'all';
 let sortBy = 'default';
 let sortDir = 'asc';
@@ -39,14 +35,14 @@ let selectedListColor = LIST_COLORS[0];
 let selectedTaskTags = [];
 let dragSrcId = null;
 let dragFromHandle = false;
-let activeMenuId = null;       // unified context menu tracker
+let activeMenuId = null;
 let tagFilterDropdownOpen = false;
 
 const today = new Date();
 const todayStr = today.toISOString().split('T')[0];
 
 // ────────── UTILS ──────────
-function id() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function uid() { return crypto.randomUUID(); }
 
 function formatDate(ds) {
   if (!ds) return '';
@@ -55,7 +51,7 @@ function formatDate(ds) {
 }
 
 function isOverdue(ds) { return ds && ds < todayStr; }
-function isToday(ds) { return ds === todayStr; }
+function isToday(ds)   { return ds === todayStr; }
 function isThisWeek(ds) {
   if (!ds) return false;
   const d = new Date(ds + 'T00:00:00');
@@ -65,6 +61,47 @@ function isThisWeek(ds) {
 
 function getTag(id) { return tags.find(t => t.id === id); }
 function getList(id) { return lists.find(l => l.id === id); }
+
+// ────────── DB TRANSFORM ──────────
+// Maps a Supabase task row to the shape the app uses internally.
+function fromDbTask(t) {
+  return {
+    id:          t.id,
+    name:        t.name,
+    list:        t.list_id || '',
+    priority:    t.priority || 'medium',
+    due:         t.due || '',
+    tags:        t.tags || [],
+    notes:       t.notes || '',
+    done:        t.done || false,
+    completedAt: t.completed_at ? new Date(t.completed_at).getTime() : null,
+    order:       t.position || 0,
+  };
+}
+
+// ────────── DATA LOADING ──────────
+async function loadAll() {
+  const [tr, lr, gr] = await Promise.all([
+    _sb.from('tasks').select('*').eq('user_id', _uid).order('position', { ascending: true }),
+    _sb.from('lists').select('*').eq('user_id', _uid).order('created_at', { ascending: true }),
+    _sb.from('tags').select('*').eq('user_id', _uid).order('created_at',  { ascending: true }),
+  ]);
+
+  tasks = (tr.data || []).map(fromDbTask);
+  tags  = gr.data || [];
+
+  if (lr.data && lr.data.length) {
+    lists = lr.data;
+  } else {
+    // Seed two default lists for a brand-new user
+    const defaults = [
+      { id: uid(), user_id: _uid, name: 'Personal', color: '#7C9EFF' },
+      { id: uid(), user_id: _uid, name: 'Work',     color: '#06D6A0' },
+    ];
+    await _sb.from('lists').insert(defaults);
+    lists = defaults;
+  }
+}
 
 // ────────── CONTEXT MENUS (unified) ──────────
 function openContextMenu(e, dropdownId) {
@@ -93,11 +130,11 @@ function renderSidebar() {
   document.getElementById('sidebar-date-label').textContent = d;
 
   const active = tasks.filter(t => !t.done);
-  document.getElementById('count-all').textContent = active.length;
-  document.getElementById('count-today').textContent = active.filter(t => isToday(t.due)).length;
-  document.getElementById('count-week').textContent = active.filter(t => isThisWeek(t.due)).length;
+  document.getElementById('count-all').textContent     = active.length;
+  document.getElementById('count-today').textContent   = active.filter(t => isToday(t.due)).length;
+  document.getElementById('count-week').textContent    = active.filter(t => isThisWeek(t.due)).length;
   document.getElementById('count-overdue').textContent = active.filter(t => isOverdue(t.due)).length;
-  document.getElementById('count-nodate').textContent = active.filter(t => !t.due).length;
+  document.getElementById('count-nodate').textContent  = active.filter(t => !t.due).length;
 
   const ln = document.getElementById('list-nav');
   ln.innerHTML = lists.map(l => {
@@ -134,10 +171,7 @@ function setView(view, el) {
 }
 
 // ────────── SORT ──────────
-function setSortBy(val) {
-  sortBy = val;
-  renderTasks();
-}
+function setSortBy(val) { sortBy = val; renderTasks(); }
 
 function toggleSortDir() {
   sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -166,8 +200,8 @@ function sortTasks(filtered) {
 
 // ────────── TAG FILTER (sort bar) ──────────
 function renderTagFilterMenu() {
-  const menu = document.getElementById('tag-filter-menu');
-  const label = document.getElementById('tag-filter-label');
+  const menu    = document.getElementById('tag-filter-menu');
+  const label   = document.getElementById('tag-filter-label');
   const trigger = document.getElementById('tag-filter-trigger');
   if (!menu || !label) return;
 
@@ -216,14 +250,14 @@ function toggleTagFilterDropdown(e) {
   document.getElementById('tag-filter-menu').classList.toggle('open', tagFilterDropdownOpen);
 }
 
-// ────────── FILTER + SORT TASKS ──────────
+// ────────── FILTER + SORT ──────────
 function getFilteredTasks() {
   let filtered = tasks.filter(t => !t.done);
 
-  if (currentView === 'today') filtered = filtered.filter(t => isToday(t.due));
-  else if (currentView === 'week') filtered = filtered.filter(t => isThisWeek(t.due));
-  else if (currentView === 'overdue') filtered = filtered.filter(t => isOverdue(t.due));
-  else if (currentView === 'nodate') filtered = filtered.filter(t => !t.due);
+  if (currentView === 'today')           filtered = filtered.filter(t => isToday(t.due));
+  else if (currentView === 'week')       filtered = filtered.filter(t => isThisWeek(t.due));
+  else if (currentView === 'overdue')    filtered = filtered.filter(t => isOverdue(t.due));
+  else if (currentView === 'nodate')     filtered = filtered.filter(t => !t.due);
   else if (currentView.startsWith('list:')) filtered = filtered.filter(t => t.list === currentView.replace('list:', ''));
 
   if (activeTagFilters.length) {
@@ -236,10 +270,9 @@ function getFilteredTasks() {
 // ────────── RENDER TASKS ──────────
 function renderTasks() {
   const container = document.getElementById('tasks-container');
-  const filtered = getFilteredTasks();
+  const filtered  = getFilteredTasks();
 
-  const subtitle = `${filtered.length} task${filtered.length !== 1 ? 's' : ''}`;
-  document.getElementById('view-subtitle').textContent = subtitle;
+  document.getElementById('view-subtitle').textContent = `${filtered.length} task${filtered.length !== 1 ? 's' : ''}`;
 
   if (!filtered.length) {
     container.innerHTML = `<div class="empty-state">
@@ -264,14 +297,14 @@ function renderTaskItem(t) {
 
   let dueHtml = '';
   if (t.due) {
-    const cls = isOverdue(t.due) ? 'overdue' : isToday(t.due) ? 'today' : '';
+    const cls  = isOverdue(t.due) ? 'overdue' : isToday(t.due) ? 'today' : '';
     const icon = isOverdue(t.due) ? '⚑' : '📅';
     dueHtml = `<span class="due-badge ${cls}">${icon} ${isToday(t.due) ? 'Today' : formatDate(t.due)}</span>`;
   }
 
   const priorityClass = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' }[t.priority] || 'priority-medium';
   const priorityLabel = { high: '↑ High', medium: '→ Med', low: '↓ Low' }[t.priority] || 'Med';
-  const menuId = `task-menu-${t.id}`;
+  const menuId   = `task-menu-${t.id}`;
   const safeName = t.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
   return `<div class="task-item" data-id="${t.id}"
@@ -304,7 +337,7 @@ function renderTaskItem(t) {
 // ────────── COMPLETED ──────────
 function renderCompleted() {
   const done = tasks.filter(t => t.done).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
-  const el = document.getElementById('completed-section');
+  const el   = document.getElementById('completed-section');
   if (!done.length) { el.innerHTML = ''; return; }
 
   const visible = showAllCompleted ? done : done.slice(0, 5);
@@ -318,7 +351,7 @@ function renderCompleted() {
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       ${visible.map(t => {
-        const menuId = `completed-menu-${t.id}`;
+        const menuId   = `completed-menu-${t.id}`;
         const safeName = t.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         return `
         <div class="completed-task">
@@ -342,28 +375,29 @@ function renderCompleted() {
 function toggleSeeMore() { showAllCompleted = !showAllCompleted; renderCompleted(); }
 
 // ────────── TASK ACTIONS ──────────
-function completeTask(tid) {
+async function completeTask(tid) {
   const t = tasks.find(x => x.id === tid);
   if (!t) return;
+  const now = new Date().toISOString();
   t.done = true;
   t.completedAt = Date.now();
-  save('tasks_v2', tasks);
   renderTasks();
+  await _sb.from('tasks').update({ done: true, completed_at: now }).eq('id', tid).eq('user_id', _uid);
 }
 
-function uncompleteTask(tid) {
+async function uncompleteTask(tid) {
   const t = tasks.find(x => x.id === tid);
   if (!t) return;
   t.done = false;
   delete t.completedAt;
-  save('tasks_v2', tasks);
   renderTasks();
+  await _sb.from('tasks').update({ done: false, completed_at: null }).eq('id', tid).eq('user_id', _uid);
 }
 
 function confirmDelete(type, itemId, itemName) {
   const messages = {
     task: `"${itemName}" will be permanently deleted.`,
-    list: `The list "${itemName}" will be deleted. Tasks in this list won't be deleted but will lose their list assignment.`
+    list: `The list "${itemName}" will be deleted. Tasks in this list won't be deleted but will lose their list assignment.`,
   };
   document.getElementById('confirm-delete-msg').textContent = messages[type] || 'This will be permanently deleted.';
   const btn = document.getElementById('confirm-delete-btn');
@@ -375,17 +409,15 @@ function confirmDelete(type, itemId, itemName) {
   openModal('confirm-delete-modal');
 }
 
-function deleteTask(tid) {
+async function deleteTask(tid) {
   tasks = tasks.filter(t => t.id !== tid);
-  save('tasks_v2', tasks);
   renderTasks();
+  await _sb.from('tasks').delete().eq('id', tid).eq('user_id', _uid);
 }
 
 function editTask(tid) {
   const t = tasks.find(x => x.id === tid);
   if (!t) return;
-  // Populate fields first, then show modal directly — do NOT call openModal()
-  // because openModal('add-task-modal') resets all fields for a new task.
   document.getElementById('task-modal-title').textContent = 'Edit Task';
   document.getElementById('editing-task-id').value = tid;
   document.getElementById('task-name-input').value = t.name;
@@ -397,24 +429,22 @@ function editTask(tid) {
   selectedTaskTags = [...(t.tags || [])];
   tagDropdownOpen = false;
   populateTaskModal(t.list);
-  // Show the backdrop directly
   document.getElementById('add-task-modal').classList.add('show');
   setTimeout(() => document.getElementById('task-name-input')?.focus(), 80);
-  // Show delete button
   const deleteBtn = document.getElementById('modal-delete-btn');
-  const actions = document.getElementById('task-modal-actions');
+  const actions   = document.getElementById('task-modal-actions');
   if (deleteBtn) deleteBtn.style.display = 'inline-flex';
-  if (actions) actions.style.justifyContent = 'space-between';
+  if (actions)   actions.style.justifyContent = 'space-between';
 }
 
 function modalDeleteTask() {
-  const tid = document.getElementById('editing-task-id').value;
+  const tid  = document.getElementById('editing-task-id').value;
   const name = document.getElementById('task-name-input').value.trim();
   closeModal('add-task-modal');
   confirmDelete('task', tid, name);
 }
 
-function saveTask() {
+async function saveTask() {
   const name = document.getElementById('task-name-input').value.trim();
   const list = document.getElementById('task-list-input').value;
   if (!name || !list) {
@@ -422,46 +452,75 @@ function saveTask() {
     if (!list) document.getElementById('task-list-input').style.borderColor = 'var(--p-high)';
     return;
   }
-  const tid = document.getElementById('editing-task-id').value;
+  const tid  = document.getElementById('editing-task-id').value;
   const data = {
     name,
     priority: document.getElementById('task-priority-input').value,
-    due: document.getElementById('task-due-input').value,
-    list: document.getElementById('task-list-input').value,
-    tags: [...selectedTaskTags],
-    notes: document.getElementById('task-notes-input').value.trim(),
-    done: false
+    due:      document.getElementById('task-due-input').value,
+    list,
+    tags:     [...selectedTaskTags],
+    notes:    document.getElementById('task-notes-input').value.trim(),
+    done:     false,
   };
+
+  closeModal('add-task-modal');
+
   if (tid) {
     const t = tasks.find(x => x.id === tid);
     if (t) Object.assign(t, data);
+    renderTasks();
+    await _sb.from('tasks').update({
+      name:    data.name,
+      list_id: data.list || null,
+      priority: data.priority,
+      due:     data.due || null,
+      tags:    data.tags,
+      notes:   data.notes || null,
+    }).eq('id', tid).eq('user_id', _uid);
   } else {
-    tasks.unshift({ id: id(), ...data, order: Date.now() });
+    const newId  = uid();
+    const minPos = tasks.length ? Math.min(...tasks.map(t => t.order || 0)) : 0;
+    const pos    = minPos - 1;
+    const newTask = { id: newId, ...data, order: pos };
+    tasks.unshift(newTask);
+    renderTasks();
+    await _sb.from('tasks').insert({
+      id:       newId,
+      user_id:  _uid,
+      name:     data.name,
+      list_id:  data.list || null,
+      priority: data.priority,
+      due:      data.due || null,
+      tags:     data.tags,
+      notes:    data.notes || null,
+      done:     false,
+      position: pos,
+    });
   }
-  save('tasks_v2', tasks);
-  closeModal('add-task-modal');
-  renderTasks();
 }
 
 // ────────── LISTS ──────────
-function addList() {
+async function addList() {
   const name = document.getElementById('new-list-name').value.trim();
   if (!name) return;
-  lists.push({ id: id(), name, color: selectedListColor });
-  save('lists_v2', lists);
+  const newList = { id: uid(), name, color: selectedListColor };
+  lists.push(newList);
   document.getElementById('new-list-name').value = '';
   closeModal('add-list-modal');
   renderSidebar();
+  await _sb.from('lists').insert({ ...newList, user_id: _uid });
 }
 
-function deleteList(lid) {
+async function deleteList(lid) {
   lists = lists.filter(l => l.id !== lid);
   tasks.forEach(t => { if (t.list === lid) t.list = ''; });
-  save('lists_v2', lists);
-  save('tasks_v2', tasks);
   if (currentView === 'list:' + lid) setView('all');
   renderSidebar();
   renderTasks();
+  await Promise.all([
+    _sb.from('lists').delete().eq('id', lid).eq('user_id', _uid),
+    _sb.from('tasks').update({ list_id: null }).eq('list_id', lid).eq('user_id', _uid),
+  ]);
 }
 
 // ────────── TAGS ──────────
@@ -475,7 +534,7 @@ function populateTaskModal(selectedList) {
 
 // ────────── TAG DROPDOWN (task modal) ──────────
 let tagDropdownOpen = false;
-let inlineTagColor = TAG_COLORS[0];
+let inlineTagColor  = TAG_COLORS[0];
 
 function renderTagDropdown() {
   const opts = document.getElementById('tag-dropdown-options');
@@ -488,7 +547,7 @@ function renderTagDropdown() {
     </div>`).join('');
 
   const sel = document.getElementById('tag-dropdown-selected');
-  const ph = document.getElementById('tag-dropdown-placeholder');
+  const ph  = document.getElementById('tag-dropdown-placeholder');
   if (selectedTaskTags.length) {
     ph.style.display = 'none';
     sel.innerHTML = '<span class="tag-dropdown-placeholder" id="tag-dropdown-placeholder" style="display:none"></span>' +
@@ -527,7 +586,7 @@ function showInlineTagForm() {
          onclick="selectInlineTagColor('${c}', this)"></div>`).join('');
   document.getElementById('tag-inline-form').classList.add('show');
   setTimeout(() => {
-    const form = document.getElementById('tag-inline-form');
+    const form    = document.getElementById('tag-inline-form');
     const backdrop = document.getElementById('add-task-modal');
     if (form && backdrop) {
       const formBottom = form.getBoundingClientRect().bottom;
@@ -549,12 +608,12 @@ function selectInlineTagColor(c, el) {
   el.classList.add('selected');
 }
 
-function saveInlineTag() {
+async function saveInlineTag() {
   const name = document.getElementById('inline-tag-name').value.trim();
   if (!name) { document.getElementById('inline-tag-name').style.borderColor = 'var(--p-high)'; return; }
-  const newTag = { id: id(), name: name.toLowerCase(), color: inlineTagColor };
+  const newTag = { id: uid(), name: name.toLowerCase(), color: inlineTagColor };
   tags.push(newTag);
-  save('tags_v2', tags);
+  await _sb.from('tags').insert({ ...newTag, user_id: _uid });
   selectedTaskTags.push(newTag.id);
   hideInlineTagForm();
   renderTagDropdown();
@@ -573,12 +632,11 @@ function openModal(mid) {
     document.getElementById('task-due-input').value = '';
     document.getElementById('task-notes-input').value = '';
     selectedTaskTags = [];
-    tagDropdownOpen = false;
-    // Hide delete button for new task
-    const deleteBtn = document.getElementById('modal-delete-btn');
-    const actions = document.getElementById('task-modal-actions');
+    tagDropdownOpen  = false;
+    const deleteBtn  = document.getElementById('modal-delete-btn');
+    const actions    = document.getElementById('task-modal-actions');
     if (deleteBtn) deleteBtn.style.display = 'none';
-    if (actions) actions.style.justifyContent = 'flex-end';
+    if (actions)   actions.style.justifyContent = 'flex-end';
     const defaultList = currentView.startsWith('list:') ? currentView.replace('list:', '') : (lists[0]?.id || '');
     populateTaskModal(defaultList);
   }
@@ -599,22 +657,25 @@ function selectListColor(c, el) {
   el.classList.add('selected');
 }
 
+// ────────── SIGN OUT ──────────
+async function signOut() {
+  await _sb.auth.signOut();
+  window.location.href = '../login.html';
+}
+
 // ────────── GLOBAL EVENT HANDLERS ──────────
 document.addEventListener('click', (e) => {
-  // Close task modal tag dropdown
   if (tagDropdownOpen && !document.getElementById('tag-dropdown-wrap')?.contains(e.target)) {
     tagDropdownOpen = false;
     document.getElementById('tag-dropdown-trigger').classList.remove('open');
     document.getElementById('tag-dropdown-menu').classList.remove('open');
     hideInlineTagForm();
   }
-  // Close sort bar tag filter dropdown
   if (tagFilterDropdownOpen && !document.getElementById('tag-filter-wrap')?.contains(e.target)) {
     tagFilterDropdownOpen = false;
     document.getElementById('tag-filter-trigger')?.classList.remove('open');
     document.getElementById('tag-filter-menu')?.classList.remove('open');
   }
-  // Close any open context menu
   closeContextMenu();
 });
 
@@ -639,18 +700,22 @@ function onDragOver(e, tid) {
   if (el && tid !== dragSrcId) el.classList.add('drag-over');
 }
 
-function onDrop(e, tid) {
+async function onDrop(e, tid) {
   e.preventDefault();
   if (!dragSrcId || dragSrcId === tid) return;
   const srcTask = tasks.find(t => t.id === dragSrcId);
   const tgtTask = tasks.find(t => t.id === tid);
   if (!srcTask || !tgtTask) return;
-  const srcGlobal = tasks.indexOf(srcTask);
-  const tgtGlobal = tasks.indexOf(tgtTask);
-  tasks.splice(srcGlobal, 1);
-  tasks.splice(tgtGlobal, 0, srcTask);
-  save('tasks_v2', tasks);
+  const srcIdx = tasks.indexOf(srcTask);
+  const tgtIdx = tasks.indexOf(tgtTask);
+  tasks.splice(srcIdx, 1);
+  tasks.splice(tgtIdx, 0, srcTask);
+  tasks.forEach((t, i) => { t.order = i; });
   renderTasks();
+  await _sb.from('tasks').upsert(
+    tasks.map(t => ({ id: t.id, user_id: _uid, position: t.order })),
+    { onConflict: 'id' }
+  );
 }
 
 function onDragEnd() {
@@ -670,6 +735,14 @@ function closeSidebar() {
 }
 
 // ────────── INIT ──────────
-renderSidebar();
-renderTasks();
-renderTagFilterMenu();
+async function init() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (!session) { window.location.href = '../login.html'; return; }
+  _uid = session.user.id;
+  await loadAll();
+  renderSidebar();
+  renderTasks();
+  renderTagFilterMenu();
+}
+
+init();

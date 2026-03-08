@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Portal">
+<title>Sign In — Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/shared.css">
+<style>
+body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 48px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  animation: modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.login-title {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.login-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+
+.login-error {
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+.login-error.show { display: block; }
+.login-error.error { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: var(--p-high); }
+.login-error.success { background: rgba(107,203,119,0.1); border: 1px solid rgba(107,203,119,0.3); color: var(--p-low); }
+
+.btn-full { width: 100%; justify-content: center; padding: 10px; font-size: 14px; }
+
+.login-link {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 20px;
+}
+.login-link a { color: var(--accent); text-decoration: none; cursor: pointer; }
+.login-link a:hover { text-decoration: underline; }
+
+@media (max-width: 480px) { .login-card { padding: 32px 24px; } }
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="login-title">Portal</div>
+  <div class="login-sub" id="login-sub">Sign in to continue</div>
+  <div class="login-error" id="login-msg"></div>
+  <div class="form-group">
+    <label>Email</label>
+    <input type="email" id="email-input" placeholder="you@example.com" autocomplete="email">
+  </div>
+  <div class="form-group">
+    <label>Password</label>
+    <input type="password" id="password-input" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <button class="btn btn-primary btn-full" id="auth-btn" onclick="submit()">Sign In</button>
+  <div class="login-link" id="login-link">
+    New here? <a onclick="toggleMode()">Create an account</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script>
+const _sb = window.supabaseClient;
+let isSignUp = false;
+
+// If already logged in, skip login page
+_sb.auth.getSession().then(({ data: { session } }) => {
+  if (session) window.location.href = 'index.html';
+});
+
+function toggleMode() {
+  isSignUp = !isSignUp;
+  document.getElementById('login-sub').textContent = isSignUp ? 'Create your account' : 'Sign in to continue';
+  document.getElementById('auth-btn').textContent = isSignUp ? 'Create Account' : 'Sign In';
+  document.getElementById('login-link').innerHTML = isSignUp
+    ? 'Already have an account? <a onclick="toggleMode()">Sign in</a>'
+    : 'New here? <a onclick="toggleMode()">Create an account</a>';
+  showMsg('', '');
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('login-msg');
+  el.textContent = text;
+  el.className = 'login-error' + (text ? ' show ' + type : '');
+}
+
+async function submit() {
+  const email = document.getElementById('email-input').value.trim();
+  const password = document.getElementById('password-input').value;
+  if (!email || !password) { showMsg('Please enter your email and password.', 'error'); return; }
+
+  const btn = document.getElementById('auth-btn');
+  btn.disabled = true;
+  btn.textContent = isSignUp ? 'Creating account...' : 'Signing in...';
+  showMsg('', '');
+
+  const { error } = isSignUp
+    ? await _sb.auth.signUp({ email, password })
+    : await _sb.auth.signInWithPassword({ email, password });
+
+  btn.disabled = false;
+  btn.textContent = isSignUp ? 'Create Account' : 'Sign In';
+
+  if (error) { showMsg(error.message, 'error'); return; }
+
+  if (isSignUp) {
+    showMsg('Account created. Check your email to confirm, then sign in.', 'success');
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+</script>
+</body>
+</html>
