@@ -52,10 +52,10 @@
 
   <hr class="sidebar-divider">
 
-  <div class="sidebar-section">Lists</div>
-  <div id="list-nav"></div>
-  <div class="sidebar-add-list" onclick="openModal('add-list-modal')">
-    <span style="font-size:16px;">+</span> New List
+  <div class="sidebar-section">Categories</div>
+  <div id="category-nav"></div>
+  <div class="sidebar-add-list" onclick="openModal('add-category-modal')">
+    <span style="font-size:16px;">+</span> New Category
   </div>
 
   <hr class="sidebar-divider">
@@ -126,8 +126,8 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>List <span style="color:var(--p-high);">*</span></label>
-        <select id="task-list-input"></select>
+        <label>Category <span style="color:var(--p-high);">*</span></label>
+        <select id="task-category-input"></select>
       </div>
       <div class="form-group">
         <label>Priority</label>
@@ -186,21 +186,21 @@
   </div>
 </div>
 
-<!-- ADD LIST -->
-<div class="modal-backdrop" id="add-list-modal">
+<!-- ADD CATEGORY -->
+<div class="modal-backdrop" id="add-category-modal">
   <div class="modal">
-    <div class="modal-title">New List</div>
+    <div class="modal-title">New Category</div>
     <div class="form-group">
-      <label>List Name</label>
-      <input type="text" id="new-list-name" placeholder="e.g. Work, Personal, Shopping">
+      <label>Category Name</label>
+      <input type="text" id="new-category-name" placeholder="e.g. Work, Personal, Shopping">
     </div>
     <div class="form-group">
       <label>Color</label>
-      <div class="list-color-picker" id="list-color-picker"></div>
+      <div class="list-color-picker" id="category-color-picker"></div>
     </div>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal('add-list-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="addList()">Create List</button>
+      <button class="btn" onclick="closeModal('add-category-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addCategory()">Create Category</button>
     </div>
   </div>
 </div>

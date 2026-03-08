@@ -49,18 +49,25 @@
 <!-- MAIN CONTENT -->
 <main class="content">
   <div class="cal-topbar">
-    <h2 class="cal-month-label" id="cal-month-label"></h2>
-    <div class="cal-nav-right">
-      <button class="cal-nav-btn" onclick="prevMonth()" title="Previous month">‹</button>
-      <button class="cal-nav-btn cal-today-btn" onclick="goToToday()">Today</button>
-      <button class="cal-nav-btn" onclick="nextMonth()" title="Next month">›</button>
+    <h2 class="cal-period-label" id="cal-period-label"></h2>
+    <div class="cal-topbar-right">
+      <div class="cal-view-switcher">
+        <button class="cal-view-btn active" id="view-btn-month" onclick="switchView('month')">Month</button>
+        <button class="cal-view-btn" id="view-btn-week" onclick="switchView('week')">Week</button>
+        <button class="cal-view-btn" id="view-btn-day" onclick="switchView('day')">Day</button>
+      </div>
+      <div class="cal-nav-right">
+        <button class="cal-nav-btn" onclick="prevPeriod()" title="Previous">‹</button>
+        <button class="cal-nav-btn cal-today-btn" onclick="goToToday()">Today</button>
+        <button class="cal-nav-btn" onclick="nextPeriod()" title="Next">›</button>
+      </div>
     </div>
   </div>
-  <div class="cal-grid" id="cal-grid"></div>
+  <div id="cal-grid"></div>
 </main>
 </div>
 
-<!-- DAY PANEL -->
+<!-- DAY PANEL (month view only) -->
 <div class="day-panel-overlay" id="day-panel-overlay" onclick="closeDayPanel()"></div>
 <div class="day-panel" id="day-panel">
   <div class="day-panel-header">
@@ -78,7 +85,7 @@
 
 <!-- ── MODALS ── -->
 
-<!-- EDIT TASK -->
+<!-- EDIT TASK (same fields as tasks app) -->
 <div class="modal-backdrop" id="task-modal">
   <div class="modal">
     <div class="modal-title">Edit Task</div>
@@ -89,8 +96,8 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>List</label>
-        <select id="task-list-input"></select>
+        <label>Category</label>
+        <select id="task-category-input"></select>
       </div>
       <div class="form-group">
         <label>Priority</label>
@@ -125,7 +132,7 @@
       <label>Notes</label>
       <textarea id="task-notes-input" placeholder="Any extra details..."></textarea>
     </div>
-    <div class="modal-actions" id="task-modal-actions" style="justify-content:space-between;">
+    <div class="modal-actions" style="justify-content:space-between;">
       <button class="btn btn-danger" id="task-delete-btn" onclick="confirmDeleteTask()">Delete</button>
       <div style="display:flex;gap:10px;">
         <button class="btn" onclick="closeModal('task-modal')">Cancel</button>
@@ -146,12 +153,36 @@
     </div>
     <div class="form-row">
       <div class="form-group">
+        <label>Category <span style="color:var(--p-high);">*</span></label>
+        <select id="event-category-input"></select>
+      </div>
+      <div class="form-group">
         <label>Date <span style="color:var(--p-high);">*</span></label>
         <input type="date" id="event-date-input">
       </div>
+    </div>
+    <!-- All Day Toggle -->
+    <div class="form-group">
+      <div class="toggle-row">
+        <span class="toggle-label-text">All day</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="event-allday-input" checked onchange="toggleAllDay(this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+    <!-- Time Fields (hidden when all day) -->
+    <div id="event-time-fields" style="display:none;">
       <div class="form-group">
-        <label>Time</label>
-        <input type="time" id="event-time-input">
+        <label>Time <span style="color:var(--p-high);">*</span></label>
+        <div class="time-input-wrap">
+          <input type="text" id="event-time-hhmm" placeholder="HH:MM" maxlength="5"
+                 oninput="formatTimeInput(this)" class="time-hhmm-input">
+          <select id="event-time-ampm" class="time-ampm-select">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
       </div>
     </div>
     <div class="form-group">
@@ -202,41 +233,88 @@ const TAG_COLORS = [
 ];
 
 // ── DATA ──
-let tasks  = [];
-let events = [];
-let lists  = [];
-let tags   = [];
+let tasks      = [];
+let events     = [];
+let categories = []; // DB table: lists
+let tags       = [];
 
-// ── STATE ──
-let currentMonth, currentYear;
-let activeDayStr    = null;
+// ── CALENDAR VIEW STATE ──
+// NOTE: Week start day is Sunday (0). Will be made user-configurable later.
+const WEEK_START_DAY = 0;
+const HOUR_HEIGHT    = 64; // px per hour in week/day view
+
+let calView       = 'month';
+let viewYear, viewMonth;         // month view
+let viewWeekStart = null;        // Date object (Sunday), week view
+let viewDay       = null;        // dateStr, day view
+let activeDayStr  = null;        // open day panel (month view)
+
+// ── TASK EDIT STATE ──
 let selectedTaskTags = [];
 let tagDropdownOpen  = false;
-let activeMenuId     = null;
 
 const today    = new Date();
 const todayStr = today.toISOString().split('T')[0];
 
 // ── UTILS ──
-function uid()       { return crypto.randomUUID(); }
-function getList(id) { return lists.find(l => l.id === id); }
-function getTag(id)  { return tags.find(t => t.id === id); }
-
-function formatTime(timeStr) {
-  if (!timeStr) return '';
-  const [h, m] = timeStr.split(':');
-  const hour   = parseInt(h);
-  const ampm   = hour >= 12 ? 'PM' : 'AM';
-  const h12    = hour % 12 || 12;
-  return `${h12}:${m} ${ampm}`;
-}
+function uid()        { return crypto.randomUUID(); }
+function getCategory(id) { return categories.find(c => c.id === id); }
+function getTag(id)   { return tags.find(t => t.id === id); }
 
 function capitalize(s) { return s ? s[0].toUpperCase() + s.slice(1) : ''; }
 
 function daysBetween(d1str, d2str) {
-  const d1 = new Date(d1str + 'T00:00:00');
-  const d2 = new Date(d2str + 'T00:00:00');
-  return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+  return Math.round((new Date(d2str + 'T00:00:00') - new Date(d1str + 'T00:00:00')) / 86400000);
+}
+
+function fmtDate(year, month, day) {
+  return new Date(year, month, day).toISOString().split('T')[0];
+}
+
+// ── TIME UTILS ──
+// Convert 24h "HH:MM" or "HH:MM:SS" to { hhmm: "HH:MM", ampm: "AM"|"PM" }
+function timeFromDb(timeStr) {
+  if (!timeStr) return { hhmm: '', ampm: 'AM' };
+  const parts = timeStr.split(':');
+  let h = parseInt(parts[0]);
+  const m = parts[1] || '00';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return { hhmm: `${String(h).padStart(2, '0')}:${m}`, ampm };
+}
+
+// Convert { hhmm, ampm } to 24h "HH:MM" for DB, or null if invalid
+function timeToDb(hhmm, ampm) {
+  if (!hhmm || !hhmm.includes(':')) return null;
+  const [hStr, mStr] = hhmm.split(':');
+  let h = parseInt(hStr);
+  const m = parseInt(mStr);
+  if (isNaN(h) || isNaN(m)) return null;
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Format 24h time string "HH:MM" or "HH:MM:SS" to "12:30 PM"
+function formatTime(timeStr) {
+  if (!timeStr) return '';
+  const { hhmm, ampm } = timeFromDb(timeStr);
+  return `${hhmm} ${ampm}`;
+}
+
+// Auto-format HH:MM text input
+function formatTimeInput(input) {
+  let raw = input.value.replace(/[^0-9]/g, '').slice(0, 4);
+  if (raw.length >= 3) {
+    input.value = raw.slice(0, 2) + ':' + raw.slice(2);
+  } else {
+    input.value = raw;
+  }
+}
+
+function toggleAllDay(isAllDay) {
+  document.getElementById('event-time-fields').style.display = isAllDay ? 'none' : 'block';
 }
 
 // ── RECURRENCE ──
@@ -253,44 +331,124 @@ function eventOccursOn(ev, dateStr) {
 function getEventsForDay(dateStr) { return events.filter(e => eventOccursOn(e, dateStr)); }
 function getTasksForDay(dateStr)  { return tasks.filter(t => !t.done && t.due === dateStr); }
 
-// ── CALENDAR RENDER ──
-function renderCalendar() {
-  const label = new Date(currentYear, currentMonth, 1)
-    .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  document.getElementById('cal-month-label').textContent = label;
+// ── PERIOD LABEL ──
+function getPeriodLabel() {
+  if (calView === 'month') {
+    return new Date(viewYear, viewMonth, 1)
+      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+  if (calView === 'week') {
+    const end = new Date(viewWeekStart);
+    end.setDate(end.getDate() + 6);
+    const s = viewWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const e = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${s} – ${e}`;
+  }
+  if (calView === 'day') {
+    return new Date(viewDay + 'T00:00:00')
+      .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
+}
 
-  const firstWeekday  = new Date(currentYear, currentMonth, 1).getDay();
-  const daysInMonth   = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const daysInPrevMo  = new Date(currentYear, currentMonth, 0).getDate();
+// ── VIEW SWITCHER ──
+function switchView(view) {
+  calView = view;
+  ['month', 'week', 'day'].forEach(v => {
+    document.getElementById('view-btn-' + v).classList.toggle('active', v === view);
+  });
+  if (view === 'week' && !viewWeekStart) {
+    // Default to current week
+    const d = new Date(today);
+    d.setDate(d.getDate() - d.getDay()); // Sunday
+    viewWeekStart = d;
+  }
+  if (view === 'day' && !viewDay) {
+    viewDay = todayStr;
+  }
+  renderCalendar();
+}
+
+// ── NAVIGATION ──
+function prevPeriod() {
+  if (calView === 'month') {
+    viewMonth--;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  } else if (calView === 'week') {
+    viewWeekStart = new Date(viewWeekStart);
+    viewWeekStart.setDate(viewWeekStart.getDate() - 7);
+  } else if (calView === 'day') {
+    const d = new Date(viewDay + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    viewDay = d.toISOString().split('T')[0];
+  }
+  renderCalendar();
+}
+
+function nextPeriod() {
+  if (calView === 'month') {
+    viewMonth++;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  } else if (calView === 'week') {
+    viewWeekStart = new Date(viewWeekStart);
+    viewWeekStart.setDate(viewWeekStart.getDate() + 7);
+  } else if (calView === 'day') {
+    const d = new Date(viewDay + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    viewDay = d.toISOString().split('T')[0];
+  }
+  renderCalendar();
+}
+
+function goToToday() {
+  if (calView === 'month') {
+    viewMonth = today.getMonth();
+    viewYear  = today.getFullYear();
+  } else if (calView === 'week') {
+    const d = new Date(today);
+    d.setDate(d.getDate() - d.getDay());
+    viewWeekStart = d;
+  } else if (calView === 'day') {
+    viewDay = todayStr;
+  }
+  renderCalendar();
+}
+
+// ── RENDER DISPATCH ──
+function renderCalendar() {
+  document.getElementById('cal-period-label').textContent = getPeriodLabel();
+  if (calView === 'month')      renderMonthView();
+  else if (calView === 'week')  renderWeekView();
+  else if (calView === 'day')   renderDayView();
+}
+
+// ── MONTH VIEW ──
+function renderMonthView() {
+  const grid = document.getElementById('cal-grid');
+  grid.className = 'cal-month-grid';
+
+  const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth  = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrevMo = new Date(viewYear, viewMonth, 0).getDate();
 
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   let html = DAY_NAMES.map(d => `<div class="cal-header-cell">${d}</div>`).join('');
 
-  // Trailing days from previous month
   for (let i = firstWeekday - 1; i >= 0; i--) {
-    html += renderDayCell(fmtDate(currentYear, currentMonth - 1, daysInPrevMo - i), daysInPrevMo - i, true);
+    html += renderMonthDayCell(fmtDate(viewYear, viewMonth - 1, daysInPrevMo - i), daysInPrevMo - i, true);
   }
-
-  // Current month
   for (let d = 1; d <= daysInMonth; d++) {
-    html += renderDayCell(fmtDate(currentYear, currentMonth, d), d, false);
+    html += renderMonthDayCell(fmtDate(viewYear, viewMonth, d), d, false);
   }
-
-  // Leading days from next month
   const totalCells  = firstWeekday + daysInMonth;
   const trailingCnt = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
   for (let d = 1; d <= trailingCnt; d++) {
-    html += renderDayCell(fmtDate(currentYear, currentMonth + 1, d), d, true);
+    html += renderMonthDayCell(fmtDate(viewYear, viewMonth + 1, d), d, true);
   }
 
-  document.getElementById('cal-grid').innerHTML = html;
+  grid.innerHTML = html;
 }
 
-function fmtDate(year, month, day) {
-  return new Date(year, month, day).toISOString().split('T')[0];
-}
-
-function renderDayCell(dateStr, dayNum, otherMonth) {
+function renderMonthDayCell(dateStr, dayNum, otherMonth) {
   const isToday  = dateStr === todayStr;
   const isActive = dateStr === activeDayStr;
 
@@ -307,8 +465,8 @@ function renderDayCell(dateStr, dayNum, otherMonth) {
 
   let barsHtml = visible.map(({ type, item }) => {
     if (type === 'task') {
-      const list  = getList(item.list);
-      const color = list ? list.color : '#666666';
+      const cat   = getCategory(item.category);
+      const color = cat ? cat.color : '#666666';
       const safe  = item.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
       return `<div class="cal-bar task-bar"
                    style="background:${color}22;border-left:3px solid ${color};"
@@ -318,11 +476,14 @@ function renderDayCell(dateStr, dayNum, otherMonth) {
         <span class="cal-bar-text">${item.name}</span>
       </div>`;
     } else {
-      const safe = item.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const cat   = getCategory(item.category_id);
+      const color = cat ? cat.color : 'var(--accent)';
+      const safe  = item.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
       return `<div class="cal-bar event-bar"
+                   style="background:${color}22;border-left:3px solid ${color};"
                    onclick="event.stopPropagation();openEditEvent('${item.id}')"
                    title="${safe}">
-        <span class="cal-bar-dot" style="background:var(--accent);"></span>
+        <span class="cal-bar-dot" style="background:${color};"></span>
         <span class="cal-bar-text">${item.title}</span>
       </div>`;
     }
@@ -337,27 +498,139 @@ function renderDayCell(dateStr, dayNum, otherMonth) {
   </div>`;
 }
 
-// ── NAVIGATION ──
-function prevMonth() {
-  currentMonth--;
-  if (currentMonth < 0) { currentMonth = 11; currentYear--; }
-  renderCalendar();
+// ── WEEK VIEW ──
+function renderWeekView() {
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(viewWeekStart);
+    d.setDate(d.getDate() + i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+  document.getElementById('cal-grid').className = '';
+  document.getElementById('cal-grid').innerHTML = buildTimedView(days);
+  scrollToCurrentHour();
 }
 
-function nextMonth() {
-  currentMonth++;
-  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-  renderCalendar();
+// ── DAY VIEW ──
+function renderDayView() {
+  document.getElementById('cal-grid').className = '';
+  document.getElementById('cal-grid').innerHTML = buildTimedView([viewDay]);
+  scrollToCurrentHour();
 }
 
-function goToToday() {
-  currentMonth = today.getMonth();
-  currentYear  = today.getFullYear();
-  renderCalendar();
+function scrollToCurrentHour() {
+  setTimeout(() => {
+    const scroll = document.getElementById('cal-time-scroll');
+    if (scroll) scroll.scrollTop = Math.max(0, (today.getHours() - 1) * HOUR_HEIGHT);
+  }, 50);
 }
 
-// ── DAY PANEL ──
+// ── TIMED VIEW BUILDER (shared by week and day) ──
+function buildTimedView(days) {
+  const ncols = days.length;
+
+  // ── Header row ──
+  let headerHtml = `<div class="cal-gutter"></div>`;
+  headerHtml += days.map(dateStr => {
+    const d       = new Date(dateStr + 'T00:00:00');
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNum  = d.getDate();
+    const isToday = dateStr === todayStr;
+    return `<div class="cal-col-header${isToday ? ' today' : ''}"
+                 onclick="switchToDayView('${dateStr}')">
+      <span class="col-header-name">${dayName}</span>
+      <span class="col-header-num${isToday ? ' today' : ''}">${dayNum}</span>
+    </div>`;
+  }).join('');
+
+  // ── All-day row ──
+  let alldayHtml = `<div class="cal-gutter cal-allday-label">all day</div>`;
+  alldayHtml += days.map(dateStr => {
+    const dayTasks     = getTasksForDay(dateStr);
+    const alldayEvents = getEventsForDay(dateStr).filter(e => e.all_day);
+
+    const items = [
+      ...dayTasks.map(t => {
+        const cat   = getCategory(t.category);
+        const color = cat ? cat.color : '#666666';
+        return `<div class="cal-allday-item" style="background:${color}22;border-left:2px solid ${color};"
+                     onclick="editTask('${t.id}')" title="${t.name.replace(/"/g,'&quot;')}">${t.name}</div>`;
+      }),
+      ...alldayEvents.map(e => {
+        const cat   = getCategory(e.category_id);
+        const color = cat ? cat.color : 'var(--accent)';
+        return `<div class="cal-allday-item" style="background:${color}22;border-left:2px solid ${color};"
+                     onclick="openEditEvent('${e.id}')" title="${e.title.replace(/"/g,'&quot;')}">${e.title}</div>`;
+      }),
+    ];
+    return `<div class="cal-allday-col">${items.join('')}</div>`;
+  }).join('');
+
+  // ── Time axis ──
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const timeAxisHtml = hours.map(h => {
+    const label = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
+    return `<div class="cal-time-label">${label}</div>`;
+  }).join('');
+
+  // ── Day columns ──
+  const dayColsHtml = days.map(dateStr => {
+    const isToday = dateStr === todayStr;
+
+    // Hour grid lines + click slots
+    const linesHtml = hours.map(h => {
+      const h12  = h % 12 || 12;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const hhmm = `${String(h12).padStart(2, '0')}:00`;
+      return `<div class="cal-hour-slot" style="top:${h * HOUR_HEIGHT}px;height:${HOUR_HEIGHT}px;"
+                   onclick="event.stopPropagation();openEventModal(null,'${dateStr}',false,'${hhmm}','${ampm}')">
+        <div class="cal-hour-line"></div>
+      </div>`;
+    }).join('');
+
+    // Timed events
+    const timedEvents = getEventsForDay(dateStr).filter(e => !e.all_day && e.time);
+    const eventsHtml  = timedEvents.map(e => {
+      const [hr, mn] = e.time.split(':').map(Number);
+      const topPx    = (hr + mn / 60) * HOUR_HEIGHT;
+      const cat      = getCategory(e.category_id);
+      const color    = cat ? cat.color : 'var(--accent)';
+      return `<div class="cal-timed-event"
+                   style="top:${topPx}px;height:${HOUR_HEIGHT - 4}px;background:${color}22;border-left:3px solid ${color};"
+                   onclick="event.stopPropagation();openEditEvent('${e.id}')">
+        <div class="cal-timed-title">${e.title}</div>
+        <div class="cal-timed-time">${formatTime(e.time)}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="cal-day-col${isToday ? ' today' : ''}">
+      ${linesHtml}
+      ${eventsHtml}
+    </div>`;
+  }).join('');
+
+  const gridCols = `52px repeat(${ncols}, 1fr)`;
+
+  return `<div class="cal-timed-view">
+    <div class="cal-timed-header" style="grid-template-columns:${gridCols};">${headerHtml}</div>
+    <div class="cal-allday-section" style="grid-template-columns:${gridCols};">${alldayHtml}</div>
+    <div class="cal-time-scroll" id="cal-time-scroll">
+      <div class="cal-time-inner" style="grid-template-columns:${gridCols};">
+        <div class="cal-time-axis">${timeAxisHtml}</div>
+        ${dayColsHtml}
+      </div>
+    </div>
+  </div>`;
+}
+
+function switchToDayView(dateStr) {
+  viewDay = dateStr;
+  switchView('day');
+}
+
+// ── DAY PANEL (month view) ──
 function openDayPanel(dateStr) {
+  if (calView !== 'month') return;
   activeDayStr = dateStr;
   const d = new Date(dateStr + 'T00:00:00');
   document.getElementById('day-panel-date').textContent =
@@ -375,7 +648,7 @@ function closeDayPanel() {
   activeDayStr = null;
   document.getElementById('day-panel').classList.remove('open');
   document.getElementById('day-panel-overlay').classList.remove('show');
-  renderCalendar();
+  if (calView === 'month') renderCalendar();
 }
 
 function renderDayPanel() {
@@ -394,13 +667,13 @@ function renderDayPanel() {
     if (dayTasks.length) {
       html += `<div class="day-panel-section-label">Tasks</div>`;
       html += dayTasks.map(t => {
-        const list  = getList(t.list);
-        const color = list ? list.color : '#666666';
+        const cat   = getCategory(t.category);
+        const color = cat ? cat.color : '#666666';
         return `<div class="day-panel-item" onclick="editTask('${t.id}')">
           <span class="day-panel-dot" style="background:${color};"></span>
           <div class="day-panel-item-body">
             <div class="day-panel-item-name">${t.name}</div>
-            ${list ? `<div class="day-panel-item-meta">${list.name}</div>` : ''}
+            ${cat ? `<div class="day-panel-item-meta">${cat.name}</div>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -409,9 +682,14 @@ function renderDayPanel() {
     if (dayEvents.length) {
       html += `<div class="day-panel-section-label"${dayTasks.length ? ' style="margin-top:20px;"' : ''}>Events</div>`;
       html += dayEvents.map(e => {
-        const meta = [e.time ? formatTime(e.time) : '', e.repeat !== 'never' ? capitalize(e.repeat) : ''].filter(Boolean).join(' · ');
+        const cat   = getCategory(e.category_id);
+        const color = cat ? cat.color : 'var(--accent)';
+        const meta  = [
+          !e.all_day && e.time ? formatTime(e.time) : 'All day',
+          e.repeat !== 'never' ? capitalize(e.repeat) : '',
+        ].filter(Boolean).join(' · ');
         return `<div class="day-panel-item" onclick="openEditEvent('${e.id}')">
-          <span class="day-panel-dot" style="background:var(--accent);"></span>
+          <span class="day-panel-dot" style="background:${color};"></span>
           <div class="day-panel-item-body">
             <div class="day-panel-item-name">${e.title}</div>
             ${meta ? `<div class="day-panel-item-meta">${meta}</div>` : ''}
@@ -425,7 +703,7 @@ function renderDayPanel() {
 }
 
 function openNewEventFromPanel() {
-  openEventModal(null, activeDayStr || todayStr);
+  openEventModal(null, activeDayStr || todayStr, true, '', 'AM');
 }
 
 // ── TASK EDITING ──
@@ -434,17 +712,16 @@ function editTask(tid) {
   if (!t) return;
 
   document.getElementById('editing-task-id').value = tid;
-  document.getElementById('task-name-input').value = t.name;
+  document.getElementById('task-name-input').value  = t.name;
   document.getElementById('task-name-input').style.borderColor = '';
   document.getElementById('task-priority-input').value = t.priority;
-  document.getElementById('task-due-input').value = t.due || '';
+  document.getElementById('task-due-input').value  = t.due || '';
   document.getElementById('task-notes-input').value = t.notes || '';
   selectedTaskTags = [...(t.tags || [])];
   tagDropdownOpen  = false;
 
-  // Populate list dropdown
-  document.getElementById('task-list-input').innerHTML =
-    lists.map(l => `<option value="${l.id}"${t.list === l.id ? ' selected' : ''}>${l.name}</option>`).join('');
+  document.getElementById('task-category-input').innerHTML =
+    categories.map(c => `<option value="${c.id}"${t.category === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
 
   renderTagDropdown();
   document.getElementById('task-modal').classList.add('show');
@@ -453,7 +730,7 @@ function editTask(tid) {
 
 async function saveTask() {
   const name     = document.getElementById('task-name-input').value.trim();
-  const list     = document.getElementById('task-list-input').value;
+  const category = document.getElementById('task-category-input').value;
   const priority = document.getElementById('task-priority-input').value;
   const due      = document.getElementById('task-due-input').value;
   const notes    = document.getElementById('task-notes-input').value.trim();
@@ -465,21 +742,14 @@ async function saveTask() {
   closeModal('task-modal');
 
   const t = tasks.find(x => x.id === tid);
-  if (t) {
-    t.name = name; t.list = list; t.priority = priority;
-    t.due = due; t.tags = tagsCopy; t.notes = notes;
-  }
+  if (t) { t.name = name; t.category = category; t.priority = priority; t.due = due; t.tags = tagsCopy; t.notes = notes; }
 
   renderCalendar();
   if (activeDayStr) renderDayPanel();
 
   await _sb.from('tasks').update({
-    name,
-    list_id:  list || null,
-    priority,
-    due:      due || null,
-    tags:     tagsCopy,
-    notes:    notes || null,
+    name, category_id: category || null, priority,
+    due: due || null, tags: tagsCopy, notes: notes || null,
   }).eq('id', tid).eq('user_id', _uid);
 }
 
@@ -499,7 +769,7 @@ async function deleteTask(tid) {
   await _sb.from('tasks').delete().eq('id', tid).eq('user_id', _uid);
 }
 
-// ── TAG DROPDOWN ──
+// ── TAG DROPDOWN (task modal) ──
 function toggleTagDropdown(e) {
   e.stopPropagation();
   tagDropdownOpen = !tagDropdownOpen;
@@ -538,8 +808,13 @@ function toggleTaskTag(tid) {
   renderTagDropdown();
 }
 
-// ── EVENT CRUD ──
-function openEventModal(eid, dateStr) {
+// ── EVENT MODAL ──
+function openEventModal(eid, dateStr = null, allDay = true, timeHhMm = '', timeAmPm = 'AM') {
+  // Populate category dropdown
+  document.getElementById('event-category-input').innerHTML =
+    `<option value="">— Select category —</option>` +
+    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
   if (eid) {
     const ev = events.find(x => x.id === eid);
     if (!ev) return;
@@ -547,11 +822,23 @@ function openEventModal(eid, dateStr) {
     document.getElementById('editing-event-id').value = eid;
     document.getElementById('event-title-input').value  = ev.title;
     document.getElementById('event-date-input').value   = ev.date;
-    document.getElementById('event-time-input').value   = ev.time || '';
     document.getElementById('event-repeat-input').value = ev.repeat || 'never';
     document.getElementById('event-notes-input').value  = ev.notes || '';
-    document.getElementById('event-title-input').style.borderColor = '';
-    document.getElementById('event-date-input').style.borderColor  = '';
+    document.getElementById('event-title-input').style.borderColor   = '';
+    document.getElementById('event-date-input').style.borderColor    = '';
+    document.getElementById('event-category-input').value = ev.category_id || '';
+
+    const isAllDay = ev.all_day !== false; // default true if not set
+    document.getElementById('event-allday-input').checked = isAllDay;
+    toggleAllDay(isAllDay);
+    if (!isAllDay && ev.time) {
+      const { hhmm, ampm } = timeFromDb(ev.time);
+      document.getElementById('event-time-hhmm').value  = hhmm;
+      document.getElementById('event-time-ampm').value  = ampm;
+    } else {
+      document.getElementById('event-time-hhmm').value = '';
+      document.getElementById('event-time-ampm').value = 'AM';
+    }
     document.getElementById('event-delete-btn').style.display = 'inline-flex';
     document.getElementById('event-modal-actions').style.justifyContent = 'space-between';
   } else {
@@ -559,14 +846,18 @@ function openEventModal(eid, dateStr) {
     document.getElementById('editing-event-id').value = '';
     document.getElementById('event-title-input').value  = '';
     document.getElementById('event-date-input').value   = dateStr || todayStr;
-    document.getElementById('event-time-input').value   = '';
     document.getElementById('event-repeat-input').value = 'never';
     document.getElementById('event-notes-input').value  = '';
-    document.getElementById('event-title-input').style.borderColor = '';
-    document.getElementById('event-date-input').style.borderColor  = '';
+    document.getElementById('event-title-input').style.borderColor  = '';
+    document.getElementById('event-date-input').style.borderColor   = '';
+    document.getElementById('event-allday-input').checked = allDay;
+    toggleAllDay(allDay);
+    document.getElementById('event-time-hhmm').value = timeHhMm;
+    document.getElementById('event-time-ampm').value = timeAmPm;
     document.getElementById('event-delete-btn').style.display = 'none';
     document.getElementById('event-modal-actions').style.justifyContent = 'flex-end';
   }
+
   document.getElementById('event-modal').classList.add('show');
   setTimeout(() => document.getElementById('event-title-input')?.focus(), 80);
 }
@@ -574,17 +865,35 @@ function openEventModal(eid, dateStr) {
 function openEditEvent(eid) { openEventModal(eid, null); }
 
 async function saveEvent() {
-  const title  = document.getElementById('event-title-input').value.trim();
-  const date   = document.getElementById('event-date-input').value;
-  const time   = document.getElementById('event-time-input').value;
-  const repeat = document.getElementById('event-repeat-input').value;
-  const notes  = document.getElementById('event-notes-input').value.trim();
-  const eid    = document.getElementById('editing-event-id').value;
+  const title      = document.getElementById('event-title-input').value.trim();
+  const date       = document.getElementById('event-date-input').value;
+  const categoryId = document.getElementById('event-category-input').value;
+  const allDay     = document.getElementById('event-allday-input').checked;
+  const repeat     = document.getElementById('event-repeat-input').value;
+  const notes      = document.getElementById('event-notes-input').value.trim();
+  const eid        = document.getElementById('editing-event-id').value;
 
-  if (!title) { document.getElementById('event-title-input').style.borderColor = 'var(--p-high)'; return; }
-  if (!date)  { document.getElementById('event-date-input').style.borderColor  = 'var(--p-high)'; return; }
+  if (!title)      { document.getElementById('event-title-input').style.borderColor  = 'var(--p-high)'; return; }
+  if (!date)       { document.getElementById('event-date-input').style.borderColor   = 'var(--p-high)'; return; }
+  if (!categoryId) { document.getElementById('event-category-input').style.borderColor = 'var(--p-high)'; return; }
 
-  const data = { title, date, time: time || null, repeat, notes: notes || null };
+  let time = null;
+  if (!allDay) {
+    const hhmm = document.getElementById('event-time-hhmm').value;
+    const ampm = document.getElementById('event-time-ampm').value;
+    time = timeToDb(hhmm, ampm);
+    if (!time) {
+      document.getElementById('event-time-hhmm').style.borderColor = 'var(--p-high)';
+      return;
+    }
+    document.getElementById('event-time-hhmm').style.borderColor = '';
+  }
+
+  const data = {
+    title, date, all_day: allDay, time,
+    repeat, notes: notes || null, category_id: categoryId || null,
+  };
+
   closeModal('event-modal');
 
   if (eid) {
@@ -594,9 +903,8 @@ async function saveEvent() {
     if (activeDayStr) renderDayPanel();
     await _sb.from('events').update(data).eq('id', eid).eq('user_id', _uid);
   } else {
-    const newId  = uid();
-    const newEv  = { id: newId, ...data };
-    events.push(newEv);
+    const newId = uid();
+    events.push({ id: newId, ...data });
     renderCalendar();
     if (activeDayStr) renderDayPanel();
     await _sb.from('events').insert({ id: newId, user_id: _uid, ...data });
@@ -661,27 +969,32 @@ async function init() {
   if (!session) { window.location.href = '../login.html'; return; }
   _uid = session.user.id;
 
-  currentMonth = today.getMonth();
-  currentYear  = today.getFullYear();
+  viewMonth = today.getMonth();
+  viewYear  = today.getFullYear();
 
   document.getElementById('sidebar-date-label').textContent =
     today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   const [tr, lr, gr, er] = await Promise.all([
-    _sb.from('tasks').select('id, name, list_id, priority, due, tags, notes, done').eq('user_id', _uid),
+    _sb.from('tasks').select('id, name, list_id, category_id, priority, due, tags, notes, done').eq('user_id', _uid),
     _sb.from('lists').select('*').eq('user_id', _uid),
     _sb.from('tags').select('*').eq('user_id', _uid),
     _sb.from('events').select('*').eq('user_id', _uid),
   ]);
 
-  tasks  = (tr.data || []).map(t => ({
-    id: t.id, name: t.name, list: t.list_id || '',
+  tasks = (tr.data || []).map(t => ({
+    id: t.id, name: t.name,
+    // Support both old list_id and new category_id during transition
+    category: t.category_id || t.list_id || '',
     priority: t.priority || 'medium', due: t.due || '',
     tags: t.tags || [], notes: t.notes || '', done: t.done || false,
   }));
-  lists  = lr.data || [];
-  tags   = gr.data || [];
-  events = er.data || [];
+  categories = lr.data || [];
+  tags       = gr.data || [];
+  events     = (er.data || []).map(e => ({
+    ...e,
+    all_day: e.all_day !== false, // default true if column not yet present
+  }));
 
   renderCalendar();
 }

@@ -20,25 +20,25 @@ const TAG_COLORS = [
 const LIST_COLORS = ['#7C9EFF','#FF8FAB','#FFD166','#06D6A0','#CB9CF2','#FF9F68','#4DD9F0','#F4A261','#E76F51','#A8DADC'];
 
 // ────────── DATA (in-memory, loaded from Supabase) ──────────
-let tasks = [];
-let lists = [];
-let tags  = [];
+let tasks      = [];
+let categories = []; // DB table still called 'lists'
+let tags       = [];
 
 // ────────── STATE ──────────
-let currentView = 'all';
-let sortBy = 'default';
-let sortDir = 'asc';
-let activeTagFilters = [];
-let showAllCompleted = false;
-let selectedTagColor = TAG_COLORS[0];
-let selectedListColor = LIST_COLORS[0];
-let selectedTaskTags = [];
-let dragSrcId = null;
-let dragFromHandle = false;
-let activeMenuId = null;
+let currentView       = 'all';
+let sortBy            = 'default';
+let sortDir           = 'asc';
+let activeTagFilters  = [];
+let showAllCompleted  = false;
+let selectedTagColor      = TAG_COLORS[0];
+let selectedCategoryColor = LIST_COLORS[0];
+let selectedTaskTags  = [];
+let dragSrcId         = null;
+let dragFromHandle    = false;
+let activeMenuId      = null;
 let tagFilterDropdownOpen = false;
 
-const today = new Date();
+const today    = new Date();
 const todayStr = today.toISOString().split('T')[0];
 
 // ────────── UTILS ──────────
@@ -59,16 +59,15 @@ function isThisWeek(ds) {
   return d >= today && d <= end;
 }
 
-function getTag(id) { return tags.find(t => t.id === id); }
-function getList(id) { return lists.find(l => l.id === id); }
+function getTag(id)      { return tags.find(t => t.id === id); }
+function getCategory(id) { return categories.find(c => c.id === id); }
 
 // ────────── DB TRANSFORM ──────────
-// Maps a Supabase task row to the shape the app uses internally.
 function fromDbTask(t) {
   return {
     id:          t.id,
     name:        t.name,
-    list:        t.list_id || '',
+    category:    t.category_id || '',   // DB column renamed from list_id → category_id
     priority:    t.priority || 'medium',
     due:         t.due || '',
     tags:        t.tags || [],
@@ -91,15 +90,15 @@ async function loadAll() {
   tags  = gr.data || [];
 
   if (lr.data && lr.data.length) {
-    lists = lr.data;
+    categories = lr.data;
   } else {
-    // Seed two default lists for a brand-new user
+    // Seed two default categories for a brand-new user
     const defaults = [
       { id: uid(), user_id: _uid, name: 'Personal', color: '#7C9EFF' },
       { id: uid(), user_id: _uid, name: 'Work',     color: '#06D6A0' },
     ];
     await _sb.from('lists').insert(defaults);
-    lists = defaults;
+    categories = defaults;
   }
 }
 
@@ -141,13 +140,13 @@ function renderSidebar() {
   document.getElementById('count-overdue').textContent = active.filter(t => isOverdue(t.due)).length;
   document.getElementById('count-nodate').textContent  = active.filter(t => !t.due).length;
 
-  const ln = document.getElementById('list-nav');
-  ln.innerHTML = lists.map(l => {
-    const cnt = active.filter(t => t.list === l.id).length;
-    return `<div class="sidebar-item ${currentView === 'list:' + l.id ? 'active' : ''}" onclick="setView('list:${l.id}', this)">
+  const ln = document.getElementById('category-nav');
+  ln.innerHTML = categories.map(c => {
+    const cnt = active.filter(t => t.category === c.id).length;
+    return `<div class="sidebar-item ${currentView === 'category:' + c.id ? 'active' : ''}" onclick="setView('category:${c.id}', this)">
       <div class="sidebar-item-left">
-        <span class="list-color-dot" style="background:${l.color}"></span>
-        <span>${l.name}</span>
+        <span class="list-color-dot" style="background:${c.color}"></span>
+        <span>${c.name}</span>
       </div>
       <span class="sidebar-count">${cnt}</span>
     </div>`;
@@ -164,9 +163,9 @@ function setView(view, el) {
   else { const navEl = document.getElementById('nav-' + view); if (navEl) navEl.classList.add('active'); }
 
   const titles = { all: 'All Tasks', today: 'Today', week: 'This Week', overdue: 'Overdue', nodate: 'No Due Date' };
-  if (view.startsWith('list:')) {
-    const l = getList(view.replace('list:', ''));
-    document.getElementById('view-title').textContent = l ? l.name : 'List';
+  if (view.startsWith('category:')) {
+    const c = getCategory(view.replace('category:', ''));
+    document.getElementById('view-title').textContent = c ? c.name : 'Category';
   } else {
     document.getElementById('view-title').textContent = titles[view] || view;
   }
@@ -259,11 +258,11 @@ function toggleTagFilterDropdown(e) {
 function getFilteredTasks() {
   let filtered = tasks.filter(t => !t.done);
 
-  if (currentView === 'today')           filtered = filtered.filter(t => isToday(t.due));
-  else if (currentView === 'week')       filtered = filtered.filter(t => isThisWeek(t.due));
-  else if (currentView === 'overdue')    filtered = filtered.filter(t => isOverdue(t.due));
-  else if (currentView === 'nodate')     filtered = filtered.filter(t => !t.due);
-  else if (currentView.startsWith('list:')) filtered = filtered.filter(t => t.list === currentView.replace('list:', ''));
+  if (currentView === 'today')                filtered = filtered.filter(t => isToday(t.due));
+  else if (currentView === 'week')            filtered = filtered.filter(t => isThisWeek(t.due));
+  else if (currentView === 'overdue')         filtered = filtered.filter(t => isOverdue(t.due));
+  else if (currentView === 'nodate')          filtered = filtered.filter(t => !t.due);
+  else if (currentView.startsWith('category:')) filtered = filtered.filter(t => t.category === currentView.replace('category:', ''));
 
   if (activeTagFilters.length) {
     filtered = filtered.filter(t => activeTagFilters.some(tid => t.tags && t.tags.includes(tid)));
@@ -294,7 +293,7 @@ function renderTasks() {
 }
 
 function renderTaskItem(t) {
-  const list = getList(t.list);
+  const cat = getCategory(t.category);
   const tagChips = (t.tags || []).map(tid => {
     const tag = getTag(tid);
     return tag ? `<span class="tag-chip" style="background:${tag.color}28;color:${tag.color};">${tag.name}</span>` : '';
@@ -325,7 +324,7 @@ function renderTaskItem(t) {
       <div class="task-meta">
         <span class="priority-badge ${priorityClass}">${priorityLabel}</span>
         ${dueHtml}
-        ${list ? `<span class="list-badge"><span class="list-color-dot" style="background:${list.color};width:6px;height:6px;"></span>${list.name}</span>` : ''}
+        ${cat ? `<span class="list-badge"><span class="list-color-dot" style="background:${cat.color};width:6px;height:6px;"></span>${cat.name}</span>` : ''}
         ${tagChips}
       </div>
       ${t.notes ? `<div class="task-note">${t.notes}</div>` : ''}
@@ -401,17 +400,17 @@ async function uncompleteTask(tid) {
 
 function confirmDelete(type, itemId, itemName) {
   const messages = {
-    task: `"${itemName}" will be permanently deleted.`,
-    list: `The list "${itemName}" will be deleted. Tasks in this list won't be deleted but will lose their list assignment.`,
-    tag:  `The tag "${itemName}" will be removed from all tasks and deleted permanently.`,
+    task:     `"${itemName}" will be permanently deleted.`,
+    category: `The category "${itemName}" will be deleted. Tasks in this category won't be deleted but will lose their category assignment.`,
+    tag:      `The tag "${itemName}" will be removed from all tasks and deleted permanently.`,
   };
   document.getElementById('confirm-delete-msg').textContent = messages[type] || 'This will be permanently deleted.';
   const btn = document.getElementById('confirm-delete-btn');
   btn.onclick = () => {
     closeModal('confirm-delete-modal');
-    if (type === 'task') deleteTask(itemId);
-    if (type === 'list') deleteList(itemId);
-    if (type === 'tag')  deleteTag(itemId);
+    if (type === 'task')     deleteTask(itemId);
+    if (type === 'category') deleteCategory(itemId);
+    if (type === 'tag')      deleteTag(itemId);
   };
   openModal('confirm-delete-modal');
 }
@@ -429,13 +428,13 @@ function editTask(tid) {
   document.getElementById('editing-task-id').value = tid;
   document.getElementById('task-name-input').value = t.name;
   document.getElementById('task-name-input').style.borderColor = '';
-  document.getElementById('task-list-input').style.borderColor = '';
+  document.getElementById('task-category-input').style.borderColor = '';
   document.getElementById('task-priority-input').value = t.priority;
   document.getElementById('task-due-input').value = t.due || '';
   document.getElementById('task-notes-input').value = t.notes || '';
   selectedTaskTags = [...(t.tags || [])];
   tagDropdownOpen = false;
-  populateTaskModal(t.list);
+  populateTaskModal(t.category);
   document.getElementById('add-task-modal').classList.add('show');
   setTimeout(() => document.getElementById('task-name-input')?.focus(), 80);
   const deleteBtn = document.getElementById('modal-delete-btn');
@@ -452,11 +451,11 @@ function modalDeleteTask() {
 }
 
 async function saveTask() {
-  const name = document.getElementById('task-name-input').value.trim();
-  const list = document.getElementById('task-list-input').value;
-  if (!name || !list) {
-    if (!name) document.getElementById('task-name-input').style.borderColor = 'var(--p-high)';
-    if (!list) document.getElementById('task-list-input').style.borderColor = 'var(--p-high)';
+  const name     = document.getElementById('task-name-input').value.trim();
+  const category = document.getElementById('task-category-input').value;
+  if (!name || !category) {
+    if (!name)     document.getElementById('task-name-input').style.borderColor = 'var(--p-high)';
+    if (!category) document.getElementById('task-category-input').style.borderColor = 'var(--p-high)';
     return;
   }
   const tid  = document.getElementById('editing-task-id').value;
@@ -464,7 +463,7 @@ async function saveTask() {
     name,
     priority: document.getElementById('task-priority-input').value,
     due:      document.getElementById('task-due-input').value,
-    list,
+    category,
     tags:     [...selectedTaskTags],
     notes:    document.getElementById('task-notes-input').value.trim(),
     done:     false,
@@ -477,12 +476,12 @@ async function saveTask() {
     if (t) Object.assign(t, data);
     renderTasks();
     await _sb.from('tasks').update({
-      name:    data.name,
-      list_id: data.list || null,
-      priority: data.priority,
-      due:     data.due || null,
-      tags:    data.tags,
-      notes:   data.notes || null,
+      name:        data.name,
+      category_id: data.category || null,
+      priority:    data.priority,
+      due:         data.due || null,
+      tags:        data.tags,
+      notes:       data.notes || null,
     }).eq('id', tid).eq('user_id', _uid);
   } else {
     const newId  = uid();
@@ -492,41 +491,41 @@ async function saveTask() {
     tasks.unshift(newTask);
     renderTasks();
     await _sb.from('tasks').insert({
-      id:       newId,
-      user_id:  _uid,
-      name:     data.name,
-      list_id:  data.list || null,
-      priority: data.priority,
-      due:      data.due || null,
-      tags:     data.tags,
-      notes:    data.notes || null,
-      done:     false,
-      position: pos,
+      id:          newId,
+      user_id:     _uid,
+      name:        data.name,
+      category_id: data.category || null,
+      priority:    data.priority,
+      due:         data.due || null,
+      tags:        data.tags,
+      notes:       data.notes || null,
+      done:        false,
+      position:    pos,
     });
   }
 }
 
-// ────────── LISTS ──────────
-async function addList() {
-  const name = document.getElementById('new-list-name').value.trim();
+// ────────── CATEGORIES ──────────
+async function addCategory() {
+  const name = document.getElementById('new-category-name').value.trim();
   if (!name) return;
-  const newList = { id: uid(), name, color: selectedListColor };
-  lists.push(newList);
-  document.getElementById('new-list-name').value = '';
-  closeModal('add-list-modal');
+  const newCat = { id: uid(), name, color: selectedCategoryColor };
+  categories.push(newCat);
+  document.getElementById('new-category-name').value = '';
+  closeModal('add-category-modal');
   renderSidebar();
-  await _sb.from('lists').insert({ ...newList, user_id: _uid });
+  await _sb.from('lists').insert({ ...newCat, user_id: _uid });
 }
 
-async function deleteList(lid) {
-  lists = lists.filter(l => l.id !== lid);
-  tasks.forEach(t => { if (t.list === lid) t.list = ''; });
-  if (currentView === 'list:' + lid) setView('all');
+async function deleteCategory(cid) {
+  categories = categories.filter(c => c.id !== cid);
+  tasks.forEach(t => { if (t.category === cid) t.category = ''; });
+  if (currentView === 'category:' + cid) setView('all');
   renderSidebar();
   renderTasks();
   await Promise.all([
-    _sb.from('lists').delete().eq('id', lid).eq('user_id', _uid),
-    _sb.from('tasks').update({ list_id: null }).eq('list_id', lid).eq('user_id', _uid),
+    _sb.from('lists').delete().eq('id', cid).eq('user_id', _uid),
+    _sb.from('tasks').update({ category_id: null }).eq('category_id', cid).eq('user_id', _uid),
   ]);
 }
 
@@ -580,9 +579,9 @@ function renderManageTags() {
 }
 
 // ────────── MODAL SETUP ──────────
-function populateTaskModal(selectedList) {
-  const sel = document.getElementById('task-list-input');
-  sel.innerHTML = lists.map(l => `<option value="${l.id}" ${selectedList === l.id ? 'selected' : ''}>${l.name}</option>`).join('');
+function populateTaskModal(selectedCategory) {
+  const sel = document.getElementById('task-category-input');
+  sel.innerHTML = categories.map(c => `<option value="${c.id}" ${selectedCategory === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
   renderTagDropdown();
 }
 
@@ -640,7 +639,7 @@ function showInlineTagForm() {
          onclick="selectInlineTagColor('${c}', this)"></div>`).join('');
   document.getElementById('tag-inline-form').classList.add('show');
   setTimeout(() => {
-    const form    = document.getElementById('tag-inline-form');
+    const form     = document.getElementById('tag-inline-form');
     const backdrop = document.getElementById('add-task-modal');
     if (form && backdrop) {
       const formBottom = form.getBoundingClientRect().bottom;
@@ -681,7 +680,7 @@ function openModal(mid) {
     document.getElementById('editing-task-id').value = '';
     document.getElementById('task-name-input').value = '';
     document.getElementById('task-name-input').style.borderColor = '';
-    document.getElementById('task-list-input').style.borderColor = '';
+    document.getElementById('task-category-input').style.borderColor = '';
     document.getElementById('task-priority-input').value = 'medium';
     document.getElementById('task-due-input').value = '';
     document.getElementById('task-notes-input').value = '';
@@ -691,13 +690,13 @@ function openModal(mid) {
     const actions    = document.getElementById('task-modal-actions');
     if (deleteBtn) deleteBtn.style.display = 'none';
     if (actions)   actions.style.justifyContent = 'flex-end';
-    const defaultList = currentView.startsWith('list:') ? currentView.replace('list:', '') : (lists[0]?.id || '');
-    populateTaskModal(defaultList);
+    const defaultCategory = currentView.startsWith('category:') ? currentView.replace('category:', '') : (categories[0]?.id || '');
+    populateTaskModal(defaultCategory);
   }
-  if (mid === 'add-list-modal') {
-    selectedListColor = LIST_COLORS[0];
-    const sw = document.getElementById('list-color-picker');
-    sw.innerHTML = LIST_COLORS.map((c, i) => `<div class="list-color-swatch ${i === 0 ? 'selected' : ''}" style="background:${c}" onclick="selectListColor('${c}', this)"></div>`).join('');
+  if (mid === 'add-category-modal') {
+    selectedCategoryColor = LIST_COLORS[0];
+    const sw = document.getElementById('category-color-picker');
+    sw.innerHTML = LIST_COLORS.map((c, i) => `<div class="list-color-swatch ${i === 0 ? 'selected' : ''}" style="background:${c}" onclick="selectCategoryColor('${c}', this)"></div>`).join('');
   }
   if (mid === 'manage-tags-modal') {
     selectedTagColor = TAG_COLORS[0];
@@ -713,9 +712,9 @@ function openModal(mid) {
 
 function closeModal(mid) { document.getElementById(mid).classList.remove('show'); }
 
-function selectListColor(c, el) {
-  selectedListColor = c;
-  document.querySelectorAll('#list-color-picker .list-color-swatch').forEach(s => s.classList.remove('selected'));
+function selectCategoryColor(c, el) {
+  selectedCategoryColor = c;
+  document.querySelectorAll('#category-color-picker .list-color-swatch').forEach(s => s.classList.remove('selected'));
   el.classList.add('selected');
 }
 
