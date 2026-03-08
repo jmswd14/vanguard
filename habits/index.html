@@ -149,19 +149,10 @@
       </div>
     </div>
 
-    <!-- Emoji picker (native OS) -->
+    <!-- Emoji picker -->
     <div class="form-group">
       <label>Emoji</label>
-      <div class="emoji-native-wrap">
-        <button type="button" class="emoji-native-btn" id="emoji-display-btn"
-                title="Click to open emoji picker" onclick="focusEmojiInput()">
-          <span id="emoji-display">⭐</span>
-          <input type="text" id="emoji-native-input" class="emoji-native-input"
-                 autocomplete="off" autocorrect="off" autocapitalize="off"
-                 spellcheck="false" oninput="captureEmoji(this)">
-        </button>
-        <span class="emoji-native-hint">Click, then choose an emoji</span>
-      </div>
+      <div class="emoji-grid" id="emoji-grid"></div>
     </div>
 
     <!-- Color picker -->
@@ -198,6 +189,14 @@ const _sb = window.supabaseClient;
 let _uid = null;
 
 // ── CONSTANTS ──
+const EMOJIS = [
+  '💪','🏃','🧘','🚴','🏊','🤸','🎯','🏋️','🚶','🧗',
+  '⚽','🎾','🏀','🧠','📚','✍️','🎨','🎵','🧩','💡',
+  '😴','💤','🛌','⏰','🌅','🌙','💊','🥗','🥤','💧',
+  '🍎','🥦','🚭','🍷','☕','❤️','🫀','🫁','🦷','👁️',
+  '🧴','🛁','🌿','🌱','☀️','🌊','🔥','⭐','✅','🎁',
+];
+
 const HABIT_COLORS = [
   '#7B9EC4','#B87A8A','#C09A50','#5A9B80','#8C7EC0','#B87856',
   '#4E9BAC','#A87860','#A89060','#628E92','#9A5872','#6A9660',
@@ -750,7 +749,7 @@ function openNewHabit() {
 
   setDirection('building');
   populateCategorySelect('habit-category-input', '');
-  setEmojiDisplay(selectedEmoji);
+  renderEmojiPicker();
   renderColorPicker();
   document.getElementById('habit-modal').classList.add('show');
   setTimeout(() => document.getElementById('habit-name-input')?.focus(), 80);
@@ -778,7 +777,7 @@ function openEditHabit(id) {
 
   setDirection(habitDirection);
   populateCategorySelect('habit-category-input', h.category_id || '');
-  setEmojiDisplay(selectedEmoji);
+  renderEmojiPicker();
   renderColorPicker();
   document.getElementById('habit-modal').classList.add('show');
   setTimeout(() => document.getElementById('habit-name-input')?.focus(), 80);
@@ -798,26 +797,17 @@ function onTypeChange() {
   document.getElementById('numeric-fields').style.display = type === 'numeric' ? '' : 'none';
 }
 
-function setEmojiDisplay(emoji) {
-  selectedEmoji = emoji;
-  const display = document.getElementById('emoji-display');
-  if (display) display.textContent = emoji;
+function renderEmojiPicker() {
+  const grid = document.getElementById('emoji-grid');
+  grid.innerHTML = EMOJIS.map(e =>
+    `<button type="button" class="emoji-btn${e === selectedEmoji ? ' selected' : ''}"
+             onclick="selectEmoji('${e}')">${e}</button>`
+  ).join('');
 }
 
-function focusEmojiInput() {
-  const input = document.getElementById('emoji-native-input');
-  if (input) { input.value = ''; input.focus(); }
-}
-
-function captureEmoji(input) {
-  const val = input.value;
-  if (!val) return;
-  // Use spread to correctly handle multi-byte emoji codepoints
-  const chars = [...val];
-  const emoji = chars[0];
-  if (emoji) setEmojiDisplay(emoji);
-  // Clear the input so the next tap captures fresh
-  input.value = '';
+function selectEmoji(e) {
+  selectedEmoji = e;
+  renderEmojiPicker();
 }
 
 function renderColorPicker() {

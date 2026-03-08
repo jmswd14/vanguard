@@ -279,57 +279,38 @@
 }
 
 /* ─────────────────────────────────────────
-   EMOJI PICKER — native OS
+   EMOJI PICKER — custom grid
 ───────────────────────────────────────── */
-.emoji-native-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
   margin-top: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
 }
 
-.emoji-native-btn {
-  position: relative;
-  width: 52px;
-  height: 52px;
-  border: 2px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface2);
-  cursor: pointer;
+.emoji-btn {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  font-size: 20px;
+  width: 100%;
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  line-height: 1;
-  transition: border-color 0.15s, background 0.15s;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-.emoji-native-btn:hover { border-color: var(--border2); background: var(--surface3); }
-.emoji-native-btn:focus-within { border-color: var(--accent); }
-
-/* Transparent overlay input — focusable but invisible */
-.emoji-native-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
   cursor: pointer;
-  border: none;
-  background: transparent;
-  font-size: 26px;
+  transition: background 0.1s, border-color 0.1s;
+  line-height: 1;
   padding: 0;
-  outline: none;
-  /* Don't use display:none — it prevents focus on iOS */
-  color: transparent;
-  caret-color: transparent;
 }
-
-.emoji-native-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
+.emoji-btn:hover { background: var(--surface3); }
+.emoji-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
 }
 
 /* ─────────────────────────────────────────
@@ -613,6 +594,6 @@
 
   .date-nav { gap: 8px; }
 
-  .emoji-picker { gap: 3px; }
-  .emoji-btn { width: 34px; height: 34px; font-size: 16px; }
+  .emoji-grid { grid-template-columns: repeat(8, 1fr); padding: 6px; }
+  .emoji-btn { font-size: 18px; }
 }
