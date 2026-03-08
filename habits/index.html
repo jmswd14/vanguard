@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Habits">
+<link rel="apple-touch-icon" href="/vanguard/apple-touch-icon.png">
+<link rel="manifest" href="/vanguard/manifest.json">
+<title>Habits — Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/shared.css">
+<link rel="stylesheet" href="../assets/css/habits.css">
+</head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabase-client.js"></script>
+<body>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<button class="hamburger" onclick="toggleSidebar()">☰</button>
+
+<div class="app">
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h1>Habits</h1>
+    <p id="sidebar-date-label"></p>
+  </div>
+
+  <div class="sidebar-section">Views</div>
+  <div class="sidebar-item active" id="nav-today" onclick="setView('today', this)">
+    <div class="sidebar-item-left"><span class="sidebar-icon">◎</span> Today</div>
+  </div>
+  <div class="sidebar-item" id="nav-progress" onclick="setView('progress', this)">
+    <div class="sidebar-item-left"><span class="sidebar-icon">◈</span> Progress</div>
+  </div>
+
+  <div class="sidebar-footer">
+    <a href="../index.html">← All Apps</a>
+    <span class="sidebar-signout" onclick="signOut()">Sign out</span>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<main class="content">
+
+  <!-- ── TODAY VIEW ── -->
+  <div id="view-today">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="date-nav">
+          <button class="date-nav-btn" onclick="shiftDate(-1)" title="Previous day">‹</button>
+          <div>
+            <h2 id="today-heading">Today</h2>
+            <p id="today-subheading"></p>
+          </div>
+          <button class="date-nav-btn" onclick="shiftDate(1)" title="Next day">›</button>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="openNewHabit()">+ New Habit</button>
+      </div>
+    </div>
+
+    <div id="habits-list"></div>
+  </div>
+
+  <!-- ── PROGRESS VIEW ── -->
+  <div id="view-progress" style="display:none;">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Progress</h2>
+        <p id="progress-subheading"></p>
+      </div>
+    </div>
+
+    <div class="progress-selector-wrap">
+      <label class="progress-selector-label">Habit</label>
+      <div class="sort-select-wrap">
+        <select id="progress-habit-select" onchange="selectProgressHabit(this.value)">
+          <option value="all">All Habits</option>
+        </select>
+        <span class="sort-select-arrow">▼</span>
+      </div>
+    </div>
+
+    <div id="progress-body"></div>
+  </div>
+
+</main>
+</div>
+
+<!-- ── MODALS ── -->
+
+<!-- NEW / EDIT HABIT -->
+<div class="modal-backdrop" id="habit-modal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title" id="habit-modal-title">New Habit</div>
+    <input type="hidden" id="editing-habit-id">
+
+    <div class="form-group">
+      <label>Name <span style="color:var(--p-high);">*</span></label>
+      <input type="text" id="habit-name-input" placeholder="e.g. Drink water, No sugar...">
+    </div>
+
+    <!-- Building / Breaking toggle -->
+    <div class="form-group">
+      <label>Direction</label>
+      <div class="direction-toggle" id="direction-toggle">
+        <button class="dir-btn active" id="dir-building" onclick="setDirection('building')">↑ Building</button>
+        <button class="dir-btn" id="dir-breaking" onclick="setDirection('breaking')">↓ Breaking</button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tracking</label>
+        <div class="sort-select-wrap">
+          <select id="habit-type-input" onchange="onTypeChange()">
+            <option value="yes_no">Yes / No</option>
+            <option value="numeric">Numeric</option>
+          </select>
+          <span class="sort-select-arrow">▼</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <div class="sort-select-wrap">
+          <select id="habit-category-input">
+            <option value="">None</option>
+          </select>
+          <span class="sort-select-arrow">▼</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Numeric target (shown when type = numeric) -->
+    <div id="numeric-fields" style="display:none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label id="target-label">Target</label>
+          <input type="number" id="habit-target-input" placeholder="e.g. 8" min="0">
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <input type="text" id="habit-unit-input" placeholder="e.g. glasses, km...">
+        </div>
+      </div>
+    </div>
+
+    <!-- Emoji picker -->
+    <div class="form-group">
+      <label>Emoji</label>
+      <div class="emoji-picker" id="emoji-picker"></div>
+    </div>
+
+    <!-- Color picker -->
+    <div class="form-group">
+      <label>Color</label>
+      <div class="list-color-picker" id="habit-color-picker"></div>
+    </div>
+
+    <div class="modal-actions" id="habit-modal-actions">
+      <button class="btn btn-danger" id="habit-delete-btn" style="display:none;" onclick="confirmDeleteHabit()">Delete</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn" onclick="closeModal('habit-modal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveHabit()">Save Habit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="modal-backdrop" id="confirm-delete-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title" style="font-size:20px;">Are you sure?</div>
+    <p id="confirm-delete-msg" style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:4px;"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('confirm-delete-modal')">Cancel</button>
+      <button class="btn" id="confirm-delete-btn" style="background:var(--p-high);color:white;border-color:var(--p-high);">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE ──
+const _sb = window.supabaseClient;
+let _uid = null;
+
+// ── CONSTANTS ──
+const HABIT_COLORS = [
+  '#7B9EC4','#B87A8A','#C09A50','#5A9B80','#8C7EC0','#B87856',
+  '#4E9BAC','#A87860','#A89060','#628E92','#9A5872','#6A9660',
+];
+const EMOJIS = [
+  '💧','🏃','💤','🥗','📚','🧘','💊','🚶','🍎','☕',
+  '🧠','✏️','🎯','💪','🚿','🌅','🧹','📱','🍷','🚬',
+  '🎮','💰','🥤','🏋️','🚴','🎵','🧴','🏊','🌿','⚡',
+];
+const SUCCESS_COLOR = '#6BCB77';
+const FAIL_COLOR    = '#FF6B6B';
+const EMPTY_COLOR   = 'var(--surface3)';
+
+// ── STATE ──
+let habits          = [];
+let logs            = [];
+let categories      = [];
+let currentView     = 'today';
+let selectedDate    = new Date().toISOString().split('T')[0];
+let progressHabitId = 'all';
+let openMenuId      = null;
+
+// Modal state
+let habitDirection  = 'building';
+let selectedColor   = HABIT_COLORS[0];
+let selectedEmoji   = EMOJIS[0];
+
+const today    = new Date();
+const todayStr = today.toISOString().split('T')[0];
+
+// ── UTILS ──
+function uid()           { return crypto.randomUUID(); }
+function getCategory(id) { return categories.find(c => c.id === id); }
+
+function getLog(habitId, dateStr) {
+  return logs.find(l => l.habit_id === habitId && l.date === dateStr);
+}
+
+function isSuccess(habit, log) {
+  // Breaking with no log = success (didn't do the bad thing)
+  // Building with no log = failure
+  if (!log) return habit.habit_direction === 'breaking';
+  if (habit.type === 'yes_no') {
+    return habit.habit_direction === 'building' ? !!log.completed : !log.completed;
+  }
+  const val = log.value ?? 0;
+  return habit.habit_direction === 'building'
+    ? val >= (habit.target_value || 0)
+    : val <= (habit.target_value || 0);
+}
+
+function successColor(habit, log) {
+  const log2 = log || getLog(habit.id, selectedDate);
+  return isSuccess(habit, log2) ? SUCCESS_COLOR : FAIL_COLOR;
+}
+
+function dirIcon(habit) {
+  return habit.habit_direction === 'building'
+    ? '<span class="dir-icon building" title="Building">↑</span>'
+    : '<span class="dir-icon breaking" title="Breaking">↓</span>';
+}
+
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+
+function fmtDateLong(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  });
+}
+
+function fmtDateShort(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric',
+  });
+}
+
+// ── STREAK ──
+function currentStreak(habit) {
+  let streak = 0, d = todayStr;
+  for (let i = 0; i < 365; i++) {
+    const log = getLog(habit.id, d);
+    if (isSuccess(habit, log)) { streak++; d = addDays(d, -1); }
+    else break;
+  }
+  return streak;
+}
+
+function longestStreak(habit) {
+  let best = 0, cur = 0;
+  for (let i = 364; i >= 0; i--) {
+    const d = addDays(todayStr, -i);
+    if (isSuccess(habit, getLog(habit.id, d))) { cur++; if (cur > best) best = cur; }
+    else cur = 0;
+  }
+  return best;
+}
+
+function completionRate(habit, days = 30) {
+  let n = 0;
+  for (let i = 0; i < days; i++) {
+    if (isSuccess(habit, getLog(habit.id, addDays(todayStr, -i)))) n++;
+  }
+  return Math.round((n / days) * 100);
+}
+
+// ── VIEW SWITCHER ──
+function setView(view, el) {
+  currentView = view;
+  document.getElementById('view-today').style.display    = view === 'today'    ? '' : 'none';
+  document.getElementById('view-progress').style.display = view === 'progress' ? '' : 'none';
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (view === 'today')    renderToday();
+  if (view === 'progress') renderProgress();
+}
+
+// ── DATE NAVIGATION ──
+function shiftDate(n) {
+  selectedDate = addDays(selectedDate, n);
+  renderToday();
+}
+
+function updateDateHeading() {
+  const h = document.getElementById('today-heading');
+  const s = document.getElementById('today-subheading');
+  if (selectedDate === todayStr) {
+    h.textContent = 'Today';
+    s.textContent = fmtDateLong(todayStr);
+  } else {
+    const delta = Math.round((new Date(selectedDate+'T00:00:00') - new Date(todayStr+'T00:00:00')) / 86400000);
+    h.textContent = delta === -1 ? 'Yesterday' : delta === 1 ? 'Tomorrow' : fmtDateLong(selectedDate);
+    s.textContent = delta === -1 || delta === 1 ? fmtDateLong(selectedDate) : '';
+  }
+}
+
+// ── TODAY RENDER ──
+function renderToday() {
+  updateDateHeading();
+  const container = document.getElementById('habits-list');
+
+  if (!habits.length) {
+    container.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">◎</div>
+      <h3>No habits yet</h3>
+      <p>Click <strong>+ New Habit</strong> to get started.</p>
+    </div>`;
+    return;
+  }
+
+  const active = habits.filter(h => h.active !== false);
+  if (!active.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">◎</div><h3>No active habits</h3></div>`;
+    return;
+  }
+
+  container.innerHTML = active.map(h => renderHabitRow(h)).join('');
+}
+
+function renderHabitRow(habit) {
+  const log     = getLog(habit.id, selectedDate);
+  const success = isSuccess(habit, log);
+  const cat     = getCategory(habit.category_id);
+  const catDot  = cat ? `<span class="habit-cat-dot" style="background:${cat.color};"></span>` : '';
+  const sClass  = log ? (success ? 'success' : 'fail') : 'empty';
+
+  let inputHtml = '';
+  if (habit.type === 'yes_no') {
+    const checked = log && log.completed ? 'checked' : '';
+    inputHtml = `<label class="habit-check-wrap">
+      <input type="checkbox" ${checked} onchange="logYesNo('${habit.id}', this.checked)">
+      <span class="habit-check-custom ${sClass}" style="${sClass === 'success' ? `border-color:${SUCCESS_COLOR};background:${SUCCESS_COLOR}22;` : sClass === 'fail' ? `border-color:${FAIL_COLOR};` : ''}">
+        ${sClass === 'success' ? `<span class="check-tick" style="color:${SUCCESS_COLOR};">✓</span>` : ''}
+        ${sClass === 'fail' ? `<span class="check-tick" style="color:${FAIL_COLOR};">✗</span>` : ''}
+      </span>
+    </label>`;
+  } else {
+    const val = log ? (log.value ?? '') : '';
+    const target = habit.target_value || 0;
+    const pct = target > 0 && val !== '' ? Math.min(100, Math.round((parseFloat(val) / target) * 100)) : 0;
+    const barColor = log ? (success ? SUCCESS_COLOR : FAIL_COLOR) : 'var(--border2)';
+    inputHtml = `<div class="habit-numeric-wrap">
+      <input type="number" class="habit-num-input" value="${val}" min="0"
+             placeholder="0" onchange="logNumeric('${habit.id}', this.value)"
+             style="${log && success ? `color:${SUCCESS_COLOR};` : log ? `color:${FAIL_COLOR};` : ''}">
+      <span class="habit-target-label">/ ${target}${habit.unit ? ' ' + habit.unit : ''}</span>
+      <div class="habit-progress-bar">
+        <div class="habit-progress-fill" style="width:${pct}%;background:${barColor};"></div>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="habit-row${log && success ? ' habit-done' : ''}" id="row-${habit.id}">
+    <div class="habit-row-left">
+      <div class="habit-menu-wrap">
+        <button class="habit-menu-btn" onclick="toggleHabitMenu(event,'${habit.id}')">⋯</button>
+        <div class="habit-menu-dropdown" id="menu-${habit.id}">
+          <div class="habit-menu-option" onclick="openEditHabit('${habit.id}')">Edit</div>
+          <div class="habit-menu-option danger" onclick="confirmDeleteHabitById('${habit.id}')">Delete</div>
+        </div>
+      </div>
+      <span class="habit-emoji">${habit.emoji || '◎'}</span>
+      <div class="habit-info">
+        <span class="habit-name">${habit.name}</span>
+        ${dirIcon(habit)}
+        ${catDot}
+      </div>
+    </div>
+    <div class="habit-row-right">
+      ${inputHtml}
+    </div>
+  </div>`;
+}
+
+// ── LOGGING ──
+async function logYesNo(habitId, completed) {
+  const existing = getLog(habitId, selectedDate);
+  const data = {
+    habit_id: habitId, date: selectedDate,
+    completed, value: null, note: null,
+  };
+
+  if (existing) {
+    Object.assign(existing, data);
+    await _sb.from('habit_logs').update({ completed, value: null })
+      .eq('id', existing.id).eq('user_id', _uid);
+  } else {
+    const newLog = { id: uid(), user_id: _uid, ...data };
+    logs.push(newLog);
+    await _sb.from('habit_logs').insert(newLog);
+  }
+  renderToday();
+}
+
+async function logNumeric(habitId, rawVal) {
+  const value = rawVal === '' ? null : parseFloat(rawVal);
+  const existing = getLog(habitId, selectedDate);
+  const data = { habit_id: habitId, date: selectedDate, completed: value !== null, value, note: null };
+
+  if (existing) {
+    Object.assign(existing, data);
+    await _sb.from('habit_logs').update({ completed: value !== null, value })
+      .eq('id', existing.id).eq('user_id', _uid);
+  } else {
+    if (value === null) return;
+    const newLog = { id: uid(), user_id: _uid, ...data };
+    logs.push(newLog);
+    await _sb.from('habit_logs').insert(newLog);
+  }
+  renderToday();
+}
+
+// ── CONTEXT MENU ──
+function toggleHabitMenu(e, id) {
+  e.stopPropagation();
+  const wasOpen = openMenuId === id;
+  closeAllMenus();
+  if (!wasOpen) {
+    openMenuId = id;
+    const menu = document.getElementById('menu-' + id);
+    if (menu) menu.classList.add('open');
+  }
+}
+
+function closeAllMenus() {
+  openMenuId = null;
+  document.querySelectorAll('.habit-menu-dropdown.open').forEach(m => m.classList.remove('open'));
+}
+
+// ── PROGRESS RENDER ──
+function renderProgress() {
+  // populate habit selector
+  const sel = document.getElementById('progress-habit-select');
+  sel.innerHTML = '<option value="all">All Habits</option>' +
+    habits.map(h => `<option value="${h.id}"${h.id === progressHabitId ? ' selected' : ''}>${h.emoji || ''} ${h.name}</option>`).join('');
+
+  const body = document.getElementById('progress-body');
+
+  if (!habits.length) {
+    body.innerHTML = `<div class="empty-state"><div class="empty-icon">◈</div><h3>No habits yet</h3></div>`;
+    return;
+  }
+
+  const target = progressHabitId === 'all' ? null : habits.find(h => h.id === progressHabitId);
+  const list   = target ? [target] : habits;
+
+  let html = '';
+
+  if (target) {
+    // Single habit: full analytics
+    html += renderStatCards(target);
+    html += `<div class="progress-section-label">Last 365 days</div>`;
+    html += renderHeatmap(target);
+    html += `<div class="progress-section-label" style="margin-top:32px;">Last 30 days</div>`;
+    html += renderChart(target);
+  } else {
+    // All habits: stat cards grid
+    html += `<div class="all-habits-grid">`;
+    habits.forEach(h => {
+      const rate  = completionRate(h);
+      const streak = currentStreak(h);
+      const rateColor = rate >= 70 ? SUCCESS_COLOR : rate >= 40 ? 'var(--p-medium)' : FAIL_COLOR;
+      const cat = getCategory(h.category_id);
+      html += `<div class="all-habit-card" onclick="selectProgressHabit('${h.id}')">
+        <div class="all-habit-card-top">
+          <span class="all-habit-emoji">${h.emoji || '◎'}</span>
+          <div class="all-habit-info">
+            <span class="all-habit-name">${h.name} ${dirIcon(h)}</span>
+            ${cat ? `<span class="all-habit-cat" style="color:${cat.color};">${cat.name}</span>` : ''}
+          </div>
+        </div>
+        <div class="all-habit-stats">
+          <div class="all-habit-stat">
+            <div class="all-habit-stat-value" style="color:${rateColor};">${rate}%</div>
+            <div class="all-habit-stat-label">30-day rate</div>
+          </div>
+          <div class="all-habit-stat">
+            <div class="all-habit-stat-value">${streak}</div>
+            <div class="all-habit-stat-label">day streak</div>
+          </div>
+        </div>
+        <div class="all-habit-mini-heatmap">${renderMiniHeatmap(h)}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  body.innerHTML = html;
+}
+
+function selectProgressHabit(id) {
+  progressHabitId = id;
+  renderProgress();
+}
+
+function renderStatCards(habit) {
+  const curStr  = currentStreak(habit);
+  const longStr = longestStreak(habit);
+  const rate    = completionRate(habit);
+  const rateColor = rate >= 70 ? SUCCESS_COLOR : rate >= 40 ? 'var(--p-medium)' : FAIL_COLOR;
+
+  return `<div class="stat-cards">
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${SUCCESS_COLOR};">${curStr}</div>
+      <div class="stat-card-label">Current streak</div>
+      <div class="stat-card-sub">days</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value">${longStr}</div>
+      <div class="stat-card-label">Longest streak</div>
+      <div class="stat-card-sub">days</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value" style="color:${rateColor};">${rate}%</div>
+      <div class="stat-card-label">Completion rate</div>
+      <div class="stat-card-sub">last 30 days</div>
+    </div>
+  </div>`;
+}
+
+// ── HEATMAP ──
+function renderHeatmap(habit) {
+  // Build 365 days of cells, organized into weeks (columns)
+  const cells = [];
+  for (let i = 364; i >= 0; i--) {
+    const d   = addDays(todayStr, -i);
+    const log = getLog(habit.id, d);
+    const suc = isSuccess(habit, log);
+    const hasLog = !!log;
+    cells.push({ d, suc, hasLog });
+  }
+
+  // Pad to start on Sunday
+  const firstDay = new Date(cells[0].d + 'T00:00:00').getDay(); // 0=Sun
+  const padded = Array(firstDay).fill(null).concat(cells);
+
+  // Group into weeks
+  const weeks = [];
+  for (let i = 0; i < padded.length; i += 7) {
+    weeks.push(padded.slice(i, i + 7));
+  }
+
+  // Month labels: find first occurrence of each month in weeks
+  const monthLabels = [];
+  let lastMonth = -1;
+  weeks.forEach((week, wi) => {
+    const firstReal = week.find(c => c !== null);
+    if (firstReal) {
+      const m = new Date(firstReal.d + 'T00:00:00').getMonth();
+      if (m !== lastMonth) {
+        monthLabels.push({ wi, label: new Date(firstReal.d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' }) });
+        lastMonth = m;
+      }
+    }
+  });
+
+  const dayLabels = ['','Mon','','Wed','','Fri',''];
+
+  let weeksHtml = weeks.map(week => {
+    const cellsHtml = week.map(cell => {
+      if (!cell) return `<div class="hm-cell hm-empty"></div>`;
+      let bg;
+      if (!cell.hasLog && habit.habit_direction !== 'breaking') {
+        bg = 'var(--surface3)';
+      } else {
+        bg = cell.suc ? SUCCESS_COLOR : FAIL_COLOR;
+        // For building with no log — already handled above
+        // Adjust opacity based on numeric progress
+        bg = cell.suc ? SUCCESS_COLOR : FAIL_COLOR;
+      }
+      const opacity = cell.hasLog || habit.habit_direction === 'breaking' ? '1' : '0.18';
+      const title = `${cell.d}: ${cell.suc ? 'On track' : 'Missed'}`;
+      return `<div class="hm-cell" style="background:${bg};opacity:${opacity};" title="${title}"></div>`;
+    }).join('');
+    return `<div class="hm-week">${cellsHtml}</div>`;
+  }).join('');
+
+  const monthRow = `<div class="hm-months">${
+    weeks.map((_, wi) => {
+      const lbl = monthLabels.find(m => m.wi === wi);
+      return `<div class="hm-month-label">${lbl ? lbl.label : ''}</div>`;
+    }).join('')
+  }</div>`;
+
+  const dayRow = `<div class="hm-days">${dayLabels.map(l => `<div class="hm-day-label">${l}</div>`).join('')}</div>`;
+
+  return `<div class="heatmap-wrap">
+    ${monthRow}
+    <div class="heatmap-inner">
+      ${dayRow}
+      <div class="heatmap-weeks">${weeksHtml}</div>
+    </div>
+    <div class="heatmap-legend">
+      <span style="color:var(--text-muted);font-size:11px;">Less</span>
+      <div class="hm-cell" style="background:var(--surface3);"></div>
+      <div class="hm-cell" style="background:${SUCCESS_COLOR};opacity:0.35;"></div>
+      <div class="hm-cell" style="background:${SUCCESS_COLOR};opacity:0.65;"></div>
+      <div class="hm-cell" style="background:${SUCCESS_COLOR};"></div>
+      <span style="color:var(--text-muted);font-size:11px;">More</span>
+    </div>
+  </div>`;
+}
+
+function renderMiniHeatmap(habit) {
+  // 12 weeks mini heatmap
+  const cells = [];
+  for (let i = 83; i >= 0; i--) {
+    const d   = addDays(todayStr, -i);
+    const log = getLog(habit.id, d);
+    const suc = isSuccess(habit, log);
+    cells.push(suc ? SUCCESS_COLOR : (habit.habit_direction === 'breaking' ? FAIL_COLOR : 'var(--surface3)'));
+  }
+  return cells.map(c => `<div class="mini-hm-cell" style="background:${c};"></div>`).join('');
+}
+
+// ── CHART ──
+function renderChart(habit) {
+  const days = 30;
+  const data = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d   = addDays(todayStr, -i);
+    const log = getLog(habit.id, d);
+    data.push({ d, log, suc: isSuccess(habit, log) });
+  }
+
+  const W = 700, H = 180;
+  const pad = { top: 16, right: 12, bottom: 28, left: 32 };
+  const cW  = W - pad.left - pad.right;
+  const cH  = H - pad.top  - pad.bottom;
+  const bW  = Math.max(6, (cW / days) - 2);
+
+  // Find max for numeric scale
+  let maxVal = 1;
+  if (habit.type === 'numeric') {
+    maxVal = Math.max(
+      habit.target_value || 1,
+      ...data.map(d => d.log?.value || 0),
+      1,
+    );
+    maxVal = maxVal * 1.2; // headroom
+  }
+
+  let bars = '', targetLine = '', xLabels = '';
+
+  data.forEach((row, i) => {
+    const x = pad.left + (i / days) * cW;
+    let h, y;
+
+    if (habit.type === 'yes_no') {
+      h = row.suc ? cH : (row.log ? 4 : 2);
+    } else {
+      const val = row.log?.value || 0;
+      h = Math.max(2, (val / maxVal) * cH);
+    }
+    y = pad.top + cH - h;
+    const fill = row.suc ? SUCCESS_COLOR : FAIL_COLOR;
+    const op   = !row.log && habit.type === 'yes_no' && habit.habit_direction === 'building' ? '0.15' : '0.85';
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${Math.max(2,h).toFixed(1)}" fill="${fill}" opacity="${op}" rx="2"/>`;
+  });
+
+  if (habit.type === 'numeric' && habit.target_value) {
+    const ty = pad.top + cH - (habit.target_value / maxVal) * cH;
+    targetLine = `<line x1="${pad.left}" y1="${ty.toFixed(1)}" x2="${pad.left + cW}" y2="${ty.toFixed(1)}" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="5,3" opacity="0.6"/>
+    <text x="${pad.left + cW + 2}" y="${(ty + 3).toFixed(1)}" font-size="9" fill="var(--text-muted)" font-family="var(--font-sans)">${habit.target_value}</text>`;
+  }
+
+  // x-axis labels every ~5 days
+  for (let i = 0; i < days; i += 5) {
+    const x = pad.left + (i / days) * cW;
+    xLabels += `<text x="${x.toFixed(1)}" y="${H - 4}" font-size="9" fill="var(--text-muted)" font-family="var(--font-sans)">${fmtDateShort(data[i].d)}</text>`;
+  }
+
+  // y-axis
+  let yAxis = '';
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const v = habit.type === 'numeric' ? Math.round((maxVal / steps) * i) : (i === steps ? '✓' : '');
+    const y = pad.top + cH - (i / steps) * cH;
+    yAxis += `<text x="${pad.left - 4}" y="${(y + 3).toFixed(1)}" font-size="9" fill="var(--text-muted)" font-family="var(--font-sans)" text-anchor="end">${v}</text>`;
+    yAxis += `<line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${pad.left + cW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1" opacity="0.5"/>`;
+  }
+
+  return `<div class="chart-wrap">
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible;">
+      ${yAxis}
+      ${bars}
+      ${targetLine}
+      ${xLabels}
+    </svg>
+    ${habit.type === 'numeric' && habit.target_value
+      ? `<div class="chart-legend"><span class="chart-legend-dash"></span> ${habit.habit_direction === 'building' ? 'Target' : 'Goal'}: ${habit.target_value}${habit.unit ? ' ' + habit.unit : ''}</div>`
+      : ''}
+  </div>`;
+}
+
+// ── MODAL: NEW HABIT ──
+function openNewHabit() {
+  habitDirection = 'building';
+  selectedColor  = HABIT_COLORS[0];
+  selectedEmoji  = EMOJIS[0];
+
+  document.getElementById('habit-modal-title').textContent = 'New Habit';
+  document.getElementById('editing-habit-id').value = '';
+  document.getElementById('habit-name-input').value  = '';
+  document.getElementById('habit-name-input').style.borderColor = '';
+  document.getElementById('habit-type-input').value = 'yes_no';
+  document.getElementById('numeric-fields').style.display = 'none';
+  document.getElementById('habit-target-input').value = '';
+  document.getElementById('habit-unit-input').value   = '';
+  document.getElementById('habit-delete-btn').style.display = 'none';
+  document.getElementById('habit-modal-actions').style.justifyContent = 'flex-end';
+
+  setDirection('building');
+  populateCategorySelect('habit-category-input', '');
+  renderEmojiPicker();
+  renderColorPicker();
+  document.getElementById('habit-modal').classList.add('show');
+  setTimeout(() => document.getElementById('habit-name-input')?.focus(), 80);
+}
+
+function openEditHabit(id) {
+  closeAllMenus();
+  const h = habits.find(x => x.id === id);
+  if (!h) return;
+
+  habitDirection = h.habit_direction || 'building';
+  selectedColor  = h.color || HABIT_COLORS[0];
+  selectedEmoji  = h.emoji || EMOJIS[0];
+
+  document.getElementById('habit-modal-title').textContent = 'Edit Habit';
+  document.getElementById('editing-habit-id').value = id;
+  document.getElementById('habit-name-input').value  = h.name;
+  document.getElementById('habit-name-input').style.borderColor = '';
+  document.getElementById('habit-type-input').value = h.type || 'yes_no';
+  document.getElementById('habit-target-input').value = h.target_value ?? '';
+  document.getElementById('habit-unit-input').value   = h.unit || '';
+  document.getElementById('numeric-fields').style.display = h.type === 'numeric' ? '' : 'none';
+  document.getElementById('habit-delete-btn').style.display = 'inline-flex';
+  document.getElementById('habit-modal-actions').style.justifyContent = 'space-between';
+
+  setDirection(habitDirection);
+  populateCategorySelect('habit-category-input', h.category_id || '');
+  renderEmojiPicker();
+  renderColorPicker();
+  document.getElementById('habit-modal').classList.add('show');
+  setTimeout(() => document.getElementById('habit-name-input')?.focus(), 80);
+}
+
+function setDirection(dir) {
+  habitDirection = dir;
+  document.getElementById('dir-building').classList.toggle('active', dir === 'building');
+  document.getElementById('dir-breaking').classList.toggle('active', dir === 'breaking');
+  // Update target label
+  const label = document.getElementById('target-label');
+  if (label) label.textContent = dir === 'breaking' ? 'Goal (max)' : 'Target';
+}
+
+function onTypeChange() {
+  const type = document.getElementById('habit-type-input').value;
+  document.getElementById('numeric-fields').style.display = type === 'numeric' ? '' : 'none';
+}
+
+function renderEmojiPicker() {
+  const picker = document.getElementById('emoji-picker');
+  picker.innerHTML = EMOJIS.map(e =>
+    `<button class="emoji-btn${e === selectedEmoji ? ' selected' : ''}" onclick="selectEmoji('${e}')">${e}</button>`
+  ).join('');
+}
+
+function selectEmoji(e) {
+  selectedEmoji = e;
+  renderEmojiPicker();
+}
+
+function renderColorPicker() {
+  const picker = document.getElementById('habit-color-picker');
+  picker.innerHTML = HABIT_COLORS.map(c =>
+    `<div class="list-color-swatch${c === selectedColor ? ' selected' : ''}"
+          style="background:${c};" onclick="selectHabitColor('${c}')"></div>`
+  ).join('');
+}
+
+function selectHabitColor(c) {
+  selectedColor = c;
+  renderColorPicker();
+}
+
+function populateCategorySelect(id, currentVal) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = `<option value="">None</option>` +
+    categories.map(c => `<option value="${c.id}"${c.id === currentVal ? ' selected' : ''}>${c.name}</option>`).join('');
+}
+
+async function saveHabit() {
+  const name = document.getElementById('habit-name-input').value.trim();
+  if (!name) {
+    document.getElementById('habit-name-input').style.borderColor = 'var(--p-high)';
+    return;
+  }
+
+  const type       = document.getElementById('habit-type-input').value;
+  const categoryId = document.getElementById('habit-category-input').value;
+  const target     = type === 'numeric' ? parseFloat(document.getElementById('habit-target-input').value) || null : null;
+  const unit       = type === 'numeric' ? document.getElementById('habit-unit-input').value.trim() : null;
+  const eid        = document.getElementById('editing-habit-id').value;
+
+  const data = {
+    name, type, habit_direction: habitDirection,
+    target_value: target, unit: unit || null,
+    category_id: categoryId || null,
+    emoji: selectedEmoji, color: selectedColor, active: true,
+  };
+
+  closeModal('habit-modal');
+
+  if (eid) {
+    const h = habits.find(x => x.id === eid);
+    if (h) Object.assign(h, data);
+    await _sb.from('habits').update(data).eq('id', eid).eq('user_id', _uid);
+  } else {
+    const newId = uid();
+    habits.push({ id: newId, user_id: _uid, ...data });
+    await _sb.from('habits').insert({ id: newId, user_id: _uid, ...data });
+  }
+
+  if (currentView === 'today')    renderToday();
+  if (currentView === 'progress') renderProgress();
+}
+
+// ── DELETE ──
+function confirmDeleteHabit() {
+  const id   = document.getElementById('editing-habit-id').value;
+  const name = document.getElementById('habit-name-input').value.trim();
+  closeModal('habit-modal');
+  document.getElementById('confirm-delete-msg').textContent = `"${name}" and all its logs will be permanently deleted.`;
+  document.getElementById('confirm-delete-btn').onclick = () => { closeModal('confirm-delete-modal'); deleteHabit(id); };
+  openModal('confirm-delete-modal');
+}
+
+function confirmDeleteHabitById(id) {
+  closeAllMenus();
+  const h = habits.find(x => x.id === id);
+  if (!h) return;
+  document.getElementById('confirm-delete-msg').textContent = `"${h.name}" and all its logs will be permanently deleted.`;
+  document.getElementById('confirm-delete-btn').onclick = () => { closeModal('confirm-delete-modal'); deleteHabit(id); };
+  openModal('confirm-delete-modal');
+}
+
+async function deleteHabit(id) {
+  habits = habits.filter(h => h.id !== id);
+  logs   = logs.filter(l => l.habit_id !== id);
+  if (currentView === 'today')    renderToday();
+  if (currentView === 'progress') renderProgress();
+  await _sb.from('habit_logs').delete().eq('habit_id', id).eq('user_id', _uid);
+  await _sb.from('habits').delete().eq('id', id).eq('user_id', _uid);
+}
+
+// ── MODALS ──
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ── MOBILE ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── SIGN OUT ──
+async function signOut() {
+  await _sb.auth.signOut();
+  window.location.href = '../login.html';
+}
+
+// ── GLOBAL EVENTS ──
+document.addEventListener('click', e => {
+  if (openMenuId && !e.target.closest('.habit-menu-wrap')) closeAllMenus();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-backdrop.show').forEach(m => m.classList.remove('show'));
+    closeAllMenus();
+  }
+});
+
+// ── INIT ──
+async function init() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (!session) { window.location.href = '../login.html'; return; }
+  _uid = session.user.id;
+
+  document.getElementById('sidebar-date-label').textContent =
+    today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const [hr, lr, lgr] = await Promise.all([
+    _sb.from('habits').select('*').eq('user_id', _uid).order('created_at'),
+    _sb.from('lists').select('*').eq('user_id', _uid),
+    _sb.from('habit_logs').select('*').eq('user_id', _uid),
+  ]);
+
+  habits     = hr.data  || [];
+  categories = lr.data  || [];
+  logs       = lgr.data || [];
+
+  renderToday();
+}
+
+init();
+</script>
+</body>
+</html>
