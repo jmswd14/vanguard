@@ -40,6 +40,12 @@
     <span style="font-size:14px;">☑</span> Tasks
   </a>
 
+  <hr class="sidebar-divider">
+  <div class="sidebar-section">Integrations</div>
+  <div id="gcal-sidebar" style="padding:0 16px 12px;">
+    <button class="sidebar-gcal-btn" onclick="connectGoogle()">Connect Google Calendar</button>
+  </div>
+
   <div class="sidebar-footer">
     <a href="../index.html">← All Apps</a>
     <span class="sidebar-signout" onclick="signOut()">Sign out</span>
@@ -256,6 +262,16 @@ let tagDropdownOpen  = false;
 const today    = new Date();
 const todayStr = today.toISOString().split('T')[0];
 
+// ── GOOGLE CALENDAR ──
+const GCAL_CLIENT_ID = '24557710513-s14v9scfguh13ke3p01nb46vcke2kbn4.apps.googleusercontent.com';
+const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar';
+const GCAL_API       = 'https://www.googleapis.com/calendar/v3';
+const GCAL_REDIRECT  = window.location.origin + window.location.pathname;
+let googleConnected   = false;
+let googleAccessToken = null;
+let googleTokenExpiry = null;
+let googleEvents      = [];
+
 // ── UTILS ──
 function uid()        { return crypto.randomUUID(); }
 function getCategory(id) { return categories.find(c => c.id === id); }
@@ -366,6 +382,7 @@ function switchView(view) {
     viewDay = todayStr;
   }
   renderCalendar();
+  if (googleConnected) fetchGoogleEvents().then(() => renderCalendar());
 }
 
 // ── NAVIGATION ──
@@ -382,6 +399,7 @@ function prevPeriod() {
     viewDay = d.toISOString().split('T')[0];
   }
   renderCalendar();
+  if (googleConnected) fetchGoogleEvents().then(() => renderCalendar());
 }
 
 function nextPeriod() {
@@ -397,6 +415,7 @@ function nextPeriod() {
     viewDay = d.toISOString().split('T')[0];
   }
   renderCalendar();
+  if (googleConnected) fetchGoogleEvents().then(() => renderCalendar());
 }
 
 function goToToday() {
@@ -411,6 +430,7 @@ function goToToday() {
     viewDay = todayStr;
   }
   renderCalendar();
+  if (googleConnected) fetchGoogleEvents().then(() => renderCalendar());
 }
 
 // ── RENDER DISPATCH ──
@@ -452,12 +472,14 @@ function renderMonthDayCell(dateStr, dayNum, otherMonth) {
   const isToday  = dateStr === todayStr;
   const isActive = dateStr === activeDayStr;
 
-  const dayTasks  = getTasksForDay(dateStr);
-  const dayEvents = getEventsForDay(dateStr);
+  const dayTasks        = getTasksForDay(dateStr);
+  const dayEvents       = getEventsForDay(dateStr);
+  const dayGoogleEvents = getGoogleEventsForDay(dateStr);
 
   const allItems = [
     ...dayTasks.map(t  => ({ type: 'task',  item: t })),
     ...dayEvents.map(e => ({ type: 'event', item: e })),
+    ...dayGoogleEvents.map(e => ({ type: 'gcal', item: e })),
   ];
   const maxBars  = 3;
   const visible  = allItems.slice(0, maxBars);
@@ -485,6 +507,13 @@ function renderMonthDayCell(dateStr, dayNum, otherMonth) {
                    title="${safe}">
         <span class="cal-bar-dot" style="background:${color};"></span>
         <span class="cal-bar-text">${item.title}</span>
+      </div>`;
+    } else {
+      const safe = item.title.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      return `<div class="cal-bar gcal-bar" title="${safe}">
+        <span class="cal-bar-dot" style="background:#4285F4;"></span>
+        <span class="cal-bar-text">${item.title}</span>
+        <span class="gcal-badge-inline">G</span>
       </div>`;
     }
   }).join('');
@@ -549,6 +578,7 @@ function buildTimedView(days) {
     const dayTasks     = getTasksForDay(dateStr);
     const alldayEvents = getEventsForDay(dateStr).filter(e => e.all_day);
 
+    const gcalAllDayItems = getGoogleEventsForDay(dateStr).filter(e => e.all_day);
     const items = [
       ...dayTasks.map(t => {
         const cat   = getCategory(t.category);
@@ -561,6 +591,11 @@ function buildTimedView(days) {
         const color = cat ? cat.color : 'var(--accent)';
         return `<div class="cal-allday-item" style="background:${color}22;border-left:2px solid ${color};"
                      onclick="openEditEvent('${e.id}')" title="${e.title.replace(/"/g,'&quot;')}">${e.title}</div>`;
+      }),
+      ...gcalAllDayItems.map(e => {
+        return `<div class="cal-allday-item" style="background:#4285F422;border-left:2px solid #4285F4;"
+                     title="${e.title.replace(/"/g,'&quot;')}">
+          <span class="gcal-badge">G</span>${e.title}</div>`;
       }),
     ];
     return `<div class="cal-allday-col">${items.join('')}</div>`;
@@ -603,9 +638,22 @@ function buildTimedView(days) {
       </div>`;
     }).join('');
 
+    const gcalTimedEvents = getGoogleEventsForDay(dateStr).filter(e => !e.all_day && e.time);
+    const gcalEventsHtml  = gcalTimedEvents.map(e => {
+      const [hr, mn] = e.time.split(':').map(Number);
+      const topPx    = (hr + mn / 60) * HOUR_HEIGHT;
+      return `<div class="cal-timed-event"
+                   style="top:${topPx}px;height:${HOUR_HEIGHT - 4}px;background:#4285F422;border-left:3px solid #4285F4;left:36%;"
+                   title="${e.title.replace(/"/g,'&quot;')}">
+        <div class="cal-timed-title"><span class="gcal-badge">G</span> ${e.title}</div>
+        <div class="cal-timed-time">${formatTime(e.time)}</div>
+      </div>`;
+    }).join('');
+
     return `<div class="cal-day-col${isToday ? ' today' : ''}">
       ${linesHtml}
       ${eventsHtml}
+      ${gcalEventsHtml}
     </div>`;
   }).join('');
 
@@ -658,7 +706,9 @@ function renderDayPanel() {
   const body      = document.getElementById('day-panel-body');
   let html = '';
 
-  if (!dayTasks.length && !dayEvents.length) {
+  const dayGoogleEvents = getGoogleEventsForDay(activeDayStr);
+
+  if (!dayTasks.length && !dayEvents.length && !dayGoogleEvents.length) {
     html = `<div class="day-panel-empty">
       <div class="day-panel-empty-icon">◌</div>
       <p>Nothing scheduled</p>
@@ -693,6 +743,21 @@ function renderDayPanel() {
           <div class="day-panel-item-body">
             <div class="day-panel-item-name">${e.title}</div>
             ${meta ? `<div class="day-panel-item-meta">${meta}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    if (dayGoogleEvents.length) {
+      const hasOther = dayTasks.length || dayEvents.length;
+      html += `<div class="day-panel-section-label"${hasOther ? ' style="margin-top:20px;"' : ''}>Google Calendar</div>`;
+      html += dayGoogleEvents.map(e => {
+        const meta = e.all_day ? 'All day' : formatTime(e.time);
+        return `<div class="day-panel-item">
+          <span class="day-panel-dot" style="background:#4285F4;"></span>
+          <div class="day-panel-item-body">
+            <div class="day-panel-item-name">${e.title} <span class="gcal-badge">G</span></div>
+            <div class="day-panel-item-meta">${meta}</div>
           </div>
         </div>`;
       }).join('');
@@ -902,12 +967,43 @@ async function saveEvent() {
     renderCalendar();
     if (activeDayStr) renderDayPanel();
     await _sb.from('events').update(data).eq('id', eid).eq('user_id', _uid);
+    if (googleConnected) {
+      const gcalBody = buildGcalEvent({ title, date, all_day: allDay, time });
+      const ev2 = events.find(x => x.id === eid);
+      if (ev2?.google_event_id) {
+        await gcalFetch(`/calendars/primary/events/${ev2.google_event_id}`, {
+          method: 'PUT',
+          body: JSON.stringify(gcalBody),
+        });
+      } else {
+        const gResult = await gcalFetch('/calendars/primary/events', {
+          method: 'POST',
+          body: JSON.stringify(gcalBody),
+        });
+        if (gResult?.id) {
+          if (ev2) ev2.google_event_id = gResult.id;
+          _sb.from('events').update({ google_event_id: gResult.id }).eq('id', eid).eq('user_id', _uid);
+        }
+      }
+    }
   } else {
     const newId = uid();
     events.push({ id: newId, ...data });
     renderCalendar();
     if (activeDayStr) renderDayPanel();
     await _sb.from('events').insert({ id: newId, user_id: _uid, ...data });
+    if (googleConnected) {
+      const gcalBody = buildGcalEvent({ title, date, all_day: allDay, time });
+      const gResult = await gcalFetch('/calendars/primary/events', {
+        method: 'POST',
+        body: JSON.stringify(gcalBody),
+      });
+      if (gResult?.id) {
+        const ev = events.find(x => x.id === newId);
+        if (ev) ev.google_event_id = gResult.id;
+        _sb.from('events').update({ google_event_id: gResult.id }).eq('id', newId).eq('user_id', _uid);
+      }
+    }
   }
 }
 
@@ -921,10 +1017,15 @@ function confirmDeleteEvent() {
 }
 
 async function deleteEvent(eid) {
+  const ev = events.find(e => e.id === eid);
+  const googleEventId = ev?.google_event_id;
   events = events.filter(e => e.id !== eid);
   renderCalendar();
   if (activeDayStr) renderDayPanel();
   await _sb.from('events').delete().eq('id', eid).eq('user_id', _uid);
+  if (googleConnected && googleEventId) {
+    await gcalFetch(`/calendars/primary/events/${googleEventId}`, { method: 'DELETE' });
+  }
 }
 
 // ── MODALS ──
@@ -963,6 +1064,182 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ── GOOGLE CALENDAR FUNCTIONS ──
+function connectGoogle() {
+  const params = new URLSearchParams({
+    client_id:     GCAL_CLIENT_ID,
+    redirect_uri:  GCAL_REDIRECT,
+    response_type: 'code',
+    scope:         GCAL_SCOPE,
+    access_type:   'offline',
+    prompt:        'consent',
+    state:         'gcal_auth',
+  });
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+async function handleGcalCallback(code) {
+  try {
+    const { data, error } = await _sb.functions.invoke('google-oauth-exchange', {
+      body: { code, redirect_uri: GCAL_REDIRECT },
+    });
+    if (error) throw error;
+    if (data?.access_token) {
+      googleAccessToken = data.access_token;
+      googleTokenExpiry = Date.now() + (data.expires_in * 1000);
+      googleConnected   = true;
+      renderGcalSidebar();
+    }
+  } catch (err) {
+    console.error('Google auth failed:', err);
+  }
+}
+
+async function loadGoogleTokens() {
+  const { data } = await _sb.from('google_tokens')
+    .select('access_token, expires_at')
+    .eq('user_id', _uid)
+    .single();
+  if (!data) return;
+  googleAccessToken = data.access_token;
+  googleTokenExpiry = new Date(data.expires_at).getTime();
+  googleConnected   = true;
+  renderGcalSidebar();
+}
+
+async function getValidToken() {
+  if (!googleConnected) return null;
+  if (googleTokenExpiry && Date.now() < googleTokenExpiry - 60000) {
+    return googleAccessToken;
+  }
+  return await refreshGcalToken();
+}
+
+async function refreshGcalToken() {
+  try {
+    const { data, error } = await _sb.functions.invoke('refresh-google-token', {});
+    if (error) throw error;
+    if (data?.access_token) {
+      googleAccessToken = data.access_token;
+      googleTokenExpiry = new Date(data.expires_at).getTime();
+      return googleAccessToken;
+    }
+  } catch (err) {
+    console.error('Token refresh failed:', err);
+    googleConnected = false;
+    renderGcalSidebar();
+  }
+  return null;
+}
+
+async function gcalFetch(path, options = {}) {
+  const token = await getValidToken();
+  if (!token) return null;
+  const makeHeaders = (t) => ({
+    'Authorization': `Bearer ${t}`,
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(options.headers || {}),
+  });
+  const resp = await fetch(`${GCAL_API}${path}`, { ...options, headers: makeHeaders(token) });
+  if (resp.status === 204) return {};
+  if (resp.status === 401) {
+    const newToken = await refreshGcalToken();
+    if (!newToken) return null;
+    const retry = await fetch(`${GCAL_API}${path}`, { ...options, headers: makeHeaders(newToken) });
+    return (retry.status === 204) ? {} : (retry.ok ? retry.json() : null);
+  }
+  return resp.ok ? resp.json() : null;
+}
+
+async function fetchGoogleEvents() {
+  if (!googleConnected) return;
+  let timeMin, timeMax;
+  if (calView === 'month') {
+    timeMin = new Date(viewYear, viewMonth, 1).toISOString();
+    timeMax = new Date(viewYear, viewMonth + 1, 0, 23, 59, 59).toISOString();
+  } else if (calView === 'week' && viewWeekStart) {
+    timeMin = new Date(viewWeekStart).toISOString();
+    const end = new Date(viewWeekStart);
+    end.setDate(end.getDate() + 7);
+    timeMax = end.toISOString();
+  } else if (calView === 'day' && viewDay) {
+    timeMin = new Date(viewDay + 'T00:00:00').toISOString();
+    timeMax = new Date(viewDay + 'T23:59:59').toISOString();
+  } else {
+    return;
+  }
+  const params = new URLSearchParams({
+    singleEvents: 'true',
+    orderBy:      'startTime',
+    timeMin, timeMax,
+    maxResults:   '250',
+  });
+  const data = await gcalFetch(`/calendars/primary/events?${params}`);
+  if (data?.items) {
+    googleEvents = data.items.map(parseGoogleEvent).filter(Boolean);
+  }
+}
+
+function parseGoogleEvent(item) {
+  if (!item.start) return null;
+  const isAllDay = Boolean(item.start.date);
+  const dateStr  = isAllDay ? item.start.date : item.start.dateTime?.split('T')[0];
+  const timeStr  = isAllDay ? null : item.start.dateTime?.split('T')[1]?.slice(0, 5);
+  return {
+    id:      item.id,
+    title:   item.summary || '(No title)',
+    date:    dateStr,
+    all_day: isAllDay,
+    time:    timeStr,
+    google:  true,
+  };
+}
+
+function getGoogleEventsForDay(dateStr) {
+  return googleEvents.filter(e => e.date === dateStr);
+}
+
+function buildGcalEvent(ev) {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (ev.all_day) {
+    return { summary: ev.title, start: { date: ev.date }, end: { date: ev.date } };
+  }
+  const startDT = `${ev.date}T${ev.time}:00`;
+  const [h, m]  = ev.time.split(':').map(Number);
+  const endH    = String((h + 1) % 24).padStart(2, '0');
+  const endDT   = `${ev.date}T${endH}:${String(m).padStart(2, '0')}:00`;
+  return {
+    summary: ev.title,
+    start: { dateTime: startDT, timeZone: tz },
+    end:   { dateTime: endDT,   timeZone: tz },
+  };
+}
+
+async function disconnectGoogle() {
+  googleConnected   = false;
+  googleAccessToken = null;
+  googleTokenExpiry = null;
+  googleEvents      = [];
+  await _sb.from('google_tokens').delete().eq('user_id', _uid);
+  renderGcalSidebar();
+  renderCalendar();
+}
+
+function renderGcalSidebar() {
+  const container = document.getElementById('gcal-sidebar');
+  if (!container) return;
+  if (googleConnected) {
+    container.innerHTML = `
+      <div class="gcal-connected-status">
+        <span class="gcal-status-dot"></span> Connected
+      </div>
+      <button class="sidebar-gcal-btn sidebar-gcal-disconnect" onclick="disconnectGoogle()">Disconnect</button>
+    `;
+  } else {
+    container.innerHTML = `<button class="sidebar-gcal-btn" onclick="connectGoogle()">Connect Google Calendar</button>`;
+  }
+}
+
 // ── INIT ──
 async function init() {
   const { data: { session } } = await _sb.auth.getSession();
@@ -974,6 +1251,15 @@ async function init() {
 
   document.getElementById('sidebar-date-label').textContent =
     today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  // Handle Google OAuth callback
+  const urlParams = new URLSearchParams(window.location.search);
+  const gcalCode  = urlParams.get('code');
+  const gcalState = urlParams.get('state');
+  if (gcalCode && gcalState === 'gcal_auth') {
+    window.history.replaceState({}, '', window.location.pathname);
+    await handleGcalCallback(gcalCode);
+  }
 
   const [tr, lr, gr, er] = await Promise.all([
     _sb.from('tasks').select('id, name, list_id, category_id, priority, due, tags, notes, done').eq('user_id', _uid),
@@ -995,6 +1281,10 @@ async function init() {
     ...e,
     all_day: e.all_day !== false, // default true if column not yet present
   }));
+
+  // Load Google tokens (skip if just connected via OAuth callback)
+  if (!googleConnected) await loadGoogleTokens();
+  if (googleConnected) await fetchGoogleEvents();
 
   renderCalendar();
 }

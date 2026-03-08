@@ -152,7 +152,14 @@
     <!-- Emoji picker -->
     <div class="form-group">
       <label>Emoji</label>
-      <div class="emoji-grid" id="emoji-grid"></div>
+      <div class="emoji-dropdown-wrap" id="emoji-dropdown-wrap">
+        <button type="button" class="emoji-dropdown-trigger" id="emoji-dropdown-trigger"
+                onclick="toggleEmojiDropdown(event)">
+          <span id="emoji-display">⭐</span>
+          <span class="emoji-dropdown-arrow">▼</span>
+        </button>
+        <div class="emoji-dropdown-panel" id="emoji-dropdown-panel"></div>
+      </div>
     </div>
 
     <!-- Color picker -->
@@ -798,16 +805,33 @@ function onTypeChange() {
 }
 
 function renderEmojiPicker() {
-  const grid = document.getElementById('emoji-grid');
-  grid.innerHTML = EMOJIS.map(e =>
+  const panel = document.getElementById('emoji-dropdown-panel');
+  const display = document.getElementById('emoji-display');
+  if (display) display.textContent = selectedEmoji;
+  if (!panel) return;
+  panel.innerHTML = EMOJIS.map(e =>
     `<button type="button" class="emoji-btn${e === selectedEmoji ? ' selected' : ''}"
              onclick="selectEmoji('${e}')">${e}</button>`
   ).join('');
 }
 
+function toggleEmojiDropdown(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('emoji-dropdown-panel');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  if (!isOpen) renderEmojiPicker();
+}
+
+function closeEmojiDropdown() {
+  document.getElementById('emoji-dropdown-panel')?.classList.remove('open');
+}
+
 function selectEmoji(e) {
   selectedEmoji = e;
+  document.getElementById('emoji-display').textContent = e;
   renderEmojiPicker();
+  closeEmojiDropdown();
 }
 
 function renderColorPicker() {
@@ -916,6 +940,7 @@ async function signOut() {
 // ── GLOBAL EVENTS ──
 document.addEventListener('click', e => {
   if (openMenuId && !e.target.closest('.habit-menu-wrap')) closeAllMenus();
+  if (!e.target.closest('#emoji-dropdown-wrap')) closeEmojiDropdown();
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {

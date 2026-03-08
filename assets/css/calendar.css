@@ -741,3 +741,94 @@
   .cal-time-scroll { /* inherits flex:1, no fixed height needed */ }
   .cal-allday-item { font-size: 10px; }
 }
+
+/* ─────────────────────────────────────────
+   GOOGLE CALENDAR INTEGRATION
+───────────────────────────────────────── */
+
+/* G badge — small pill on event items */
+.gcal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #4285F4;
+  color: white;
+  font-size: 8px;
+  font-weight: 700;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  margin-right: 4px;
+  flex-shrink: 0;
+  vertical-align: middle;
+  letter-spacing: 0;
+}
+
+/* Smaller G badge for month view bars */
+.gcal-badge-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #4285F4;
+  color: white;
+  font-size: 7px;
+  font-weight: 700;
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-left: 3px;
+}
+
+/* Google event bar in month view */
+.gcal-bar {
+  background: #4285F418 !important;
+  border-left: 3px solid #4285F4 !important;
+  cursor: default;
+}
+
+/* Sidebar — Google Calendar section */
+.sidebar-gcal-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.sidebar-gcal-btn:hover { border-color: var(--border2); color: var(--text); }
+
+.sidebar-gcal-disconnect {
+  margin-top: 8px;
+  color: var(--p-high);
+  border-color: transparent;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 11px;
+}
+.sidebar-gcal-disconnect:hover { background: transparent; color: var(--p-high); opacity: 0.75; }
+
+/* Connected status line */
+.gcal-connected-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.gcal-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6BCB77;
+  flex-shrink: 0;
+}
