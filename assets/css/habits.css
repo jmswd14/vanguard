@@ -279,31 +279,58 @@
 }
 
 /* ─────────────────────────────────────────
-   EMOJI PICKER
+   EMOJI PICKER — native OS
 ───────────────────────────────────────── */
-.emoji-picker {
+.emoji-native-wrap {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  gap: 12px;
   margin-top: 4px;
 }
 
-.emoji-btn {
-  background: var(--surface2);
-  border: 2px solid transparent;
+.emoji-native-btn {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border: 2px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 18px;
-  width: 38px;
-  height: 38px;
+  background: var(--surface2);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.12s;
+  font-size: 26px;
   line-height: 1;
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  overflow: hidden;
 }
-.emoji-btn:hover { background: var(--surface3); border-color: var(--border2); }
-.emoji-btn.selected { border-color: var(--accent); background: var(--accent-dim); }
+.emoji-native-btn:hover { border-color: var(--border2); background: var(--surface3); }
+.emoji-native-btn:focus-within { border-color: var(--accent); }
+
+/* Transparent overlay input — focusable but invisible */
+.emoji-native-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-size: 26px;
+  padding: 0;
+  outline: none;
+  /* Don't use display:none — it prevents focus on iOS */
+  color: transparent;
+  caret-color: transparent;
+}
+
+.emoji-native-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
 
 /* ─────────────────────────────────────────
    PROGRESS VIEW

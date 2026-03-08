@@ -149,10 +149,19 @@
       </div>
     </div>
 
-    <!-- Emoji picker -->
+    <!-- Emoji picker (native OS) -->
     <div class="form-group">
       <label>Emoji</label>
-      <div class="emoji-picker" id="emoji-picker"></div>
+      <div class="emoji-native-wrap">
+        <button type="button" class="emoji-native-btn" id="emoji-display-btn"
+                title="Click to open emoji picker" onclick="focusEmojiInput()">
+          <span id="emoji-display">⭐</span>
+          <input type="text" id="emoji-native-input" class="emoji-native-input"
+                 autocomplete="off" autocorrect="off" autocapitalize="off"
+                 spellcheck="false" oninput="captureEmoji(this)">
+        </button>
+        <span class="emoji-native-hint">Click, then choose an emoji</span>
+      </div>
     </div>
 
     <!-- Color picker -->
@@ -193,11 +202,6 @@ const HABIT_COLORS = [
   '#7B9EC4','#B87A8A','#C09A50','#5A9B80','#8C7EC0','#B87856',
   '#4E9BAC','#A87860','#A89060','#628E92','#9A5872','#6A9660',
 ];
-const EMOJIS = [
-  '💧','🏃','💤','🥗','📚','🧘','💊','🚶','🍎','☕',
-  '🧠','✏️','🎯','💪','🚿','🌅','🧹','📱','🍷','🚬',
-  '🎮','💰','🥤','🏋️','🚴','🎵','🧴','🏊','🌿','⚡',
-];
 const SUCCESS_COLOR = '#6BCB77';
 const FAIL_COLOR    = '#FF6B6B';
 const EMPTY_COLOR   = 'var(--surface3)';
@@ -214,7 +218,7 @@ let openMenuId      = null;
 // Modal state
 let habitDirection  = 'building';
 let selectedColor   = HABIT_COLORS[0];
-let selectedEmoji   = EMOJIS[0];
+let selectedEmoji   = '⭐';
 
 const today    = new Date();
 const todayStr = today.toISOString().split('T')[0];
@@ -731,7 +735,7 @@ function renderChart(habit) {
 function openNewHabit() {
   habitDirection = 'building';
   selectedColor  = HABIT_COLORS[0];
-  selectedEmoji  = EMOJIS[0];
+  selectedEmoji  = '⭐';
 
   document.getElementById('habit-modal-title').textContent = 'New Habit';
   document.getElementById('editing-habit-id').value = '';
@@ -746,7 +750,7 @@ function openNewHabit() {
 
   setDirection('building');
   populateCategorySelect('habit-category-input', '');
-  renderEmojiPicker();
+  setEmojiDisplay(selectedEmoji);
   renderColorPicker();
   document.getElementById('habit-modal').classList.add('show');
   setTimeout(() => document.getElementById('habit-name-input')?.focus(), 80);
@@ -759,7 +763,7 @@ function openEditHabit(id) {
 
   habitDirection = h.habit_direction || 'building';
   selectedColor  = h.color || HABIT_COLORS[0];
-  selectedEmoji  = h.emoji || EMOJIS[0];
+  selectedEmoji  = h.emoji || '⭐';
 
   document.getElementById('habit-modal-title').textContent = 'Edit Habit';
   document.getElementById('editing-habit-id').value = id;
@@ -774,7 +778,7 @@ function openEditHabit(id) {
 
   setDirection(habitDirection);
   populateCategorySelect('habit-category-input', h.category_id || '');
-  renderEmojiPicker();
+  setEmojiDisplay(selectedEmoji);
   renderColorPicker();
   document.getElementById('habit-modal').classList.add('show');
   setTimeout(() => document.getElementById('habit-name-input')?.focus(), 80);
@@ -794,16 +798,26 @@ function onTypeChange() {
   document.getElementById('numeric-fields').style.display = type === 'numeric' ? '' : 'none';
 }
 
-function renderEmojiPicker() {
-  const picker = document.getElementById('emoji-picker');
-  picker.innerHTML = EMOJIS.map(e =>
-    `<button class="emoji-btn${e === selectedEmoji ? ' selected' : ''}" onclick="selectEmoji('${e}')">${e}</button>`
-  ).join('');
+function setEmojiDisplay(emoji) {
+  selectedEmoji = emoji;
+  const display = document.getElementById('emoji-display');
+  if (display) display.textContent = emoji;
 }
 
-function selectEmoji(e) {
-  selectedEmoji = e;
-  renderEmojiPicker();
+function focusEmojiInput() {
+  const input = document.getElementById('emoji-native-input');
+  if (input) { input.value = ''; input.focus(); }
+}
+
+function captureEmoji(input) {
+  const val = input.value;
+  if (!val) return;
+  // Use spread to correctly handle multi-byte emoji codepoints
+  const chars = [...val];
+  const emoji = chars[0];
+  if (emoji) setEmojiDisplay(emoji);
+  // Clear the input so the next tap captures fresh
+  input.value = '';
 }
 
 function renderColorPicker() {
