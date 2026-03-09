@@ -135,7 +135,7 @@
           <div class="etc-name">Free Write</div>
           <div class="etc-desc">Anything on your mind</div>
         </button>
-        <button class="entry-type-card etc-featured" onclick="openEntryPopup('prompt')">
+        <button class="entry-type-card etc-featured" id="prompt-type-btn" onclick="openEntryPopup('prompt')">
           <div class="etc-icon">✦</div>
           <div class="etc-name">Daily Prompt</div>
           <div class="etc-desc">Today's reflection question</div>
@@ -444,6 +444,27 @@ function renderToday() {
   const todayEntries = entries
     .filter(e => e.created_at && e.created_at.slice(0, 10) === todayStr)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  // Update Daily Prompt button to reflect whether today's prompt has been written
+  const todayPromptEntry = todayEntries.find(e => e.type === 'prompt');
+  const promptBtn = document.getElementById('prompt-type-btn');
+  if (promptBtn) {
+    if (todayPromptEntry) {
+      promptBtn.className = 'entry-type-card etc-featured etc-done';
+      promptBtn.onclick = () => openEntryPopup(null, todayPromptEntry.id);
+      promptBtn.innerHTML = `
+        <div class="etc-icon">✓</div>
+        <div class="etc-name">Daily Prompt ✓</div>
+        <div class="etc-desc">Continue today's entry</div>`;
+    } else {
+      promptBtn.className = 'entry-type-card etc-featured';
+      promptBtn.onclick = () => openEntryPopup('prompt');
+      promptBtn.innerHTML = `
+        <div class="etc-icon">✦</div>
+        <div class="etc-name">Daily Prompt</div>
+        <div class="etc-desc">Today's reflection question</div>`;
+    }
+  }
 
   const container = document.getElementById('today-entries');
 

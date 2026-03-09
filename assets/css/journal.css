@@ -38,6 +38,22 @@
   border-color: rgba(232, 213, 176, 0.4);
   background: rgba(232, 213, 176, 0.04);
 }
+.entry-type-card.etc-done {
+  border-color: rgba(232, 213, 176, 0.15);
+  opacity: 0.72;
+}
+.entry-type-card.etc-done:hover {
+  border-color: rgba(232, 213, 176, 0.3);
+  background: rgba(232, 213, 176, 0.03);
+  opacity: 1;
+}
+.entry-type-card.etc-done .etc-icon {
+  color: var(--accent);
+  opacity: 0.6;
+}
+.entry-type-card.etc-done .etc-name {
+  color: var(--text-dim);
+}
 
 .etc-icon {
   font-size: 20px;
