@@ -1,3 +1,7 @@
+// IMPORTANT: This function must have "Verify JWT with legacy secret" set to OFF in Supabase Dashboard
+// Edge Functions → refresh-google-token → Details → Verify JWT = OFF
+// This setting resets to ON on every redeploy — must be manually turned off after each deployment
+
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
