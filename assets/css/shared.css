@@ -608,3 +608,48 @@ select option { background: var(--surface2); }
 
   .rs-mobile-btn { display: flex; }
 }
+
+/* ════════════════════════════════════════
+   LEFT-ONLY LAYOUT (left sidebar, no right)
+════════════════════════════════════════ */
+
+.left-only .content {
+  margin-left: 220px;
+  margin-right: 0;
+  max-width: none;
+  padding: 48px 56px;
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.app.ls-collapsed.left-only .content { margin-left: 60px; }
+
+@media (max-width: 1080px) {
+  .left-only .content { padding: 40px 32px; }
+}
+
+@media (max-width: 768px) {
+  .left-only .content {
+    margin-left: 0 !important;
+    padding: 64px 20px 48px;
+    transition: none;
+  }
+}
+
+/* ════════════════════════════════════════
+   RIGHT SIDEBAR — generic body collapsed rules
+   (shared across all apps with right sidebar)
+════════════════════════════════════════ */
+
+.right-sidebar.rs-collapsed .sidebar-section        { height: 0; padding: 0; opacity: 0; overflow: hidden; }
+.right-sidebar.rs-collapsed .sidebar-divider        { display: none; }
+.right-sidebar.rs-collapsed .sidebar-item           { padding: 9px 0; justify-content: center; }
+.right-sidebar.rs-collapsed .sidebar-item-left > :not(.sidebar-icon) { display: none; }
+.right-sidebar.rs-collapsed .sidebar-count          { display: none; }
+
+/* Restore labels when sidebar slides open on mobile */
+@media (max-width: 768px) {
+  .right-sidebar.rs-collapsed.mobile-open .sidebar-section        { height: auto; padding: 20px 24px 8px; opacity: 1; overflow: visible; }
+  .right-sidebar.rs-collapsed.mobile-open .sidebar-divider        { display: block; }
+  .right-sidebar.rs-collapsed.mobile-open .sidebar-item           { padding: 10px 24px; justify-content: space-between; }
+  .right-sidebar.rs-collapsed.mobile-open .sidebar-item-left > :not(.sidebar-icon) { display: inline; }
+  .right-sidebar.rs-collapsed.mobile-open .sidebar-count          { display: inline-flex; }
+}

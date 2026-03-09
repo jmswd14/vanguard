@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="Habits">
 <link rel="apple-touch-icon" href="/vanguard/apple-touch-icon.png">
 <link rel="manifest" href="/vanguard/manifest.json">
-<title>Habits — Portal</title>
+<title>Habits — Vanguard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/shared.css">
@@ -16,79 +16,143 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/js/supabase-client.js"></script>
 <body>
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
-<button class="hamburger" onclick="toggleSidebar()">☰</button>
 
-<div class="app">
+<!-- Overlay (mobile: covers content behind open sidebars) -->
+<div class="overlay" id="overlay" onclick="closeMobileMenus()"></div>
 
-<!-- SIDEBAR -->
-<nav class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <h1>Habits</h1>
-    <p id="sidebar-date-label"></p>
-  </div>
+<!-- Mobile toggles -->
+<button class="hamburger" onclick="openLeftMobile()" title="Menu">☰</button>
+<button class="rs-mobile-btn" onclick="openRightMobile()" title="Views">◉</button>
 
-  <div class="sidebar-section">Views</div>
-  <div class="sidebar-item active" id="nav-today" onclick="setView('today', this)">
-    <div class="sidebar-item-left"><span class="sidebar-icon">◎</span> Today</div>
-  </div>
-  <div class="sidebar-item" id="nav-progress" onclick="setView('progress', this)">
-    <div class="sidebar-item-left"><span class="sidebar-icon">◈</span> Progress</div>
-  </div>
+<div class="app dual-sidebar" id="app">
 
-  <div class="sidebar-footer">
-    <a href="../index.html">← All Apps</a>
-    <span class="sidebar-signout" onclick="signOut()">Sign out</span>
-  </div>
-</nav>
+  <!-- ── LEFT SIDEBAR — global nav ── -->
+  <nav class="left-sidebar" id="left-sidebar">
+    <div class="left-sidebar-brand">
+      <h1 class="ls-wordmark">
+        <span class="ls-brand-full">Vanguard</span>
+        <span class="ls-brand-short">V</span>
+      </h1>
+      <button class="ls-collapse-btn" id="ls-collapse-btn" onclick="toggleLeftCollapse()" title="Collapse sidebar">‹</button>
+    </div>
 
-<!-- CONTENT -->
-<main class="content">
+    <div class="left-nav">
+      <a class="left-nav-item" href="../index.html">
+        <span class="left-nav-icon">⊞</span>
+        <span class="left-nav-label">Dashboard</span>
+      </a>
+      <a class="left-nav-item" href="../tasks/index.html">
+        <span class="left-nav-icon">☑</span>
+        <span class="left-nav-label">Tasks</span>
+      </a>
+      <a class="left-nav-item" href="../calendar/index.html">
+        <span class="left-nav-icon">◫</span>
+        <span class="left-nav-label">Calendar</span>
+      </a>
+      <a class="left-nav-item active" href="index.html">
+        <span class="left-nav-icon">◉</span>
+        <span class="left-nav-label">Habits</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">✦</span>
+        <span class="left-nav-label">Journal</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◎</span>
+        <span class="left-nav-label">Goals</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◈</span>
+        <span class="left-nav-label">Finance</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">⚙</span>
+        <span class="left-nav-label">Settings</span>
+      </a>
+    </div>
 
-  <!-- ── TODAY VIEW ── -->
-  <div id="view-today">
-    <div class="topbar">
-      <div class="topbar-left">
-        <div class="date-nav">
-          <button class="date-nav-btn" onclick="shiftDate(-1)" title="Previous day">‹</button>
-          <div>
-            <h2 id="today-heading">Today</h2>
-            <p id="today-subheading"></p>
-          </div>
-          <button class="date-nav-btn" onclick="shiftDate(1)" title="Next day">›</button>
+    <div class="left-sidebar-footer">
+      <span class="ls-signout" onclick="signOut()">Sign out</span>
+    </div>
+  </nav>
+
+  <!-- ── RIGHT SIDEBAR — app nav ── -->
+  <nav class="right-sidebar" id="right-sidebar">
+    <div class="right-sidebar-header">
+      <button class="rs-collapse-btn" id="rs-collapse-btn" onclick="toggleRightCollapse()" title="Collapse sidebar">›</button>
+      <div class="rs-header-text">
+        <h2>Habits</h2>
+        <p class="rs-header-date" id="sidebar-date-label"></p>
+      </div>
+      <span class="rs-header-icon">◉</span>
+    </div>
+
+    <div class="right-sidebar-body">
+      <div class="sidebar-section">Views</div>
+
+      <div class="sidebar-item active" id="nav-today" onclick="setView('today', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">◎</span>
+          <span class="rs-nav-label">Today</span>
         </div>
       </div>
-      <div class="topbar-right">
-        <button class="btn btn-primary" onclick="openNewHabit()">+ New Habit</button>
+
+      <div class="sidebar-item" id="nav-progress" onclick="setView('progress', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">◈</span>
+          <span class="rs-nav-label">Progress</span>
+        </div>
       </div>
     </div>
+  </nav>
 
-    <div id="habits-list"></div>
-  </div>
+  <!-- ── MAIN CONTENT ── -->
+  <main class="content">
 
-  <!-- ── PROGRESS VIEW ── -->
-  <div id="view-progress" style="display:none;">
-    <div class="topbar">
-      <div class="topbar-left">
-        <h2>Progress</h2>
-        <p id="progress-subheading"></p>
+    <!-- ── TODAY VIEW ── -->
+    <div id="view-today">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="date-nav">
+            <button class="date-nav-btn" onclick="shiftDate(-1)" title="Previous day">‹</button>
+            <div>
+              <h2 id="today-heading">Today</h2>
+              <p id="today-subheading"></p>
+            </div>
+            <button class="date-nav-btn" onclick="shiftDate(1)" title="Next day">›</button>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-primary" onclick="openNewHabit()">+ New Habit</button>
+        </div>
       </div>
+
+      <div id="habits-list"></div>
     </div>
 
-    <div class="progress-selector-wrap">
-      <label class="progress-selector-label">Habit</label>
-      <div class="sort-select-wrap">
-        <select id="progress-habit-select" onchange="selectProgressHabit(this.value)">
-          <option value="all">All Habits</option>
-        </select>
-        <span class="sort-select-arrow">▼</span>
+    <!-- ── PROGRESS VIEW ── -->
+    <div id="view-progress" style="display:none;">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2>Progress</h2>
+          <p id="progress-subheading"></p>
+        </div>
       </div>
+
+      <div class="progress-selector-wrap">
+        <label class="progress-selector-label">Habit</label>
+        <div class="sort-select-wrap">
+          <select id="progress-habit-select" onchange="selectProgressHabit(this.value)">
+            <option value="all">All Habits</option>
+          </select>
+          <span class="sort-select-arrow">▼</span>
+        </div>
+      </div>
+
+      <div id="progress-body"></div>
     </div>
 
-    <div id="progress-body"></div>
-  </div>
-
-</main>
+  </main>
 </div>
 
 <!-- ── MODALS ── -->
@@ -104,7 +168,6 @@
       <input type="text" id="habit-name-input" placeholder="e.g. Drink water, No sugar...">
     </div>
 
-    <!-- Building / Breaking toggle -->
     <div class="form-group">
       <label>Direction</label>
       <div class="direction-toggle" id="direction-toggle">
@@ -135,7 +198,6 @@
       </div>
     </div>
 
-    <!-- Numeric target (shown when type = numeric) -->
     <div id="numeric-fields" style="display:none;">
       <div class="form-row">
         <div class="form-group">
@@ -149,7 +211,6 @@
       </div>
     </div>
 
-    <!-- Emoji picker -->
     <div class="form-group">
       <label>Emoji</label>
       <div class="emoji-dropdown-wrap" id="emoji-dropdown-wrap">
@@ -162,7 +223,6 @@
       </div>
     </div>
 
-    <!-- Color picker -->
     <div class="form-group">
       <label>Color</label>
       <div class="list-color-picker" id="habit-color-picker"></div>
@@ -221,7 +281,6 @@ let selectedDate    = new Date().toISOString().split('T')[0];
 let progressHabitId = 'all';
 let openMenuId      = null;
 
-// Modal state
 let habitDirection  = 'building';
 let selectedColor   = HABIT_COLORS[0];
 let selectedEmoji   = '⭐';
@@ -238,8 +297,6 @@ function getLog(habitId, dateStr) {
 }
 
 function isSuccess(habit, log) {
-  // Breaking with no log = success (didn't do the bad thing)
-  // Building with no log = failure
   if (!log) return habit.habit_direction === 'breaking';
   if (habit.type === 'yes_no') {
     return habit.habit_direction === 'building' ? !!log.completed : !log.completed;
@@ -317,6 +374,7 @@ function setView(view, el) {
   if (el) el.classList.add('active');
   if (view === 'today')    renderToday();
   if (view === 'progress') renderProgress();
+  closeMobileMenus();
 }
 
 // ── DATE NAVIGATION ──
@@ -473,7 +531,6 @@ function closeAllMenus() {
 
 // ── PROGRESS RENDER ──
 function renderProgress() {
-  // populate habit selector
   const sel = document.getElementById('progress-habit-select');
   sel.innerHTML = '<option value="all">All Habits</option>' +
     habits.map(h => `<option value="${h.id}"${h.id === progressHabitId ? ' selected' : ''}>${h.emoji || ''} ${h.name}</option>`).join('');
@@ -491,14 +548,12 @@ function renderProgress() {
   let html = '';
 
   if (target) {
-    // Single habit: full analytics
     html += renderStatCards(target);
     html += `<div class="progress-section-label">Last 365 days</div>`;
     html += renderHeatmap(target);
     html += `<div class="progress-section-label" style="margin-top:32px;">Last 30 days</div>`;
     html += renderChart(target);
   } else {
-    // All habits: stat cards grid
     html += `<div class="all-habits-grid">`;
     habits.forEach(h => {
       const rate  = completionRate(h);
@@ -564,7 +619,6 @@ function renderStatCards(habit) {
 
 // ── HEATMAP ──
 function renderHeatmap(habit) {
-  // Build 365 days of cells, organized into weeks (columns)
   const cells = [];
   for (let i = 364; i >= 0; i--) {
     const d   = addDays(todayStr, -i);
@@ -574,17 +628,14 @@ function renderHeatmap(habit) {
     cells.push({ d, suc, hasLog });
   }
 
-  // Pad to start on Sunday
-  const firstDay = new Date(cells[0].d + 'T00:00:00').getDay(); // 0=Sun
+  const firstDay = new Date(cells[0].d + 'T00:00:00').getDay();
   const padded = Array(firstDay).fill(null).concat(cells);
 
-  // Group into weeks
   const weeks = [];
   for (let i = 0; i < padded.length; i += 7) {
     weeks.push(padded.slice(i, i + 7));
   }
 
-  // Month labels: find first occurrence of each month in weeks
   const monthLabels = [];
   let lastMonth = -1;
   weeks.forEach((week, wi) => {
@@ -607,9 +658,6 @@ function renderHeatmap(habit) {
       if (!cell.hasLog && habit.habit_direction !== 'breaking') {
         bg = 'var(--surface3)';
       } else {
-        bg = cell.suc ? SUCCESS_COLOR : FAIL_COLOR;
-        // For building with no log — already handled above
-        // Adjust opacity based on numeric progress
         bg = cell.suc ? SUCCESS_COLOR : FAIL_COLOR;
       }
       const opacity = cell.hasLog || habit.habit_direction === 'breaking' ? '1' : '0.18';
@@ -646,7 +694,6 @@ function renderHeatmap(habit) {
 }
 
 function renderMiniHeatmap(habit) {
-  // 12 weeks mini heatmap
   const cells = [];
   for (let i = 83; i >= 0; i--) {
     const d   = addDays(todayStr, -i);
@@ -673,7 +720,6 @@ function renderChart(habit) {
   const cH  = H - pad.top  - pad.bottom;
   const bW  = Math.max(6, (cW / days) - 2);
 
-  // Find max for numeric scale
   let maxVal = 1;
   if (habit.type === 'numeric') {
     maxVal = Math.max(
@@ -681,7 +727,7 @@ function renderChart(habit) {
       ...data.map(d => d.log?.value || 0),
       1,
     );
-    maxVal = maxVal * 1.2; // headroom
+    maxVal = maxVal * 1.2;
   }
 
   let bars = '', targetLine = '', xLabels = '';
@@ -708,13 +754,11 @@ function renderChart(habit) {
     <text x="${pad.left + cW + 2}" y="${(ty + 3).toFixed(1)}" font-size="9" fill="var(--text-muted)" font-family="var(--font-sans)">${habit.target_value}</text>`;
   }
 
-  // x-axis labels every ~5 days
   for (let i = 0; i < days; i += 5) {
     const x = pad.left + (i / days) * cW;
     xLabels += `<text x="${x.toFixed(1)}" y="${H - 4}" font-size="9" fill="var(--text-muted)" font-family="var(--font-sans)">${fmtDateShort(data[i].d)}</text>`;
   }
 
-  // y-axis
   let yAxis = '';
   const steps = 4;
   for (let i = 0; i <= steps; i++) {
@@ -794,7 +838,6 @@ function setDirection(dir) {
   habitDirection = dir;
   document.getElementById('dir-building').classList.toggle('active', dir === 'building');
   document.getElementById('dir-breaking').classList.toggle('active', dir === 'breaking');
-  // Update target label
   const label = document.getElementById('target-label');
   if (label) label.textContent = dir === 'breaking' ? 'Goal (max)' : 'Target';
 }
@@ -921,22 +964,6 @@ async function deleteHabit(id) {
 function openModal(id)  { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// ── MOBILE ──
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
-}
-
-// ── SIGN OUT ──
-async function signOut() {
-  await _sb.auth.signOut();
-  window.location.href = '../login.html';
-}
-
 // ── GLOBAL EVENTS ──
 document.addEventListener('click', e => {
   if (openMenuId && !e.target.closest('.habit-menu-wrap')) closeAllMenus();
@@ -948,6 +975,12 @@ document.addEventListener('keydown', e => {
     closeAllMenus();
   }
 });
+
+// ── SIGN OUT ──
+async function signOut() {
+  await _sb.auth.signOut();
+  window.location.href = '../login.html';
+}
 
 // ── INIT ──
 async function init() {
@@ -973,5 +1006,63 @@ async function init() {
 
 init();
 </script>
+
+<script>
+// ── SIDEBAR STATE ─────────────────────────────────────────────────────────────
+// Runs after main script; overrides any old toggleSidebar/closeSidebar.
+
+const _app          = document.getElementById('app');
+const _leftSidebar  = document.getElementById('left-sidebar');
+const _rightSidebar = document.getElementById('right-sidebar');
+const _overlay      = document.getElementById('overlay');
+
+(function restoreState() {
+  if (localStorage.getItem('vg-ls-collapsed') === 'true') {
+    _leftSidebar.classList.add('ls-collapsed');
+    _app.classList.add('ls-collapsed');
+    document.getElementById('ls-collapse-btn').textContent = '›';
+  }
+  if (localStorage.getItem('vg-rs-collapsed') === 'true') {
+    _rightSidebar.classList.add('rs-collapsed');
+    _app.classList.add('rs-collapsed');
+    document.getElementById('rs-collapse-btn').textContent = '‹';
+  }
+})();
+
+function toggleLeftCollapse() {
+  const collapsed = _leftSidebar.classList.toggle('ls-collapsed');
+  _app.classList.toggle('ls-collapsed', collapsed);
+  document.getElementById('ls-collapse-btn').textContent = collapsed ? '›' : '‹';
+  localStorage.setItem('vg-ls-collapsed', collapsed);
+}
+
+function toggleRightCollapse() {
+  const collapsed = _rightSidebar.classList.toggle('rs-collapsed');
+  _app.classList.toggle('rs-collapsed', collapsed);
+  document.getElementById('rs-collapse-btn').textContent = collapsed ? '‹' : '›';
+  localStorage.setItem('vg-rs-collapsed', collapsed);
+}
+
+function openLeftMobile() {
+  _leftSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function openRightMobile() {
+  _rightSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function closeMobileMenus() {
+  _leftSidebar.classList.remove('mobile-open');
+  _rightSidebar.classList.remove('mobile-open');
+  _overlay.classList.remove('show');
+}
+
+// Override functions defined in the main script above
+function toggleSidebar() { openRightMobile(); }
+function closeSidebar()  { closeMobileMenus(); }
+</script>
+
 </body>
 </html>

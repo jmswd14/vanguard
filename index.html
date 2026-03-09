@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="Portal">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.json">
-<title>Portal</title>
+<title>Dashboard — Vanguard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/shared.css">
@@ -17,58 +17,79 @@
 </head>
 <body>
 
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
-<button class="hamburger" onclick="toggleSidebar()">☰</button>
+<!-- Overlay (mobile: covers content behind open sidebar) -->
+<div class="overlay" id="overlay" onclick="closeMobileMenus()"></div>
 
-<div class="app">
+<!-- Mobile toggle -->
+<button class="hamburger" onclick="openLeftMobile()" title="Menu">☰</button>
 
-<!-- SIDEBAR -->
-<nav class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <h1>Portal</h1>
-    <p id="sidebar-date"></p>
-  </div>
+<div class="app left-only" id="app">
 
-  <div class="sidebar-section">Apps</div>
-  <a class="sidebar-item" href="tasks/index.html">
-    <span class="sidebar-item-left"><span class="sidebar-icon">☑</span> Tasks</span>
-  </a>
-  <a class="sidebar-item" href="habits/index.html">
-    <span class="sidebar-item-left"><span class="sidebar-icon">◉</span> Habits</span>
-  </a>
-  <a class="sidebar-item" href="calendar/index.html">
-    <span class="sidebar-item-left"><span class="sidebar-icon">◫</span> Calendar</span>
-  </a>
-  <a class="sidebar-item disabled" href="#" style="opacity:0.35;pointer-events:none">
-    <span class="sidebar-item-left"><span class="sidebar-icon">✦</span> Journal</span>
-  </a>
-  <a class="sidebar-item disabled" href="#" style="opacity:0.35;pointer-events:none">
-    <span class="sidebar-item-left"><span class="sidebar-icon">◎</span> Goals</span>
-  </a>
-  <a class="sidebar-item disabled" href="#" style="opacity:0.35;pointer-events:none">
-    <span class="sidebar-item-left"><span class="sidebar-icon">◈</span> Finance</span>
-  </a>
-
-  <div class="sidebar-footer">
-    <span class="sidebar-signout" onclick="signOut()">Sign out</span>
-  </div>
-</nav>
-
-<!-- CONTENT -->
-<main class="content">
-  <div class="dash-topbar">
-    <div class="dash-topbar-left">
-      <h2>Dashboard</h2>
-      <p id="dash-date"></p>
+  <!-- ── LEFT SIDEBAR — global nav ── -->
+  <nav class="left-sidebar" id="left-sidebar">
+    <div class="left-sidebar-brand">
+      <h1 class="ls-wordmark">
+        <span class="ls-brand-full">Vanguard</span>
+        <span class="ls-brand-short">V</span>
+      </h1>
+      <button class="ls-collapse-btn" id="ls-collapse-btn" onclick="toggleLeftCollapse()" title="Collapse sidebar">‹</button>
     </div>
-    <div class="dash-topbar-right">
-      <button class="add-widget-btn" id="add-widget-btn" onclick="openAddPanel()">+ Add widget</button>
-      <button class="edit-btn" id="edit-btn" onclick="toggleEditMode()">Customise</button>
-    </div>
-  </div>
 
-  <div class="widget-grid" id="widget-grid"></div>
-</main>
+    <div class="left-nav">
+      <a class="left-nav-item active" href="index.html">
+        <span class="left-nav-icon">⊞</span>
+        <span class="left-nav-label">Dashboard</span>
+      </a>
+      <a class="left-nav-item" href="tasks/index.html">
+        <span class="left-nav-icon">☑</span>
+        <span class="left-nav-label">Tasks</span>
+      </a>
+      <a class="left-nav-item" href="calendar/index.html">
+        <span class="left-nav-icon">◫</span>
+        <span class="left-nav-label">Calendar</span>
+      </a>
+      <a class="left-nav-item" href="habits/index.html">
+        <span class="left-nav-icon">◉</span>
+        <span class="left-nav-label">Habits</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">✦</span>
+        <span class="left-nav-label">Journal</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◎</span>
+        <span class="left-nav-label">Goals</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◈</span>
+        <span class="left-nav-label">Finance</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">⚙</span>
+        <span class="left-nav-label">Settings</span>
+      </a>
+    </div>
+
+    <div class="left-sidebar-footer">
+      <span class="ls-signout" onclick="signOut()">Sign out</span>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="content">
+    <div class="dash-topbar">
+      <div class="dash-topbar-left">
+        <h2>Dashboard</h2>
+        <p id="dash-date"></p>
+      </div>
+      <div class="dash-topbar-right">
+        <button class="add-widget-btn" id="add-widget-btn" onclick="openAddPanel()">+ Add widget</button>
+        <button class="edit-btn" id="edit-btn" onclick="toggleEditMode()">Customise</button>
+      </div>
+    </div>
+
+    <div class="widget-grid" id="widget-grid"></div>
+  </main>
 
 </div>
 
@@ -173,7 +194,6 @@ async function init() {
   const today = new Date();
   todayStr = today.toISOString().split('T')[0];
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  document.getElementById('sidebar-date').textContent = dateStr;
   document.getElementById('dash-date').textContent = dateStr;
 
   await loadLayout();
@@ -195,13 +215,12 @@ async function loadLayout() {
     if (!error && data && data.length > 0) {
       widgets = data;
     } else {
-      // First-time user: seed default layout
       widgets = DEFAULT_LAYOUT.map(w => ({
         ...w,
         id: crypto.randomUUID(),
         user_id: currentUser.id,
       }));
-      saveLayout(); // fire and forget
+      saveLayout();
     }
   } catch (e) {
     widgets = DEFAULT_LAYOUT.map(w => ({
@@ -259,7 +278,6 @@ function createWidgetEl(widget, idx) {
     </div>
   `;
 
-  // Drag and drop
   div.addEventListener('dragstart', e => {
     if (!editMode) { e.preventDefault(); return; }
     dragSrcIdx = idx;
@@ -527,7 +545,7 @@ async function toggleHabit(habitId, el) {
       });
     }
   } catch (e) {
-    el.classList.toggle('checked'); // revert on error
+    el.classList.toggle('checked');
     console.error('Toggle habit error:', e);
   }
 }
@@ -618,14 +636,12 @@ async function loadHabitStreaks(widget) {
       return;
     }
 
-    // Build sets of completed dates per habit
     const logsByHabit = {};
     (logs || []).forEach(l => {
       if (!logsByHabit[l.habit_id]) logsByHabit[l.habit_id] = new Set();
       logsByHabit[l.habit_id].add(l.date);
     });
 
-    // Calculate streak: consecutive days from today backwards
     const habitsWithStreaks = habits.map(h => {
       const dates = logsByHabit[h.id] || new Set();
       let streak = 0;
@@ -761,15 +777,35 @@ async function signOut() {
   window.location.href = 'login.html';
 }
 
-// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+// ── LEFT SIDEBAR ──────────────────────────────────────────────────────────────
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
+const _app         = document.getElementById('app');
+const _leftSidebar = document.getElementById('left-sidebar');
+const _overlay     = document.getElementById('overlay');
+
+(function restoreState() {
+  if (localStorage.getItem('vg-ls-collapsed') === 'true') {
+    _leftSidebar.classList.add('ls-collapsed');
+    _app.classList.add('ls-collapsed');
+    document.getElementById('ls-collapse-btn').textContent = '›';
+  }
+})();
+
+function toggleLeftCollapse() {
+  const collapsed = _leftSidebar.classList.toggle('ls-collapsed');
+  _app.classList.toggle('ls-collapsed', collapsed);
+  document.getElementById('ls-collapse-btn').textContent = collapsed ? '›' : '‹';
+  localStorage.setItem('vg-ls-collapsed', collapsed);
 }
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
+
+function openLeftMobile() {
+  _leftSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function closeMobileMenus() {
+  _leftSidebar.classList.remove('mobile-open');
+  _overlay.classList.remove('show');
 }
 
 init();

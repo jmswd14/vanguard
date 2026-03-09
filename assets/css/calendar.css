@@ -832,3 +832,36 @@
   background: #6BCB77;
   flex-shrink: 0;
 }
+
+/* ── RIGHT SIDEBAR — view switcher ── */
+.cal-sidebar-view-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 16px 10px;
+}
+
+.cal-sidebar-view-btns .cal-view-btn {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  width: 100%;
+}
+.cal-sidebar-view-btns .cal-view-btn:last-child { border-right: 1px solid var(--border); }
+.cal-sidebar-view-btns .cal-view-btn.active {
+  background: rgba(232,213,176,0.12);
+  background: var(--accent-dim);
+  color: var(--text);
+  border-color: transparent;
+}
+
+/* Gcal section padding in right sidebar */
+.gcal-sidebar-body {
+  padding: 6px 16px 12px;
+}
+
+/* When right sidebar is collapsed, hide view buttons and gcal body */
+.right-sidebar.rs-collapsed .cal-sidebar-view-btns { display: none; }
+.right-sidebar.rs-collapsed .gcal-sidebar-body      { display: none; }

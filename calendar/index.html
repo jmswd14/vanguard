@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-title" content="Calendar">
 <link rel="apple-touch-icon" href="/vanguard/apple-touch-icon.png">
 <link rel="manifest" href="/vanguard/manifest.json">
-<title>Calendar — Portal</title>
+<title>Calendar — Vanguard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/shared.css">
@@ -16,61 +16,107 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/js/supabase-client.js"></script>
 <body>
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
-<button class="hamburger" onclick="toggleSidebar()">☰</button>
 
-<div class="app">
+<!-- Overlay (mobile: covers content behind open sidebars) -->
+<div class="overlay" id="overlay" onclick="closeMobileMenus()"></div>
 
-<!-- SIDEBAR -->
-<nav class="sidebar" id="sidebar">
-  <div class="sidebar-logo">
-    <h1>Calendar</h1>
-    <p id="sidebar-date-label"></p>
-  </div>
+<!-- Mobile toggles -->
+<button class="hamburger" onclick="openLeftMobile()" title="Menu">☰</button>
+<button class="rs-mobile-btn" onclick="openRightMobile()" title="View &amp; Integrations">◫</button>
 
-  <div class="sidebar-section">Navigation</div>
-  <div class="sidebar-item active">
-    <div class="sidebar-item-left"><span class="sidebar-icon">◫</span> Calendar</div>
-  </div>
+<div class="app dual-sidebar" id="app">
 
-  <hr class="sidebar-divider">
+  <!-- ── LEFT SIDEBAR — global nav ── -->
+  <nav class="left-sidebar" id="left-sidebar">
+    <div class="left-sidebar-brand">
+      <h1 class="ls-wordmark">
+        <span class="ls-brand-full">Vanguard</span>
+        <span class="ls-brand-short">V</span>
+      </h1>
+      <button class="ls-collapse-btn" id="ls-collapse-btn" onclick="toggleLeftCollapse()" title="Collapse sidebar">‹</button>
+    </div>
 
-  <div class="sidebar-section">Apps</div>
-  <a class="sidebar-add-list" href="../tasks/index.html" style="text-decoration:none;color:inherit;">
-    <span style="font-size:14px;">☑</span> Tasks
-  </a>
+    <div class="left-nav">
+      <a class="left-nav-item" href="../index.html">
+        <span class="left-nav-icon">⊞</span>
+        <span class="left-nav-label">Dashboard</span>
+      </a>
+      <a class="left-nav-item" href="../tasks/index.html">
+        <span class="left-nav-icon">☑</span>
+        <span class="left-nav-label">Tasks</span>
+      </a>
+      <a class="left-nav-item active" href="index.html">
+        <span class="left-nav-icon">◫</span>
+        <span class="left-nav-label">Calendar</span>
+      </a>
+      <a class="left-nav-item" href="../habits/index.html">
+        <span class="left-nav-icon">◉</span>
+        <span class="left-nav-label">Habits</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">✦</span>
+        <span class="left-nav-label">Journal</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◎</span>
+        <span class="left-nav-label">Goals</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◈</span>
+        <span class="left-nav-label">Finance</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">⚙</span>
+        <span class="left-nav-label">Settings</span>
+      </a>
+    </div>
 
-  <hr class="sidebar-divider">
-  <div class="sidebar-section">Integrations</div>
-  <div id="gcal-sidebar" style="padding:0 16px 12px;">
-    <button class="sidebar-gcal-btn" onclick="connectGoogle()">Connect Google Calendar</button>
-  </div>
+    <div class="left-sidebar-footer">
+      <span class="ls-signout" onclick="signOut()">Sign out</span>
+    </div>
+  </nav>
 
-  <div class="sidebar-footer">
-    <a href="../index.html">← All Apps</a>
-    <span class="sidebar-signout" onclick="signOut()">Sign out</span>
-  </div>
-</nav>
+  <!-- ── RIGHT SIDEBAR — app nav ── -->
+  <nav class="right-sidebar" id="right-sidebar">
+    <div class="right-sidebar-header">
+      <button class="rs-collapse-btn" id="rs-collapse-btn" onclick="toggleRightCollapse()" title="Collapse sidebar">›</button>
+      <div class="rs-header-text">
+        <h2>Calendar</h2>
+        <p class="rs-header-date" id="sidebar-date-label"></p>
+      </div>
+      <span class="rs-header-icon">◫</span>
+    </div>
 
-<!-- MAIN CONTENT -->
-<main class="content">
-  <div class="cal-topbar">
-    <h2 class="cal-period-label" id="cal-period-label"></h2>
-    <div class="cal-topbar-right">
-      <div class="cal-view-switcher">
+    <div class="right-sidebar-body">
+      <div class="sidebar-section">View</div>
+      <div class="cal-sidebar-view-btns">
         <button class="cal-view-btn active" id="view-btn-month" onclick="switchView('month')">Month</button>
         <button class="cal-view-btn" id="view-btn-week" onclick="switchView('week')">Week</button>
         <button class="cal-view-btn" id="view-btn-day" onclick="switchView('day')">Day</button>
       </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">Integrations</div>
+      <div id="gcal-sidebar" class="gcal-sidebar-body">
+        <button class="sidebar-gcal-btn" onclick="connectGoogle()">Connect Google Calendar</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="content">
+    <div class="cal-topbar">
+      <h2 class="cal-period-label" id="cal-period-label"></h2>
       <div class="cal-nav-right">
         <button class="cal-nav-btn" onclick="prevPeriod()" title="Previous">‹</button>
         <button class="cal-nav-btn cal-today-btn" onclick="goToToday()">Today</button>
         <button class="cal-nav-btn" onclick="nextPeriod()" title="Next">›</button>
       </div>
     </div>
-  </div>
-  <div id="cal-grid"></div>
-</main>
+    <div id="cal-grid"></div>
+  </main>
+
 </div>
 
 <!-- DAY PANEL (month view only) -->
@@ -241,19 +287,18 @@ const TAG_COLORS = [
 // ── DATA ──
 let tasks      = [];
 let events     = [];
-let categories = []; // DB table: lists
+let categories = [];
 let tags       = [];
 
 // ── CALENDAR VIEW STATE ──
-// NOTE: Week start day is Sunday (0). Will be made user-configurable later.
 const WEEK_START_DAY = 0;
-const HOUR_HEIGHT    = 64; // px per hour in week/day view
+const HOUR_HEIGHT    = 64;
 
 let calView       = 'month';
-let viewYear, viewMonth;         // month view
-let viewWeekStart = null;        // Date object (Sunday), week view
-let viewDay       = null;        // dateStr, day view
-let activeDayStr  = null;        // open day panel (month view)
+let viewYear, viewMonth;
+let viewWeekStart = null;
+let viewDay       = null;
+let activeDayStr  = null;
 
 // ── TASK EDIT STATE ──
 let selectedTaskTags = [];
@@ -288,7 +333,6 @@ function fmtDate(year, month, day) {
 }
 
 // ── TIME UTILS ──
-// Convert 24h "HH:MM" or "HH:MM:SS" to { hhmm: "HH:MM", ampm: "AM"|"PM" }
 function timeFromDb(timeStr) {
   if (!timeStr) return { hhmm: '', ampm: 'AM' };
   const parts = timeStr.split(':');
@@ -300,7 +344,6 @@ function timeFromDb(timeStr) {
   return { hhmm: `${String(h).padStart(2, '0')}:${m}`, ampm };
 }
 
-// Convert { hhmm, ampm } to 24h "HH:MM" for DB, or null if invalid
 function timeToDb(hhmm, ampm) {
   if (!hhmm || !hhmm.includes(':')) return null;
   const [hStr, mStr] = hhmm.split(':');
@@ -312,14 +355,12 @@ function timeToDb(hhmm, ampm) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-// Format 24h time string "HH:MM" or "HH:MM:SS" to "12:30 PM"
 function formatTime(timeStr) {
   if (!timeStr) return '';
   const { hhmm, ampm } = timeFromDb(timeStr);
   return `${hhmm} ${ampm}`;
 }
 
-// Auto-format HH:MM text input
 function formatTimeInput(input) {
   let raw = input.value.replace(/[^0-9]/g, '').slice(0, 4);
   if (raw.length >= 3) {
@@ -373,9 +414,8 @@ function switchView(view) {
     document.getElementById('view-btn-' + v).classList.toggle('active', v === view);
   });
   if (view === 'week' && !viewWeekStart) {
-    // Default to current week
     const d = new Date(today);
-    d.setDate(d.getDate() - d.getDay()); // Sunday
+    d.setDate(d.getDate() - d.getDay());
     viewWeekStart = d;
   }
   if (view === 'day' && !viewDay) {
@@ -558,7 +598,6 @@ function scrollToCurrentHour() {
 function buildTimedView(days) {
   const ncols = days.length;
 
-  // ── Header row ──
   let headerHtml = `<div class="cal-gutter"></div>`;
   headerHtml += days.map(dateStr => {
     const d       = new Date(dateStr + 'T00:00:00');
@@ -572,12 +611,10 @@ function buildTimedView(days) {
     </div>`;
   }).join('');
 
-  // ── All-day row ──
   let alldayHtml = `<div class="cal-gutter cal-allday-label">all day</div>`;
   alldayHtml += days.map(dateStr => {
     const dayTasks     = getTasksForDay(dateStr);
     const alldayEvents = getEventsForDay(dateStr).filter(e => e.all_day);
-
     const gcalAllDayItems = getGoogleEventsForDay(dateStr).filter(e => e.all_day);
     const items = [
       ...dayTasks.map(t => {
@@ -601,18 +638,15 @@ function buildTimedView(days) {
     return `<div class="cal-allday-col">${items.join('')}</div>`;
   }).join('');
 
-  // ── Time axis ──
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const timeAxisHtml = hours.map(h => {
     const label = h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
     return `<div class="cal-time-label">${label}</div>`;
   }).join('');
 
-  // ── Day columns ──
   const dayColsHtml = days.map(dateStr => {
     const isToday = dateStr === todayStr;
 
-    // Hour grid lines + click slots
     const linesHtml = hours.map(h => {
       const h12  = h % 12 || 12;
       const ampm = h >= 12 ? 'PM' : 'AM';
@@ -623,7 +657,6 @@ function buildTimedView(days) {
       </div>`;
     }).join('');
 
-    // Timed events
     const timedEvents = getEventsForDay(dateStr).filter(e => !e.all_day && e.time);
     const eventsHtml  = timedEvents.map(e => {
       const [hr, mn] = e.time.split(':').map(Number);
@@ -875,7 +908,6 @@ function toggleTaskTag(tid) {
 
 // ── EVENT MODAL ──
 function openEventModal(eid, dateStr = null, allDay = true, timeHhMm = '', timeAmPm = 'AM') {
-  // Populate category dropdown
   document.getElementById('event-category-input').innerHTML =
     `<option value="">— Select category —</option>` +
     categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -893,7 +925,7 @@ function openEventModal(eid, dateStr = null, allDay = true, timeHhMm = '', timeA
     document.getElementById('event-date-input').style.borderColor    = '';
     document.getElementById('event-category-input').value = ev.category_id || '';
 
-    const isAllDay = ev.all_day !== false; // default true if not set
+    const isAllDay = ev.all_day !== false;
     document.getElementById('event-allday-input').checked = isAllDay;
     toggleAllDay(isAllDay);
     if (!isAllDay && ev.time) {
@@ -1031,16 +1063,6 @@ async function deleteEvent(eid) {
 // ── MODALS ──
 function openModal(mid)  { document.getElementById(mid).classList.add('show'); }
 function closeModal(mid) { document.getElementById(mid).classList.remove('show'); }
-
-// ── MOBILE ──
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
-}
 
 // ── SIGN OUT ──
 async function signOut() {
@@ -1253,7 +1275,6 @@ async function init() {
   document.getElementById('sidebar-date-label').textContent =
     today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  // Handle Google OAuth callback — session is already confirmed above
   try {
     const urlParams = new URLSearchParams(window.location.search);
     const gcalCode  = urlParams.get('code');
@@ -1275,7 +1296,6 @@ async function init() {
 
   tasks = (tr.data || []).map(t => ({
     id: t.id, name: t.name,
-    // Support both old list_id and new category_id during transition
     category: t.category_id || t.list_id || '',
     priority: t.priority || 'medium', due: t.due || '',
     tags: t.tags || [], notes: t.notes || '', done: t.done || false,
@@ -1284,10 +1304,9 @@ async function init() {
   tags       = gr.data || [];
   events     = (er.data || []).map(e => ({
     ...e,
-    all_day: e.all_day !== false, // default true if column not yet present
+    all_day: e.all_day !== false,
   }));
 
-  // Load Google tokens (skip if just connected via OAuth callback)
   try {
     if (!googleConnected) await loadGoogleTokens();
     if (googleConnected) await fetchGoogleEvents();
@@ -1301,5 +1320,63 @@ async function init() {
 
 init();
 </script>
+
+<script>
+// ── SIDEBAR STATE ─────────────────────────────────────────────────────────────
+// Runs after main script; provides sidebar collapse and mobile behavior.
+
+const _app          = document.getElementById('app');
+const _leftSidebar  = document.getElementById('left-sidebar');
+const _rightSidebar = document.getElementById('right-sidebar');
+const _overlay      = document.getElementById('overlay');
+
+(function restoreState() {
+  if (localStorage.getItem('vg-ls-collapsed') === 'true') {
+    _leftSidebar.classList.add('ls-collapsed');
+    _app.classList.add('ls-collapsed');
+    document.getElementById('ls-collapse-btn').textContent = '›';
+  }
+  if (localStorage.getItem('vg-rs-collapsed') === 'true') {
+    _rightSidebar.classList.add('rs-collapsed');
+    _app.classList.add('rs-collapsed');
+    document.getElementById('rs-collapse-btn').textContent = '‹';
+  }
+})();
+
+function toggleLeftCollapse() {
+  const collapsed = _leftSidebar.classList.toggle('ls-collapsed');
+  _app.classList.toggle('ls-collapsed', collapsed);
+  document.getElementById('ls-collapse-btn').textContent = collapsed ? '›' : '‹';
+  localStorage.setItem('vg-ls-collapsed', collapsed);
+}
+
+function toggleRightCollapse() {
+  const collapsed = _rightSidebar.classList.toggle('rs-collapsed');
+  _app.classList.toggle('rs-collapsed', collapsed);
+  document.getElementById('rs-collapse-btn').textContent = collapsed ? '‹' : '›';
+  localStorage.setItem('vg-rs-collapsed', collapsed);
+}
+
+function openLeftMobile() {
+  _leftSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function openRightMobile() {
+  _rightSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function closeMobileMenus() {
+  _leftSidebar.classList.remove('mobile-open');
+  _rightSidebar.classList.remove('mobile-open');
+  _overlay.classList.remove('show');
+}
+
+// Override functions referenced in main script above
+function toggleSidebar() { openLeftMobile(); }
+function closeSidebar()  { closeMobileMenus(); }
+</script>
+
 </body>
 </html>
