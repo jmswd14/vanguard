@@ -1126,16 +1126,32 @@ async function loadGoogleTokens() {
   if (!data) return;
   googleAccessToken = data.access_token;
   googleTokenExpiry = new Date(data.expires_at).getTime();
-  googleConnected   = true;
-  renderGcalSidebar();
+  // If token is already valid, mark connected immediately
+  if (Date.now() < googleTokenExpiry - 300000) {
+    googleConnected = true;
+    renderGcalSidebar();
+    return;
+  }
+  // Token is expired — attempt silent refresh before declaring connected
+  const refreshed = await refreshGcalToken();
+  if (refreshed === false) {
+    // Truly revoked — stay disconnected (renderGcalSidebar called by refreshGcalToken)
+  } else {
+    // Either success (string) or transient error (null) — optimistically stay connected
+    googleConnected = true;
+    renderGcalSidebar();
+  }
 }
 
 async function getValidToken() {
   if (!googleConnected) return null;
-  if (googleTokenExpiry && Date.now() < googleTokenExpiry - 60000) {
+  if (googleTokenExpiry && Date.now() < googleTokenExpiry - 300000) {
     return googleAccessToken;
   }
-  return await refreshGcalToken();
+  const result = await refreshGcalToken();
+  if (result === false) return null;          // truly revoked
+  if (result === null) return googleAccessToken; // transient error — use existing token optimistically
+  return result;
 }
 
 async function refreshGcalToken() {
@@ -1147,12 +1163,20 @@ async function refreshGcalToken() {
       googleTokenExpiry = new Date(data.expires_at).getTime();
       return googleAccessToken;
     }
+    // Edge Function returned success but no token — treat as transient
+    return null;
   } catch (err) {
     console.error('Token refresh failed:', err);
-    googleConnected = false;
-    renderGcalSidebar();
+    const msg = (err?.message || '').toLowerCase();
+    if (msg.includes('invalid_grant') || msg.includes('invalid_token')) {
+      // Refresh token truly revoked — disconnect
+      googleConnected = false;
+      renderGcalSidebar();
+      return false;
+    }
+    // Network/server error — do not change connection state
+    return null;
   }
-  return null;
 }
 
 async function gcalFetch(path, options = {}) {
@@ -1312,7 +1336,7 @@ async function init() {
     if (googleConnected) await fetchGoogleEvents();
   } catch (err) {
     console.error('Google Calendar load error:', err);
-    googleConnected = false;
+    // Do not disconnect on transient errors — connection state managed by refreshGcalToken
   }
 
   renderCalendar();
