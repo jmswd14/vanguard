@@ -118,26 +118,42 @@ const WIDGET_CATALOG = [
 ];
 
 const JOURNAL_PROMPTS = [
-  "What's one thing you're grateful for today?",
-  "What would make today feel like a success?",
-  "What's one thing you want to let go of?",
-  "What brought you joy this week?",
-  "What's something you're looking forward to?",
-  "What's been on your mind lately?",
-  "What's a small win you've had recently?",
-  "How are you really feeling today?",
-  "What's one thing you could do to take care of yourself?",
-  "What's something you want to remember about this moment?",
-  "What are you learning right now?",
-  "Who in your life are you thankful for today?",
-  "What's something you want to do differently?",
-  "What's bringing you energy? What's draining it?",
-  "What would you tell your past self from a year ago?",
-  "What does a good day look like for you?",
-  "What's something that challenged you recently?",
-  "What are you proud of this week?",
-  "What habit do you most want to build this month?",
-  "What's one thing you wish you had more time for?",
+  // Gratitude
+  "Name three things that exist in your life right now that you once hoped for.",
+  "Who has quietly made your life better, and have you ever told them?",
+  "What's something about today — however small — that you don't want to take for granted?",
+  "What part of your daily routine would you miss most if it were gone?",
+  "Think of a difficulty from your past that turned into something you're grateful for. What happened?",
+  // Reflection
+  "What's a belief you held five years ago that you've since outgrown?",
+  "When did you last feel genuinely proud of yourself, and what made it matter?",
+  "What decision are you avoiding, and what's really holding you back?",
+  "Describe a moment recently when you felt most like yourself.",
+  "What are you tolerating in your life that you've quietly stopped questioning?",
+  // Goals & Growth
+  "What would you attempt if you knew the outcome didn't define your worth?",
+  "Where do you want to be in one year, and what's the single next step?",
+  "What skill, if developed, would change the most about your day-to-day life?",
+  "What does success look like to you right now — not in general, but specifically?",
+  "Is there something you keep saying you'll do 'one day'? What's actually stopping you?",
+  // Relationships
+  "Which relationship in your life deserves more of your attention than it's getting?",
+  "Think of someone who challenges you. What might they see in you that you can't see yourself?",
+  "What's something you wish you could say to someone, but haven't yet?",
+  "How have you shown up for the people you care about lately?",
+  "Who do you want to become closer to, and what would that actually require of you?",
+  // Mindset
+  "What story about yourself do you repeat most often? Is it still true?",
+  "What fear has kept you safe but also kept you small?",
+  "When things go wrong, what's your default — blame, withdrawal, or something else?",
+  "What's something you're genuinely curious about right now, with no practical reason to be?",
+  "What would it mean to be kinder to yourself today than you were yesterday?",
+  // Self-awareness
+  "What does your energy feel like this week — where is it going, and is that where you want it?",
+  "What are you pretending not to know?",
+  "If a close friend described you to a stranger, what do you think they'd say?",
+  "What do you need more of right now — rest, connection, challenge, or silence?",
+  "At the end of this year, what do you most want to be able to say you did?",
 ];
 
 let widgets = [];
@@ -718,7 +734,7 @@ function loadJournalPrompt(widget) {
   const dayOfYear = Math.floor(
     (now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)
   );
-  const prompt = JOURNAL_PROMPTS[dayOfYear % JOURNAL_PROMPTS.length];
+  const prompt = JOURNAL_PROMPTS[Math.floor(dayOfYear) % 30];
 
   el.innerHTML = `
     <div class="journal-prompt-text">&ldquo;${esc(prompt)}&rdquo;</div>
