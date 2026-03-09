@@ -1121,27 +1121,37 @@ async function handleGcalCallback(code, session) {
 }
 
 async function loadGoogleTokens() {
-  const { data } = await _sb.from('google_tokens')
+  console.log('[GCal] loadGoogleTokens() start');
+  const { data, error } = await _sb.from('google_tokens')
     .select('access_token, expires_at')
     .eq('user_id', _uid)
     .maybeSingle();
-  if (!data) return;
-  googleAccessToken = data.access_token;
-  googleTokenExpiry = new Date(data.expires_at).getTime();
-  // If token is already valid, mark connected immediately
-  if (Date.now() < googleTokenExpiry - 300000) {
-    googleConnected = true;
-    renderGcalSidebar();
+  if (error) console.error('[GCal] google_tokens query error:', error);
+  if (!data) {
+    console.log('[GCal] No google_tokens row found — not connected');
     return;
   }
-  // Token is expired — attempt silent refresh before declaring connected
-  const refreshed = await refreshGcalToken();
-  if (refreshed === false) {
-    // Truly revoked — stay disconnected (renderGcalSidebar called by refreshGcalToken)
-  } else {
-    // Either success (string) or transient error (null) — optimistically stay connected
+  googleAccessToken = data.access_token;
+  googleTokenExpiry = new Date(data.expires_at).getTime();
+  const expiresIn   = Math.round((googleTokenExpiry - Date.now()) / 1000);
+  console.log(`[GCal] Token found. expires_at=${data.expires_at} (${expiresIn}s from now)`);
+  // If token is still valid (more than 5 min remaining), mark connected immediately
+  if (Date.now() < googleTokenExpiry - 300000) {
+    console.log('[GCal] Token valid — marking connected');
     googleConnected = true;
-    renderGcalSidebar();
+    return;
+  }
+  // Token is expired or expiring soon — attempt silent refresh
+  console.log('[GCal] Token expired/expiring — attempting silent refresh');
+  const refreshed = await refreshGcalToken();
+  console.log('[GCal] refreshGcalToken() returned:', refreshed === false ? 'false (revoked)' : refreshed === null ? 'null (transient error)' : 'new token');
+  if (refreshed === false) {
+    // Truly revoked — stay disconnected (refreshGcalToken already set googleConnected = false)
+    console.log('[GCal] Refresh token revoked — staying disconnected');
+  } else {
+    // Success token or transient error (null) — optimistically mark connected
+    googleConnected = true;
+    console.log('[GCal] Optimistically marking connected after refresh attempt');
   }
 }
 
@@ -1157,26 +1167,45 @@ async function getValidToken() {
 }
 
 async function refreshGcalToken() {
+  console.log('[GCal] refreshGcalToken() called');
   try {
     const { data, error } = await _sb.functions.invoke('refresh-google-token', {});
+    console.log('[GCal] Edge Function response — data:', data, 'error:', error);
     if (error) throw error;
     if (data?.access_token) {
       googleAccessToken = data.access_token;
       googleTokenExpiry = new Date(data.expires_at).getTime();
+      console.log('[GCal] Token refreshed successfully, expires:', data.expires_at);
       return googleAccessToken;
     }
+    if (data?.error) {
+      // Edge Function returned an application-level error in the response body
+      const appErr = (data.error || '').toLowerCase();
+      console.warn('[GCal] Edge Function app error:', data.error);
+      if (appErr.includes('invalid_grant') || appErr.includes('invalid_token')) {
+        console.log('[GCal] Refresh token revoked (app error) — disconnecting');
+        googleConnected = false;
+        renderGcalSidebar();
+        return false;
+      }
+    }
     // Edge Function returned success but no token — treat as transient
+    console.warn('[GCal] Edge Function returned no token and no error — treating as transient');
     return null;
   } catch (err) {
-    console.error('Token refresh failed:', err);
-    const msg = (err?.message || '').toLowerCase();
+    console.error('[GCal] Token refresh exception:', err);
+    // Check both err.message and err.context for invalid_grant (Supabase wraps errors)
+    const msg = [err?.message, err?.context?.message, JSON.stringify(err?.context)]
+      .filter(Boolean).join(' ').toLowerCase();
+    console.log('[GCal] Combined error message for type detection:', msg);
     if (msg.includes('invalid_grant') || msg.includes('invalid_token')) {
-      // Refresh token truly revoked — disconnect
+      console.log('[GCal] Refresh token revoked — disconnecting');
       googleConnected = false;
       renderGcalSidebar();
       return false;
     }
-    // Network/server error — do not change connection state
+    // Network/server/transient error — do not change connection state
+    console.log('[GCal] Transient error — keeping googleConnected unchanged');
     return null;
   }
 }
@@ -1338,10 +1367,12 @@ async function init() {
     if (!googleConnected) await loadGoogleTokens();
     if (googleConnected) await fetchGoogleEvents();
   } catch (err) {
-    console.error('Google Calendar load error:', err);
+    console.error('[GCal] Google Calendar load error:', err);
     // Do not disconnect on transient errors — connection state managed by refreshGcalToken
   }
 
+  console.log('[GCal] Final googleConnected state before render:', googleConnected);
+  renderGcalSidebar(); // Always sync sidebar to final state before rendering calendar
   renderCalendar();
 }
 
