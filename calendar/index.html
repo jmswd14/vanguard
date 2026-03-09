@@ -1077,11 +1077,11 @@ function connectGoogle() {
   window.location.href = url;
 }
 
-async function handleGcalCallback(code) {
+async function handleGcalCallback(code, session) {
   try {
     console.log('Calling google-oauth-exchange with code:', code.slice(0, 20) + '...');
     console.log('redirect_uri:', GCAL_REDIRECT);
-    const { data: { session: currentSession } } = await _sb.auth.getSession();
+    const currentSession = session;
     const { data, error } = await _sb.functions.invoke('google-oauth-exchange', {
       body: { code, redirect_uri: GCAL_REDIRECT },
       headers: currentSession ? { Authorization: `Bearer ${currentSession.access_token}` } : {},
@@ -1259,14 +1259,14 @@ async function init() {
   document.getElementById('sidebar-date-label').textContent =
     today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  // Handle Google OAuth callback
+  // Handle Google OAuth callback — session is already confirmed above
   try {
     const urlParams = new URLSearchParams(window.location.search);
     const gcalCode  = urlParams.get('code');
     const gcalState = urlParams.get('state');
     if (gcalCode && gcalState === 'gcal_auth') {
       window.history.replaceState({}, '', window.location.pathname);
-      await handleGcalCallback(gcalCode);
+      await handleGcalCallback(gcalCode, session);
     }
   } catch (err) {
     console.error('Google OAuth callback error:', err);
