@@ -179,6 +179,15 @@
               <option value="">All tags</option>
             </select>
           </div>
+          <div class="hf-group">
+            <label class="hf-label">Type</label>
+            <select class="hf-select" id="history-type-filter" onchange="setTypeFilter(this.value)">
+              <option value="">All types</option>
+              <option value="free_write">Free Write</option>
+              <option value="prompt">Daily Prompt</option>
+              <option value="gratitude">Gratitude</option>
+            </select>
+          </div>
           <div class="hf-active-wrap" id="hf-active-wrap" style="display:none;">
             <span class="hf-active-label" id="hf-active-label"></span>
             <button class="hf-clear-btn" onclick="clearHistoryFilters()">Clear all</button>
@@ -343,6 +352,7 @@ let contentChanged  = false;
 let searchQuery       = '';
 let historyDateRange  = 'all';
 let historyTagFilter  = '';
+let historyTypeFilter = '';
 let gratitudeItems    = [''];
 let newTagColor       = JOURNAL_TAG_COLORS[0];
 
@@ -481,6 +491,8 @@ function renderHistory() {
     }
     // Tag filter
     if (historyTagFilter && (!e.tags || !e.tags.includes(historyTagFilter))) return false;
+    // Type filter
+    if (historyTypeFilter && e.type !== historyTypeFilter) return false;
     return true;
   });
 
@@ -563,16 +575,25 @@ function setTagFilter(val) {
   renderHistory();
 }
 
+function setTypeFilter(val) {
+  historyTypeFilter = val;
+  updateActiveFilterIndicator();
+  renderHistory();
+}
+
 function clearHistoryFilters() {
-  searchQuery      = '';
-  historyDateRange = 'all';
-  historyTagFilter = '';
+  searchQuery       = '';
+  historyDateRange  = 'all';
+  historyTagFilter  = '';
+  historyTypeFilter = '';
   const searchEl = document.getElementById('history-search');
   if (searchEl) searchEl.value = '';
   const dateEl = document.getElementById('history-date-range');
   if (dateEl) dateEl.value = 'all';
   const tagEl = document.getElementById('history-tag-filter');
   if (tagEl) tagEl.value = '';
+  const typeEl = document.getElementById('history-type-filter');
+  if (typeEl) typeEl.value = '';
   updateActiveFilterIndicator();
   renderHistory();
 }
@@ -580,7 +601,8 @@ function clearHistoryFilters() {
 function updateActiveFilterIndicator() {
   const count = (searchQuery.trim() ? 1 : 0)
     + (historyDateRange !== 'all' ? 1 : 0)
-    + (historyTagFilter ? 1 : 0);
+    + (historyTagFilter ? 1 : 0)
+    + (historyTypeFilter ? 1 : 0);
   const wrap  = document.getElementById('hf-active-wrap');
   const label = document.getElementById('hf-active-label');
   if (!wrap) return;
@@ -850,8 +872,12 @@ async function saveCurrentEntry(silent = false) {
   }
 
   contentChanged = false;
-  setAutosaveStatus('Saved');
-  setTimeout(() => { if (!contentChanged) setAutosaveStatus(''); }, 2000);
+  if (!silent) {
+    closeEntryPopup();
+  } else {
+    setAutosaveStatus('Saved');
+    setTimeout(() => { if (!contentChanged) setAutosaveStatus(''); }, 2000);
+  }
 }
 
 // ── RICH TEXT EDITOR ───────────────────────────────────────────────────────────
