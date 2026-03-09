@@ -1100,7 +1100,7 @@ async function loadGoogleTokens() {
   const { data } = await _sb.from('google_tokens')
     .select('access_token, expires_at')
     .eq('user_id', _uid)
-    .single();
+    .maybeSingle();
   if (!data) return;
   googleAccessToken = data.access_token;
   googleTokenExpiry = new Date(data.expires_at).getTime();
@@ -1267,7 +1267,7 @@ async function init() {
   }
 
   const [tr, lr, gr, er] = await Promise.all([
-    _sb.from('tasks').select('id, name, list_id, category_id, priority, due, tags, notes, done').eq('user_id', _uid),
+    _sb.from('tasks').select('id, name, category_id, priority, due, tags, notes, done').eq('user_id', _uid),
     _sb.from('lists').select('*').eq('user_id', _uid),
     _sb.from('tags').select('*').eq('user_id', _uid),
     _sb.from('events').select('*').eq('user_id', _uid),
