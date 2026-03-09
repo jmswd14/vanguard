@@ -5,110 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Portal">
-<link rel="apple-touch-icon" href="/vanguard/apple-touch-icon.png">
-<link rel="manifest" href="/vanguard/manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
 <title>Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/shared.css">
+<link rel="stylesheet" href="assets/css/dashboard.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
-<script>
-  window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
-    if (!session) window.location.href = 'login.html';
-  });
-</script>
-</head>
-<style>
-/* ── PORTAL HOME ── */
-.portal-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-  margin-top: 8px;
-}
-
-.portal-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 26px 24px;
-  text-decoration: none;
-  color: var(--text);
-  transition: all 0.18s;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.portal-card:hover {
-  border-color: var(--border2);
-  background: var(--surface2);
-  transform: translateY(-1px);
-}
-
-.portal-card.coming-soon {
-  opacity: 0.4;
-  cursor: default;
-  pointer-events: none;
-}
-
-.portal-card-icon { font-size: 26px; line-height: 1; }
-
-.portal-card-name {
-  font-family: var(--font-serif);
-  font-size: 18px;
-  font-weight: 400;
-  font-style: italic;
-  color: var(--text);
-}
-
-.portal-card-desc {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 300;
-  line-height: 1.6;
-}
-
-.portal-card-status {
-  display: inline-flex;
-  align-items: center;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 500;
-  margin-top: 4px;
-}
-
-.portal-card-status.live { color: var(--p-low); }
-.portal-card-status.soon { color: var(--text-muted); }
-
-/* Portal sidebar nav */
-.portal-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 10px 24px;
-  color: var(--text-dim);
-  font-size: 13.5px;
-  text-decoration: none;
-  transition: all 0.15s;
-  font-family: var(--font-sans);
-}
-.portal-nav-item:hover { background: var(--surface2); color: var(--text); }
-.portal-nav-item.active { color: var(--text); background: var(--accent-dim); }
-.portal-nav-item.disabled { opacity: 0.35; pointer-events: none; }
-
-@media (max-width: 740px) {
-  .portal-grid { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 480px) {
-  .portal-grid { grid-template-columns: 1fr; }
-}
-</style>
 </head>
 <body>
+
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 <button class="hamburger" onclick="toggleSidebar()">☰</button>
 
@@ -122,97 +30,733 @@
   </div>
 
   <div class="sidebar-section">Apps</div>
-  <a class="portal-nav-item" href="tasks/index.html">
-    <span class="sidebar-icon">☑</span> Tasks
+  <a class="sidebar-item" href="tasks/index.html">
+    <span class="sidebar-item-left"><span class="sidebar-icon">☑</span> Tasks</span>
   </a>
-  <a class="portal-nav-item" href="habits/index.html">
-    <span class="sidebar-icon">◉</span> Habits
+  <a class="sidebar-item" href="habits/index.html">
+    <span class="sidebar-item-left"><span class="sidebar-icon">◉</span> Habits</span>
   </a>
-  <a class="portal-nav-item disabled" href="#">
-    <span class="sidebar-icon">✦</span> Journal
+  <a class="sidebar-item" href="calendar/index.html">
+    <span class="sidebar-item-left"><span class="sidebar-icon">◫</span> Calendar</span>
   </a>
-  <a class="portal-nav-item" href="calendar/index.html">
-    <span class="sidebar-icon">◫</span> Calendar
+  <a class="sidebar-item disabled" href="#" style="opacity:0.35;pointer-events:none">
+    <span class="sidebar-item-left"><span class="sidebar-icon">✦</span> Journal</span>
   </a>
-  <a class="portal-nav-item disabled" href="#">
-    <span class="sidebar-icon">◎</span> Goals
+  <a class="sidebar-item disabled" href="#" style="opacity:0.35;pointer-events:none">
+    <span class="sidebar-item-left"><span class="sidebar-icon">◎</span> Goals</span>
   </a>
-  <a class="portal-nav-item disabled" href="#">
-    <span class="sidebar-icon">◈</span> Finance
+  <a class="sidebar-item disabled" href="#" style="opacity:0.35;pointer-events:none">
+    <span class="sidebar-item-left"><span class="sidebar-icon">◈</span> Finance</span>
   </a>
+
+  <div class="sidebar-footer">
+    <span class="sidebar-signout" onclick="signOut()">Sign out</span>
+  </div>
 </nav>
 
 <!-- CONTENT -->
 <main class="content">
-  <div class="topbar">
-    <div class="topbar-left">
-      <h2>Good to see you.</h2>
-      <p id="home-date"></p>
+  <div class="dash-topbar">
+    <div class="dash-topbar-left">
+      <h2>Dashboard</h2>
+      <p id="dash-date"></p>
+    </div>
+    <div class="dash-topbar-right">
+      <button class="add-widget-btn" id="add-widget-btn" onclick="openAddPanel()">+ Add widget</button>
+      <button class="edit-btn" id="edit-btn" onclick="toggleEditMode()">Customise</button>
     </div>
   </div>
 
-  <div class="portal-grid">
-
-    <a class="portal-card" href="tasks/index.html">
-      <div class="portal-card-icon">☑</div>
-      <div class="portal-card-name">Tasks</div>
-      <div class="portal-card-desc">Manage your to-do lists with priorities, tags, and due dates.</div>
-      <div class="portal-card-status live">● Live</div>
-    </a>
-
-    <a class="portal-card" href="calendar/index.html">
-      <div class="portal-card-icon">◫</div>
-      <div class="portal-card-name">Calendar</div>
-      <div class="portal-card-desc">View your schedule, tasks by due date, and add events.</div>
-      <div class="portal-card-status live">● Live</div>
-    </a>
-
-    <a class="portal-card" href="habits/index.html">
-      <div class="portal-card-icon">◉</div>
-      <div class="portal-card-name">Habits</div>
-      <div class="portal-card-desc">Track daily habits and build consistent routines.</div>
-      <div class="portal-card-status live">● Live</div>
-    </a>
-
-    <div class="portal-card coming-soon">
-      <div class="portal-card-icon">✦</div>
-      <div class="portal-card-name">Journal</div>
-      <div class="portal-card-desc">A private space for daily reflections, notes, and gratitude.</div>
-      <div class="portal-card-status soon">Coming soon</div>
-    </div>
-
-    <div class="portal-card coming-soon">
-      <div class="portal-card-icon">◎</div>
-      <div class="portal-card-name">Goals</div>
-      <div class="portal-card-desc">Set long-term goals and track your progress.</div>
-      <div class="portal-card-status soon">Coming soon</div>
-    </div>
-
-    <div class="portal-card coming-soon">
-      <div class="portal-card-icon">◈</div>
-      <div class="portal-card-name">Finance</div>
-      <div class="portal-card-desc">Log expenses and keep an eye on your spending.</div>
-      <div class="portal-card-status soon">Coming soon</div>
-    </div>
-
-  </div>
+  <div class="widget-grid" id="widget-grid"></div>
 </main>
+
 </div>
 
+<!-- Add Widget Panel -->
+<div class="add-widget-panel" id="add-panel">
+  <div class="add-panel-header">
+    <span class="add-panel-title">Add widget</span>
+    <button class="add-panel-close" onclick="closeAddPanel()">✕</button>
+  </div>
+  <div class="add-panel-body" id="add-panel-body"></div>
+</div>
+<div class="panel-overlay" id="panel-overlay" onclick="closeAddPanel()"></div>
+
 <script>
+const DB = window.supabaseClient;
+
+const DEFAULT_LAYOUT = [
+  { widget_type: 'greeting',        size: 'wide',  position: 0, config: {} },
+  { widget_type: 'quick-task',      size: 'small', position: 1, config: {} },
+  { widget_type: 'journal-prompt',  size: 'small', position: 2, config: {} },
+  { widget_type: 'tasks-today',     size: 'large', position: 3, config: {} },
+  { widget_type: 'habit-checkin',   size: 'wide',  position: 4, config: {} },
+  { widget_type: 'upcoming-events', size: 'large', position: 5, config: {} },
+  { widget_type: 'habit-streaks',   size: 'wide',  position: 6, config: {} },
+];
+
+const WIDGET_LABELS = {
+  'greeting':        'Greeting',
+  'tasks-today':     "Today's Tasks",
+  'habit-checkin':   'Habit Check-in',
+  'upcoming-events': 'Upcoming Events',
+  'habit-streaks':   'Habit Streaks',
+  'quick-task':      'Quick Add Task',
+  'journal-prompt':  'Journal Prompt',
+  'goals-progress':  'Goals Progress',
+};
+
+const WIDGET_CATALOG = [
+  { type: 'greeting',        size: 'wide',  icon: '◌', name: 'Greeting',        desc: 'Time, date & welcome' },
+  { type: 'tasks-today',     size: 'large', icon: '☑', name: "Today's Tasks",   desc: 'Tasks due today' },
+  { type: 'habit-checkin',   size: 'wide',  icon: '◉', name: 'Habit Check-in',  desc: "Check off today's habits" },
+  { type: 'upcoming-events', size: 'large', icon: '◫', name: 'Upcoming Events', desc: 'Next 7 days of events' },
+  { type: 'habit-streaks',   size: 'wide',  icon: '↑', name: 'Habit Streaks',   desc: 'Your top habit streaks' },
+  { type: 'quick-task',      size: 'small', icon: '+', name: 'Quick Add Task',   desc: 'Add a task instantly' },
+  { type: 'journal-prompt',  size: 'small', icon: '✦', name: 'Journal Prompt',  desc: 'Daily reflection prompt' },
+  { type: 'goals-progress',  size: 'large', icon: '◎', name: 'Goals Progress',  desc: 'Track long-term goals' },
+];
+
+const JOURNAL_PROMPTS = [
+  "What's one thing you're grateful for today?",
+  "What would make today feel like a success?",
+  "What's one thing you want to let go of?",
+  "What brought you joy this week?",
+  "What's something you're looking forward to?",
+  "What's been on your mind lately?",
+  "What's a small win you've had recently?",
+  "How are you really feeling today?",
+  "What's one thing you could do to take care of yourself?",
+  "What's something you want to remember about this moment?",
+  "What are you learning right now?",
+  "Who in your life are you thankful for today?",
+  "What's something you want to do differently?",
+  "What's bringing you energy? What's draining it?",
+  "What would you tell your past self from a year ago?",
+  "What does a good day look like for you?",
+  "What's something that challenged you recently?",
+  "What are you proud of this week?",
+  "What habit do you most want to build this month?",
+  "What's one thing you wish you had more time for?",
+];
+
+let widgets = [];
+let editMode = false;
+let dragSrcIdx = null;
+let currentUser = null;
+let todayStr = '';
+let clockInterval = null;
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+
+async function init() {
+  const { data: { session } } = await DB.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
   const today = new Date();
+  todayStr = today.toISOString().split('T')[0];
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   document.getElementById('sidebar-date').textContent = dateStr;
-  document.getElementById('home-date').textContent = dateStr;
+  document.getElementById('dash-date').textContent = dateStr;
 
-  function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
-    document.getElementById('overlay').classList.toggle('show');
+  await loadLayout();
+  renderGrid();
+  loadAllWidgetData();
+
+  clockInterval = setInterval(updateGreetingClocks, 30000);
+}
+
+// ── LAYOUT PERSISTENCE ────────────────────────────────────────────────────────
+
+async function loadLayout() {
+  try {
+    const { data, error } = await DB
+      .from('dashboard_widgets')
+      .select('*')
+      .order('position');
+
+    if (!error && data && data.length > 0) {
+      widgets = data;
+    } else {
+      // First-time user: seed default layout
+      widgets = DEFAULT_LAYOUT.map(w => ({
+        ...w,
+        id: crypto.randomUUID(),
+        user_id: currentUser.id,
+      }));
+      saveLayout(); // fire and forget
+    }
+  } catch (e) {
+    widgets = DEFAULT_LAYOUT.map(w => ({
+      ...w,
+      id: crypto.randomUUID(),
+      user_id: currentUser.id,
+    }));
   }
-  function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('overlay').classList.remove('show');
+}
+
+async function saveLayout() {
+  try {
+    const rows = widgets.map((w, i) => ({
+      id: w.id,
+      user_id: currentUser.id,
+      widget_type: w.widget_type,
+      size: w.size,
+      position: i,
+      config: w.config || {},
+    }));
+    await DB.from('dashboard_widgets').upsert(rows, { onConflict: 'id' });
+  } catch (e) {
+    console.error('Dashboard save error:', e);
   }
+}
+
+// ── GRID RENDER ───────────────────────────────────────────────────────────────
+
+function renderGrid() {
+  const grid = document.getElementById('widget-grid');
+  grid.innerHTML = '';
+  if (editMode) grid.classList.add('edit-mode');
+  else grid.classList.remove('edit-mode');
+
+  widgets.forEach((w, idx) => {
+    grid.appendChild(createWidgetEl(w, idx));
+  });
+}
+
+function createWidgetEl(widget, idx) {
+  const div = document.createElement('div');
+  div.className = `widget size-${widget.size}`;
+  div.dataset.id = widget.id;
+  div.dataset.idx = String(idx);
+  div.draggable = editMode;
+
+  div.innerHTML = `
+    <div class="widget-header">
+      <span class="widget-drag-handle" title="Drag to reorder">⠿</span>
+      <span class="widget-label">${esc(WIDGET_LABELS[widget.widget_type] || widget.widget_type)}</span>
+      <button class="widget-remove" onclick="removeWidget('${widget.id}')" title="Remove">✕</button>
+    </div>
+    <div class="widget-body" id="wb-${widget.id}">
+      <div class="widget-empty"><div class="widget-empty-icon">◌</div><div class="widget-empty-text">Loading</div></div>
+    </div>
+  `;
+
+  // Drag and drop
+  div.addEventListener('dragstart', e => {
+    if (!editMode) { e.preventDefault(); return; }
+    dragSrcIdx = idx;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => { div.style.opacity = '0.45'; }, 0);
+  });
+  div.addEventListener('dragend', () => {
+    div.style.opacity = '';
+    document.querySelectorAll('.widget.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
+  div.addEventListener('dragenter', e => { e.preventDefault(); div.classList.add('drag-over'); });
+  div.addEventListener('dragleave', () => { div.classList.remove('drag-over'); });
+  div.addEventListener('dragover', e => { e.preventDefault(); });
+  div.addEventListener('drop', e => {
+    e.preventDefault();
+    div.classList.remove('drag-over');
+    const dropIdx = parseInt(div.dataset.idx);
+    if (dragSrcIdx === null || dragSrcIdx === dropIdx) return;
+    const moved = widgets.splice(dragSrcIdx, 1)[0];
+    widgets.splice(dropIdx, 0, moved);
+    widgets.forEach((w, i) => { w.position = i; });
+    dragSrcIdx = null;
+    renderGrid();
+    loadAllWidgetData();
+    saveLayout();
+  });
+
+  return div;
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── EDIT MODE ─────────────────────────────────────────────────────────────────
+
+function toggleEditMode() {
+  editMode = !editMode;
+  const btn = document.getElementById('edit-btn');
+  const addBtn = document.getElementById('add-widget-btn');
+
+  if (editMode) {
+    btn.textContent = 'Done';
+    btn.classList.add('done');
+    addBtn.classList.add('visible');
+  } else {
+    btn.textContent = 'Customise';
+    btn.classList.remove('done');
+    addBtn.classList.remove('visible');
+    closeAddPanel();
+    saveLayout();
+  }
+
+  renderGrid();
+  loadAllWidgetData();
+}
+
+function removeWidget(id) {
+  widgets = widgets.filter(w => w.id !== id);
+  widgets.forEach((w, i) => { w.position = i; });
+  DB.from('dashboard_widgets').delete().eq('id', id);
+  renderGrid();
+  loadAllWidgetData();
+}
+
+// ── ADD WIDGET PANEL ──────────────────────────────────────────────────────────
+
+function openAddPanel() {
+  const body = document.getElementById('add-panel-body');
+  body.innerHTML = WIDGET_CATALOG.map(cat => `
+    <div class="widget-type-item">
+      <span class="widget-type-icon">${cat.icon}</span>
+      <div class="widget-type-info">
+        <div class="widget-type-name">${esc(cat.name)}</div>
+        <div class="widget-type-meta">${cat.size} &middot; ${esc(cat.desc)}</div>
+      </div>
+      <button class="widget-type-add" onclick="addWidget('${cat.type}','${cat.size}')">Add</button>
+    </div>
+  `).join('');
+  document.getElementById('add-panel').classList.add('open');
+  document.getElementById('panel-overlay').classList.add('show');
+}
+
+function closeAddPanel() {
+  document.getElementById('add-panel').classList.remove('open');
+  document.getElementById('panel-overlay').classList.remove('show');
+}
+
+function addWidget(type, size) {
+  const w = {
+    id: crypto.randomUUID(),
+    user_id: currentUser.id,
+    widget_type: type,
+    size: size,
+    position: widgets.length,
+    config: {},
+  };
+  widgets.push(w);
+  closeAddPanel();
+  renderGrid();
+  loadAllWidgetData();
+  saveLayout();
+}
+
+// ── WIDGET DATA LOADERS ───────────────────────────────────────────────────────
+
+function loadAllWidgetData() {
+  const loaders = {
+    'greeting':        loadGreeting,
+    'tasks-today':     loadTasksToday,
+    'habit-checkin':   loadHabitCheckin,
+    'upcoming-events': loadUpcomingEvents,
+    'habit-streaks':   loadHabitStreaks,
+    'quick-task':      loadQuickTask,
+    'journal-prompt':  loadJournalPrompt,
+    'goals-progress':  loadGoalsProgress,
+  };
+  widgets.forEach(w => {
+    if (loaders[w.widget_type]) loaders[w.widget_type](w);
+  });
+}
+
+// GREETING ────────────────────────────────────────────────────────────────────
+function loadGreeting(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+  const now = new Date();
+  const h = now.getHours();
+  const msg = h < 12 ? 'Good morning.' : h < 17 ? 'Good afternoon.' : 'Good evening.';
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  el.innerHTML = `
+    <div class="greeting-time" data-clock="true">${timeStr}</div>
+    <div class="greeting-msg">${msg}</div>
+    <div class="greeting-date">${dateStr}</div>
+  `;
+}
+
+function updateGreetingClocks() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  document.querySelectorAll('[data-clock="true"]').forEach(el => {
+    el.textContent = timeStr;
+  });
+}
+
+// TASKS TODAY ─────────────────────────────────────────────────────────────────
+async function loadTasksToday(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+
+  try {
+    const { data: tasks, error } = await DB
+      .from('tasks')
+      .select('id, name, priority, completed')
+      .eq('due_date', todayStr)
+      .eq('completed', false)
+      .order('position')
+      .limit(8);
+
+    if (error) throw error;
+
+    if (!tasks || tasks.length === 0) {
+      el.innerHTML = `
+        <div class="widget-empty">
+          <div class="widget-empty-icon">☑</div>
+          <div class="widget-empty-text">No tasks due today</div>
+        </div>
+        <a href="tasks/index.html" class="widget-footer-link">Open Tasks →</a>
+      `;
+      return;
+    }
+
+    const pc = { high: 'var(--p-high)', medium: 'var(--p-medium)', low: 'var(--p-low)' };
+    el.innerHTML = `
+      <div class="mini-tasks-list">
+        ${tasks.map(t => `
+          <div class="task-row-mini">
+            <div class="mini-priority-dot" style="background:${pc[t.priority] || 'var(--border2)'}"></div>
+            <div class="mini-task-name">${esc(t.name)}</div>
+          </div>
+        `).join('')}
+      </div>
+      <a href="tasks/index.html" class="widget-footer-link">View all in Tasks →</a>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="widget-empty"><div class="widget-empty-text">Could not load tasks</div></div>`;
+  }
+}
+
+// HABIT CHECK-IN ──────────────────────────────────────────────────────────────
+async function loadHabitCheckin(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+
+  try {
+    const [{ data: habits, error: he }, { data: logs }] = await Promise.all([
+      DB.from('habits').select('id, name, emoji, direction').eq('active', true).order('created_at').limit(6),
+      DB.from('habit_logs').select('habit_id, completed').eq('date', todayStr),
+    ]);
+
+    if (he) throw he;
+
+    if (!habits || habits.length === 0) {
+      el.innerHTML = `
+        <div class="widget-empty">
+          <div class="widget-empty-icon">◉</div>
+          <div class="widget-empty-text">No habits set up yet</div>
+        </div>
+        <a href="habits/index.html" class="widget-footer-link">Open Habits →</a>
+      `;
+      return;
+    }
+
+    const logMap = {};
+    (logs || []).forEach(l => { logMap[l.habit_id] = l.completed; });
+
+    el.innerHTML = `
+      <div style="flex:1;overflow:hidden;">
+        ${habits.map(h => {
+          const checked = logMap[h.id] === true;
+          return `
+            <div class="habit-row-mini">
+              <span class="habit-emoji-sm">${h.emoji || '◉'}</span>
+              <span class="habit-name-sm">${esc(h.name)}</span>
+              <div class="habit-toggle${checked ? ' checked' : ''}"
+                   onclick="toggleHabit('${h.id}',this)"
+                   title="${checked ? 'Mark incomplete' : 'Mark complete'}"></div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <a href="habits/index.html" class="widget-footer-link">Open Habits →</a>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="widget-empty"><div class="widget-empty-text">Could not load habits</div></div>`;
+  }
+}
+
+async function toggleHabit(habitId, el) {
+  const wasChecked = el.classList.contains('checked');
+  el.classList.toggle('checked');
+
+  try {
+    const { data: existing } = await DB
+      .from('habit_logs')
+      .select('id')
+      .eq('habit_id', habitId)
+      .eq('date', todayStr)
+      .maybeSingle();
+
+    if (existing) {
+      await DB.from('habit_logs').update({ completed: !wasChecked }).eq('id', existing.id);
+    } else {
+      await DB.from('habit_logs').insert({
+        id: crypto.randomUUID(),
+        user_id: currentUser.id,
+        habit_id: habitId,
+        date: todayStr,
+        completed: true,
+      });
+    }
+  } catch (e) {
+    el.classList.toggle('checked'); // revert on error
+    console.error('Toggle habit error:', e);
+  }
+}
+
+// UPCOMING EVENTS ─────────────────────────────────────────────────────────────
+async function loadUpcomingEvents(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+
+  try {
+    const now = new Date();
+    const end = new Date();
+    end.setDate(end.getDate() + 7);
+
+    const { data: events, error } = await DB
+      .from('events')
+      .select('id, title, start_at, end_at, all_day')
+      .gte('start_at', now.toISOString())
+      .lte('start_at', end.toISOString())
+      .order('start_at')
+      .limit(5);
+
+    if (error) throw error;
+
+    if (!events || events.length === 0) {
+      el.innerHTML = `
+        <div class="widget-empty">
+          <div class="widget-empty-icon">◫</div>
+          <div class="widget-empty-text">No upcoming events</div>
+        </div>
+        <a href="calendar/index.html" class="widget-footer-link">Open Calendar →</a>
+      `;
+      return;
+    }
+
+    el.innerHTML = `
+      <div style="flex:1;overflow:hidden;">
+        ${events.map(ev => {
+          const d = new Date(ev.start_at);
+          const timeStr = ev.all_day
+            ? 'All day'
+            : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          return `
+            <div class="event-row-mini">
+              <div class="event-date-block">
+                <div class="edb-day">${d.getDate()}</div>
+                <div class="edb-mon">${d.toLocaleDateString('en-US', { month: 'short' })}</div>
+              </div>
+              <div class="event-info">
+                <div class="event-name-mini">${esc(ev.title)}</div>
+                <div class="event-time-mini">${timeStr}</div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <a href="calendar/index.html" class="widget-footer-link">Open Calendar →</a>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="widget-empty"><div class="widget-empty-text">Could not load events</div></div>`;
+  }
+}
+
+// HABIT STREAKS ───────────────────────────────────────────────────────────────
+async function loadHabitStreaks(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+
+  try {
+    const [{ data: habits, error: he }, { data: logs }] = await Promise.all([
+      DB.from('habits').select('id, name, emoji').eq('active', true),
+      DB.from('habit_logs')
+        .select('habit_id, date, completed')
+        .eq('completed', true)
+        .order('date', { ascending: false })
+        .limit(300),
+    ]);
+
+    if (he) throw he;
+
+    if (!habits || habits.length === 0) {
+      el.innerHTML = `
+        <div class="widget-empty">
+          <div class="widget-empty-icon">↑</div>
+          <div class="widget-empty-text">No habits set up yet</div>
+        </div>
+      `;
+      return;
+    }
+
+    // Build sets of completed dates per habit
+    const logsByHabit = {};
+    (logs || []).forEach(l => {
+      if (!logsByHabit[l.habit_id]) logsByHabit[l.habit_id] = new Set();
+      logsByHabit[l.habit_id].add(l.date);
+    });
+
+    // Calculate streak: consecutive days from today backwards
+    const habitsWithStreaks = habits.map(h => {
+      const dates = logsByHabit[h.id] || new Set();
+      let streak = 0;
+      const cur = new Date();
+      while (streak < 365) {
+        const ds = cur.toISOString().split('T')[0];
+        if (dates.has(ds)) { streak++; cur.setDate(cur.getDate() - 1); }
+        else break;
+      }
+      return { ...h, streak };
+    }).filter(h => h.streak > 0).sort((a, b) => b.streak - a.streak);
+
+    if (habitsWithStreaks.length === 0) {
+      el.innerHTML = `
+        <div class="widget-empty">
+          <div class="widget-empty-icon">↑</div>
+          <div class="widget-empty-text">Check off habits to start building streaks</div>
+        </div>
+      `;
+      return;
+    }
+
+    el.innerHTML = habitsWithStreaks.slice(0, 5).map(h => `
+      <div class="streak-row">
+        <span class="streak-emoji">${h.emoji || '◉'}</span>
+        <span class="streak-name">${esc(h.name)}</span>
+        <div>
+          <div class="streak-count">${h.streak}</div>
+          <div class="streak-unit">${h.streak === 1 ? 'day' : 'days'}</div>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<div class="widget-empty"><div class="widget-empty-text">Could not load streaks</div></div>`;
+  }
+}
+
+// QUICK ADD TASK ──────────────────────────────────────────────────────────────
+function loadQuickTask(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+
+  el.innerHTML = `
+    <form class="quick-add-form" onsubmit="quickAddTask(event,'${widget.id}')">
+      <input
+        class="quick-add-input"
+        type="text"
+        placeholder="What needs doing?"
+        id="qa-name-${widget.id}"
+        autocomplete="off"
+        required
+      >
+      <div class="quick-add-row">
+        <select class="quick-add-select" id="qa-priority-${widget.id}">
+          <option value="">Priority</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <button class="quick-add-btn" type="submit">Add</button>
+      </div>
+      <div class="quick-add-success" id="qa-ok-${widget.id}">Task added</div>
+    </form>
+  `;
+}
+
+async function quickAddTask(e, widgetId) {
+  e.preventDefault();
+  const nameEl = document.getElementById(`qa-name-${widgetId}`);
+  const priorityEl = document.getElementById(`qa-priority-${widgetId}`);
+  const okEl = document.getElementById(`qa-ok-${widgetId}`);
+
+  const name = nameEl.value.trim();
+  if (!name) return;
+
+  const task = {
+    id: crypto.randomUUID(),
+    user_id: currentUser.id,
+    name,
+    completed: false,
+    position: 0,
+  };
+  if (priorityEl && priorityEl.value) task.priority = priorityEl.value;
+
+  try {
+    const { error } = await DB.from('tasks').insert(task);
+    if (error) throw error;
+    nameEl.value = '';
+    if (priorityEl) priorityEl.value = '';
+    if (okEl) {
+      okEl.classList.add('show');
+      setTimeout(() => okEl.classList.remove('show'), 2000);
+    }
+    nameEl.focus();
+  } catch (err) {
+    console.error('Quick add task error:', err);
+  }
+}
+
+// JOURNAL PROMPT ──────────────────────────────────────────────────────────────
+function loadJournalPrompt(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+
+  const now = new Date();
+  const dayOfYear = Math.floor(
+    (now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24)
+  );
+  const prompt = JOURNAL_PROMPTS[dayOfYear % JOURNAL_PROMPTS.length];
+
+  el.innerHTML = `
+    <div class="journal-prompt-text">&ldquo;${esc(prompt)}&rdquo;</div>
+    <div class="journal-prompt-tag">Daily reflection</div>
+  `;
+}
+
+// GOALS PROGRESS ──────────────────────────────────────────────────────────────
+function loadGoalsProgress(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+  el.innerHTML = `
+    <div class="goals-placeholder">
+      <div class="goals-placeholder-icon">◎</div>
+      <div class="goals-placeholder-label">Goals coming soon</div>
+    </div>
+  `;
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+
+async function signOut() {
+  await DB.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+init();
 </script>
 </body>
 </html>
