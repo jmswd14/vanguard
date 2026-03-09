@@ -545,6 +545,41 @@
   font-size: 13.5px;
 }
 
+/* ── ENTRY TITLE INPUT ── */
+
+.ep-title-wrap {
+  padding: 16px 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ep-title-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text);
+  padding: 0 0 14px;
+  line-height: 1.3;
+}
+.ep-title-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.entry-card-title {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+
 /* ── GRATITUDE DYNAMIC INPUTS ── */
 
 .gratitude-list {

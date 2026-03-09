@@ -109,6 +109,7 @@
 
       <div class="sidebar-item" onclick="openTagManager()">
         <div class="sidebar-item-left">
+          <span class="sidebar-icon">✏️</span>
           <span class="rs-nav-label">Manage Tags</span>
         </div>
       </div>
@@ -467,7 +468,7 @@ function renderHistory() {
     // Text search — content + all gratitude fields + tag names
     if (q) {
       const gratExtra = Array.isArray(e.gratitude_extra) ? e.gratitude_extra.join(' ') : '';
-      const raw = [e.content, e.gratitude_1, e.gratitude_2, e.gratitude_3, gratExtra].join(' ');
+      const raw = [e.title, e.content, e.gratitude_1, e.gratitude_2, e.gratitude_3, gratExtra].join(' ');
       const text = stripHtml(raw).toLowerCase();
       const tagNames = getTagsForEntry(e).map(t => t.name.toLowerCase()).join(' ');
       if (!text.includes(q) && !tagNames.includes(q)) return false;
@@ -607,6 +608,8 @@ function renderEntryCard(entry, previewLen) {
   const tagsHtml = tags.map(t =>
     `<span class="entry-tag-chip" style="background:${t.color}22;color:${t.color};border-color:${t.color}55;">${esc(t.name)}</span>`
   ).join('');
+  const titleHtml = entry.title
+    ? `<div class="entry-card-title">${esc(entry.title)}</div>` : '';
 
   return `
     <div class="entry-card" onclick="openEntryPopup(null,'${entry.id}')">
@@ -614,6 +617,7 @@ function renderEntryCard(entry, previewLen) {
         <span class="entry-type-badge etb-${entry.type}">${esc(formatType(entry.type))}</span>
         <span class="entry-card-time">${formatTime(entry.created_at)}</span>
       </div>
+      ${titleHtml}
       <div class="entry-card-preview">${esc(preview)}</div>
       ${tagsHtml ? `<div class="entry-card-tags">${tagsHtml}</div>` : ''}
     </div>`;
@@ -699,13 +703,24 @@ function openEntryPopup(type, entryId) {
   // Body
   const body = document.getElementById('ep-body');
   if (type === 'free_write') {
-    body.innerHTML = `<div class="rt-editor" id="rt-editor" contenteditable="true"
-      data-placeholder="Start writing..."></div>`;
+    body.innerHTML = `
+      <div class="ep-title-wrap">
+        <input type="text" class="ep-title-input" id="ep-title"
+               value="${esc(entry ? entry.title || '' : '')}"
+               placeholder="Title (optional)" oninput="markChanged()">
+      </div>
+      <div class="rt-editor" id="rt-editor" contenteditable="true"
+        data-placeholder="Start writing..."></div>`;
     if (entry && entry.content) document.getElementById('rt-editor').innerHTML = entry.content;
     document.getElementById('rt-editor').addEventListener('input', markChanged);
 
   } else if (type === 'prompt') {
     body.innerHTML = `
+      <div class="ep-title-wrap">
+        <input type="text" class="ep-title-input" id="ep-title"
+               value="${esc(entry ? entry.title || '' : '')}"
+               placeholder="Title (optional)" oninput="markChanged()">
+      </div>
       <div class="ep-prompt-box">
         <div class="ep-prompt-label">Today's prompt</div>
         <div class="ep-prompt-text">${esc(todayPrompt)}</div>
@@ -721,7 +736,7 @@ function openEntryPopup(type, entryId) {
       <div class="gratitude-intro">What are you grateful for today?</div>
       <div class="gratitude-list" id="gratitude-list"></div>
       <div class="gratitude-add-row">
-        <button class="gratitude-add-btn" onclick="addGratitudeItem()">+ Add another</button>
+        <button class="gratitude-add-btn" onclick="addGratitudeItem()">+ add another</button>
       </div>`;
     renderGratitudeList();
   }
@@ -788,10 +803,12 @@ function stopAutoSave() {
 
 function getCurrentContent() {
   if (editingType === 'free_write' || editingType === 'prompt') {
-    const ed = document.getElementById('rt-editor');
+    const ed      = document.getElementById('rt-editor');
+    const titleEl = document.getElementById('ep-title');
     return {
       content:     ed ? ed.innerHTML : '',
       prompt_text: editingType === 'prompt' ? todayPrompt : null,
+      title:       titleEl ? titleEl.value.trim() || null : null,
     };
   }
   if (editingType === 'gratitude') {
@@ -1017,6 +1034,13 @@ async function init() {
   jTags   = tr.data || [];
 
   renderToday();
+
+  // Auto-open entry popup if ?type= URL param is present
+  const urlType = new URLSearchParams(window.location.search).get('type');
+  if (urlType && ['free_write', 'prompt', 'gratitude'].includes(urlType)) {
+    window.history.replaceState({}, '', window.location.pathname);
+    openEntryPopup(urlType);
+  }
 }
 
 init();
