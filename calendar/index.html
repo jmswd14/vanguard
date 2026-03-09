@@ -1079,15 +1079,21 @@ function connectGoogle() {
 
 async function handleGcalCallback(code) {
   try {
+    console.log('Calling google-oauth-exchange with code:', code.slice(0, 20) + '...');
+    console.log('redirect_uri:', GCAL_REDIRECT);
     const { data, error } = await _sb.functions.invoke('google-oauth-exchange', {
       body: { code, redirect_uri: GCAL_REDIRECT },
     });
+    console.log('Edge function response data:', JSON.stringify(data));
+    console.log('Edge function response error:', JSON.stringify(error));
     if (error) throw error;
     if (data?.access_token) {
       googleAccessToken = data.access_token;
       googleTokenExpiry = Date.now() + (data.expires_in * 1000);
       googleConnected   = true;
       renderGcalSidebar();
+    } else {
+      console.error('No access_token in response:', JSON.stringify(data));
     }
   } catch (err) {
     console.error('Google auth failed:', err);
