@@ -419,8 +419,11 @@ function renderToday() {
     return;
   }
 
-  const active = habits.filter(h => h.active !== false &&
-    (!h.created_at || h.created_at.split('T')[0] <= selectedDate));
+  const active = habits.filter(h => {
+    if (h.active === false) return false;
+    if (h.created_at == null) return true;
+    return h.created_at.slice(0, 10) <= selectedDate;
+  });
   if (!active.length) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">◎</div><h3>No active habits</h3></div>`;
     return;
@@ -438,15 +441,16 @@ function renderHabitRow(habit) {
 
   let inputHtml = '';
   if (habit.type === 'yes_no') {
-    const isYes = log !== undefined && log !== null && log.completed === true;
-    const isNo  = log !== undefined && log !== null && log.completed === false;
+    const isYes = log != null && log.completed === true;
+    const isNo  = log != null && log.completed === false;
     const hColor = habit.color || SUCCESS_COLOR;
-    const yStyle = isYes ? `color:${hColor};border-color:${hColor};background:${hColor}22;` : '';
-    const nStyle = isNo  ? `color:${FAIL_COLOR};border-color:${FAIL_COLOR};background:${FAIL_COLOR}22;` : '';
+    const MUTED_RED = '#E07070';
+    const yStyle = isYes ? `background:${hColor};border-color:${hColor};color:#0f0f0f;` : '';
+    const nStyle = isNo  ? `background:${MUTED_RED};border-color:${MUTED_RED};color:#0f0f0f;` : '';
     inputHtml = `<div class="habit-yn-btns">
-      <button class="habit-yn-btn yn-yes${isYes ? ' active' : ''}" style="${yStyle}"
+      <button class="habit-yn-btn yn-yes" style="${yStyle}"
               onclick="logYesNo('${habit.id}', true, ${isYes})">✓</button>
-      <button class="habit-yn-btn yn-no${isNo ? ' active' : ''}" style="${nStyle}"
+      <button class="habit-yn-btn yn-no" style="${nStyle}"
               onclick="logYesNo('${habit.id}', false, ${isNo})">✗</button>
     </div>`;
   } else {
@@ -490,34 +494,31 @@ function renderHabitRow(habit) {
 // ── LOGGING ──
 async function logYesNo(habitId, completed, wasActive) {
   const habit = habits.find(h => h.id === habitId);
-  if (habit && habit.created_at && selectedDate < habit.created_at.split('T')[0]) return;
+  if (habit && habit.created_at && selectedDate < habit.created_at.slice(0, 10)) return;
 
   const existing = getLog(habitId, selectedDate);
 
   if (wasActive) {
-    if (existing) {
-      logs = logs.filter(l => l.id !== existing.id);
-      await _sb.from('habit_logs').delete().eq('id', existing.id).eq('user_id', _uid);
-    }
+    // Deselect: update local state and re-render immediately, then sync DB
+    const existingId = existing ? existing.id : null;
+    if (existing) logs = logs.filter(l => l.id !== existing.id);
     renderToday();
+    if (existingId) await _sb.from('habit_logs').delete().eq('id', existingId).eq('user_id', _uid);
     return;
   }
 
-  const data = {
-    habit_id: habitId, date: selectedDate,
-    completed, value: null, note: null,
-  };
-
   if (existing) {
-    Object.assign(existing, data);
+    // Update local state first, re-render, then sync DB
+    Object.assign(existing, { habit_id: habitId, date: selectedDate, completed, value: null });
+    renderToday();
     await _sb.from('habit_logs').update({ completed, value: null })
       .eq('id', existing.id).eq('user_id', _uid);
   } else {
-    const newLog = { id: uid(), user_id: _uid, ...data };
+    const newLog = { id: uid(), user_id: _uid, habit_id: habitId, date: selectedDate, completed, value: null, note: null };
     logs.push(newLog);
+    renderToday();
     await _sb.from('habit_logs').insert(newLog);
   }
-  renderToday();
 }
 
 async function logNumeric(habitId, rawVal) {
@@ -622,48 +623,58 @@ function renderProgress() {
 
 // ── ALL-HABITS LINE GRAPH ──
 function renderAllHabitsLineGraph(displayHabits) {
-  const days = 30;
   const W = 700, H = 200;
   const pad = { top: 20, right: 12, bottom: 32, left: 36 };
   const cW = W - pad.left - pad.right;
   const cH = H - pad.top - pad.bottom;
 
+  // X-axis: earliest creation date (capped at 30 days ago) → today
+  const capStart = addDays(todayStr, -29);
+  let startDate = todayStr;
+  displayHabits.forEach(h => {
+    const cd = h.created_at ? h.created_at.slice(0, 10) : capStart;
+    const eff = cd < capStart ? capStart : cd;
+    if (eff < startDate) startDate = eff;
+  });
+
+  // Build ordered list of days on the x-axis
+  const dayList = [];
+  for (let d = startDate; d <= todayStr; d = addDays(d, 1)) dayList.push(d);
+  const totalDays = dayList.length;
+
   const habitData = displayHabits.map(habit => {
-    const createdDate = habit.created_at ? habit.created_at.split('T')[0] : null;
-    const points = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = addDays(todayStr, -i);
+    const cd = habit.created_at ? habit.created_at.slice(0, 10) : null;
+    const habitStart = cd && cd > capStart ? cd : capStart;
+    const points = dayList.map((d, i) => {
+      if (d < habitStart) return { d, i, avg: null };
       let sum = 0, count = 0;
       for (let j = 6; j >= 0; j--) {
         const rd = addDays(d, -j);
-        if (createdDate && rd < createdDate) continue;
+        if (rd < habitStart) continue;
         sum += isSuccess(habit, getLog(habit.id, rd)) ? 1 : 0;
         count++;
       }
-      points.push({ d, avg: count > 0 ? sum / count : null });
-    }
+      return { d, i, avg: count > 0 ? sum / count : null };
+    });
     return { habit, points };
   });
 
   let paths = '';
   habitData.forEach(({ habit, points }) => {
     const color = habit.color || SUCCESS_COLOR;
-    const segs = [];
-    let seg = [];
-    points.forEach((pt, i) => {
-      if (pt.avg === null) {
-        if (seg.length > 1) segs.push(seg);
-        seg = [];
-      } else {
-        const x = pad.left + (i / (days - 1)) * cW;
-        const y = pad.top + cH - pt.avg * cH;
-        seg.push(`${seg.length === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`);
-      }
+    let pathStr = '', inPath = false;
+    points.forEach(pt => {
+      if (pt.avg === null) { inPath = false; return; }
+      const x = pad.left + (totalDays > 1 ? (pt.i / (totalDays - 1)) : 0) * cW;
+      const y = pad.top + cH - pt.avg * cH;
+      pathStr += inPath
+        ? `L ${x.toFixed(1)} ${y.toFixed(1)} `
+        : `M ${x.toFixed(1)} ${y.toFixed(1)} `;
+      inPath = true;
     });
-    if (seg.length > 1) segs.push(seg);
-    segs.forEach(s => {
-      paths += `<path data-ll="${habit.id}" d="${s.join(' ')}" stroke="${color}" stroke-width="2" fill="none" opacity="0.85" style="transition:opacity 0.2s;"/>`;
-    });
+    if (pathStr) {
+      paths += `<path data-ll="${habit.id}" d="${pathStr.trim()}" stroke="${color}" stroke-width="2" fill="none" opacity="0.85" style="transition:opacity 0.2s;"/>`;
+    }
   });
 
   let grid = '';
@@ -674,19 +685,21 @@ function renderAllHabitsLineGraph(displayHabits) {
     grid += `<line x1="${pad.left}" y1="${y.toFixed(1)}" x2="${pad.left + cW}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1" opacity="0.5"/>`;
   }
 
+  const labelStep = totalDays <= 10 ? 2 : totalDays <= 20 ? 4 : 7;
   let xLabels = '';
-  for (let i = 0; i < days; i += 7) {
-    const x = pad.left + (i / (days - 1)) * cW;
-    xLabels += `<text x="${x.toFixed(1)}" y="${H - 4}" font-size="9" fill="var(--text-muted)" font-family="var(--font-sans)">${fmtDateShort(addDays(todayStr, -(days - 1 - i)))}</text>`;
-  }
+  dayList.forEach((d, i) => {
+    if (i % labelStep !== 0 && i !== totalDays - 1) return;
+    const x = pad.left + (totalDays > 1 ? (i / (totalDays - 1)) : 0) * cW;
+    xLabels += `<text x="${x.toFixed(1)}" y="${H - 4}" font-size="9" fill="var(--text-muted)" font-family="var(--font-sans)">${fmtDateShort(d)}</text>`;
+  });
 
   const legendHtml = displayHabits.map(h =>
-    `<span class="line-legend-item" onclick="toggleLineHabit('${h.id}')">
-      <span class="line-legend-dot" id="ll-dot-${h.id}" style="background:${h.color || SUCCESS_COLOR};"></span>${h.emoji ? h.emoji + ' ' : ''}${h.name}
-    </span>`
+    `<button class="line-legend-btn" id="ll-btn-${h.id}"
+             style="--ll-color:${h.color || SUCCESS_COLOR};"
+             onclick="toggleLineHabit('${h.id}')">${h.emoji ? h.emoji + '\u2009' : ''}${h.name}</button>`
   ).join('');
 
-  return `<div class="progress-section-label" style="margin-top:32px;">30-day trend (7-day rolling average)</div>
+  return `<div class="progress-section-label" style="margin-top:32px;">Completion trend (7-day rolling average)</div>
   <div class="chart-wrap">
     <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible;">
       ${grid}${paths}${xLabels}
@@ -697,11 +710,11 @@ function renderAllHabitsLineGraph(displayHabits) {
 
 function toggleLineHabit(id) {
   const pathEls = document.querySelectorAll(`[data-ll="${id}"]`);
-  const dot     = document.getElementById('ll-dot-' + id);
+  const btn = document.getElementById('ll-btn-' + id);
   if (!pathEls.length) return;
   const hidden = pathEls[0].style.opacity === '0';
   pathEls.forEach(p => p.style.opacity = hidden ? '0.85' : '0');
-  if (dot) dot.style.opacity = hidden ? '1' : '0.3';
+  if (btn) btn.classList.toggle('inactive', !hidden);
 }
 
 function selectProgressHabit(id) {

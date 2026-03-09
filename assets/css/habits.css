@@ -636,24 +636,25 @@
 ───────────────────────────────────────── */
 .habit-yn-btns {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 .habit-yn-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 15px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: 13px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
   font-family: var(--font-sans);
+  white-space: nowrap;
 }
 .habit-yn-btn:hover { border-color: var(--border2); color: var(--text); }
 
@@ -663,27 +664,32 @@
 .line-chart-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
-  padding: 6px 0 2px;
-  margin-top: 6px;
+  gap: 6px 8px;
+  padding: 8px 0 2px;
+  margin-top: 4px;
 }
 
-.line-legend-item {
-  display: flex;
+.line-legend-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--ll-color, var(--border));
+  background: var(--ll-color, transparent);
+  color: #0f0f0f;
   font-size: 12px;
-  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-weight: 500;
   cursor: pointer;
+  transition: opacity 0.2s, background 0.2s, border-color 0.2s, color 0.2s;
   user-select: none;
-  transition: color 0.15s;
 }
-.line-legend-item:hover { color: var(--text); }
-
-.line-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  transition: opacity 0.2s;
+.line-legend-btn:hover { opacity: 0.85; }
+.line-legend-btn.inactive {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+  opacity: 0.5;
+  text-decoration: line-through;
 }
