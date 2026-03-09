@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Journal">
+<link rel="apple-touch-icon" href="/vanguard/apple-touch-icon.png">
+<link rel="manifest" href="/vanguard/manifest.json">
+<title>Journal — Vanguard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/shared.css">
+<link rel="stylesheet" href="../assets/css/journal.css">
+</head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabase-client.js"></script>
+<body>
+
+<!-- Overlay (mobile) -->
+<div class="overlay" id="overlay" onclick="closeMobileMenus()"></div>
+
+<!-- Mobile toggles -->
+<button class="hamburger" onclick="openLeftMobile()" title="Menu">☰</button>
+<button class="rs-mobile-btn" onclick="openRightMobile()" title="Views">✦</button>
+
+<div class="app dual-sidebar" id="app">
+
+  <!-- ── LEFT SIDEBAR — global nav ── -->
+  <nav class="left-sidebar" id="left-sidebar">
+    <div class="left-sidebar-brand">
+      <h1 class="ls-wordmark">
+        <span class="ls-brand-full">Vanguard</span>
+        <span class="ls-brand-short">V</span>
+      </h1>
+      <button class="ls-collapse-btn" id="ls-collapse-btn" onclick="toggleLeftCollapse()" title="Collapse sidebar">‹</button>
+    </div>
+
+    <div class="left-nav">
+      <a class="left-nav-item" href="../index.html">
+        <span class="left-nav-icon">⊞</span>
+        <span class="left-nav-label">Dashboard</span>
+      </a>
+      <a class="left-nav-item" href="../tasks/index.html">
+        <span class="left-nav-icon">☑</span>
+        <span class="left-nav-label">Tasks</span>
+      </a>
+      <a class="left-nav-item" href="../calendar/index.html">
+        <span class="left-nav-icon">◫</span>
+        <span class="left-nav-label">Calendar</span>
+      </a>
+      <a class="left-nav-item" href="../habits/index.html">
+        <span class="left-nav-icon">◉</span>
+        <span class="left-nav-label">Habits</span>
+      </a>
+      <a class="left-nav-item active" href="index.html">
+        <span class="left-nav-icon">✦</span>
+        <span class="left-nav-label">Journal</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◎</span>
+        <span class="left-nav-label">Goals</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">◈</span>
+        <span class="left-nav-label">Finance</span>
+      </a>
+      <a class="left-nav-item disabled">
+        <span class="left-nav-icon">⚙</span>
+        <span class="left-nav-label">Settings</span>
+      </a>
+    </div>
+
+    <div class="left-sidebar-footer">
+      <span class="ls-signout" onclick="signOut()">Sign out</span>
+    </div>
+  </nav>
+
+  <!-- ── RIGHT SIDEBAR — journal nav ── -->
+  <nav class="right-sidebar" id="right-sidebar">
+    <div class="right-sidebar-header">
+      <button class="rs-collapse-btn" id="rs-collapse-btn" onclick="toggleRightCollapse()" title="Collapse sidebar">›</button>
+      <div class="rs-header-text">
+        <h2>Journal</h2>
+        <p class="rs-header-date" id="sidebar-date-label"></p>
+      </div>
+      <span class="rs-header-icon">✦</span>
+    </div>
+
+    <div class="right-sidebar-body">
+      <div class="sidebar-section">Views</div>
+
+      <div class="sidebar-item active" id="nav-today" onclick="setView('today', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">◎</span>
+          <span class="rs-nav-label">Today</span>
+        </div>
+      </div>
+
+      <div class="sidebar-item" id="nav-history" onclick="setView('history', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">☰</span>
+          <span class="rs-nav-label">History</span>
+        </div>
+      </div>
+
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">Tags</div>
+
+      <div class="sidebar-item" onclick="openTagManager()">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">⬡</span>
+          <span class="rs-nav-label">Manage Tags</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="content">
+
+    <!-- ── TODAY VIEW ── -->
+    <div id="view-today">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2 id="today-heading">Today</h2>
+          <p id="today-subheading"></p>
+        </div>
+      </div>
+
+      <!-- Entry type buttons -->
+      <div class="entry-type-grid">
+        <button class="entry-type-card" onclick="openEntryPopup('free_write')">
+          <div class="etc-icon">✎</div>
+          <div class="etc-name">Free Write</div>
+          <div class="etc-desc">Anything on your mind</div>
+        </button>
+        <button class="entry-type-card etc-featured" onclick="openEntryPopup('prompt')">
+          <div class="etc-icon">✦</div>
+          <div class="etc-name">Daily Prompt</div>
+          <div class="etc-desc">Today's reflection question</div>
+        </button>
+        <button class="entry-type-card" onclick="openEntryPopup('gratitude')">
+          <div class="etc-icon">◈</div>
+          <div class="etc-name">Gratitude</div>
+          <div class="etc-desc">Three things you're grateful for</div>
+        </button>
+      </div>
+
+      <!-- Today's entries feed -->
+      <div id="today-entries"></div>
+    </div>
+
+    <!-- ── HISTORY VIEW ── -->
+    <div id="view-history" style="display:none;">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2>History</h2>
+          <p>All your journal entries</p>
+        </div>
+      </div>
+
+      <div class="history-search-wrap">
+        <input type="text" id="history-search" class="history-search"
+               placeholder="Search entries and tags..." oninput="onSearchInput(this.value)">
+      </div>
+
+      <div id="history-entries"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ════════════════════════════════════════
+     ENTRY OVERLAY — full-screen write/read
+════════════════════════════════════════ -->
+<div class="entry-overlay" id="entry-overlay">
+  <div class="entry-popup">
+
+    <div class="entry-popup-header">
+      <div class="ep-meta">
+        <span class="ep-type-label" id="ep-type-label">Free Write</span>
+        <span class="ep-date" id="ep-date"></span>
+      </div>
+      <div class="ep-header-right">
+        <span class="ep-autosave" id="ep-autosave"></span>
+        <button class="ep-close" onclick="closeEntryPopup()" title="Close (Esc)">✕</button>
+      </div>
+    </div>
+
+    <!-- Rich text toolbar (shown for free_write and prompt) -->
+    <div class="rt-toolbar" id="rt-toolbar">
+      <button class="rt-btn" onclick="rtCmd('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button class="rt-btn" onclick="rtCmd('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+      <button class="rt-btn" onclick="rtCmd('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+      <span class="rt-sep"></span>
+      <button class="rt-btn" onclick="rtBlock('h2')" title="Large heading">H1</button>
+      <button class="rt-btn" onclick="rtBlock('h3')" title="Small heading">H2</button>
+      <span class="rt-sep"></span>
+      <button class="rt-btn" onclick="rtCmd('insertUnorderedList')" title="Bullet list">• List</button>
+      <button class="rt-btn" onclick="rtCmd('insertOrderedList')" title="Numbered list">1. List</button>
+    </div>
+
+    <!-- Dynamic body (injected by JS) -->
+    <div class="entry-popup-body" id="ep-body"></div>
+
+    <!-- Tags -->
+    <div class="ep-tags-section">
+      <div class="ep-tags-label">Tags</div>
+      <div class="ep-tag-chips" id="ep-tag-chips"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="entry-popup-footer">
+      <button class="btn btn-danger" id="ep-delete-btn" onclick="confirmDeleteEntry()" style="display:none;">Delete</button>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn" onclick="closeEntryPopup()">Close</button>
+        <button class="btn btn-primary" onclick="saveCurrentEntry()">Save</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONFIRM DELETE -->
+<div class="modal-backdrop" id="confirm-delete-modal">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-title" style="font-size:20px;">Delete entry?</div>
+    <p style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:4px;">This entry will be permanently deleted and cannot be recovered.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('confirm-delete-modal')">Cancel</button>
+      <button class="btn" id="confirm-delete-btn" style="background:var(--p-high);color:white;border-color:var(--p-high);">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TAG MANAGER -->
+<div class="modal-backdrop" id="tag-manager-modal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-title">Journal Tags</div>
+
+    <div id="tag-list" style="margin-bottom:4px;"></div>
+
+    <div class="tag-manager-add">
+      <div class="form-group">
+        <label>New Tag Name</label>
+        <input type="text" id="new-tag-name" placeholder="e.g. Reflection, Work, Growth..."
+               onkeydown="if(event.key==='Enter') saveNewTag()">
+      </div>
+      <div class="form-group">
+        <label>Color</label>
+        <div class="list-color-picker" id="new-tag-color-picker"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('tag-manager-modal')">Done</button>
+      <button class="btn btn-primary" onclick="saveNewTag()">Add Tag</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────────────
+
+const _sb = window.supabaseClient;
+
+const JOURNAL_TAG_COLORS = [
+  '#8B9DC3', '#C4A4A4', '#C9B99A', '#8FAF8F',
+  '#A89DC4', '#C09080', '#7FA0A0', '#B09080',
+  '#C4B070', '#7AAFAF', '#B08090', '#8FA070',
+];
+
+const JOURNAL_PROMPTS = [
+  "Name three things that exist in your life right now that you once hoped for.",
+  "Who has quietly made your life better, and have you ever told them?",
+  "What's something about today — however small — that you don't want to take for granted?",
+  "What part of your daily routine would you miss most if it were gone?",
+  "Think of a difficulty from your past that turned into something you're grateful for. What happened?",
+  "What's a belief you held five years ago that you've since outgrown?",
+  "When did you last feel genuinely proud of yourself, and what made it matter?",
+  "What decision are you avoiding, and what's really holding you back?",
+  "Describe a moment recently when you felt most like yourself.",
+  "What are you tolerating in your life that you've quietly stopped questioning?",
+  "What would you attempt if you knew the outcome didn't define your worth?",
+  "Where do you want to be in one year, and what's the single next step?",
+  "What skill, if developed, would change the most about your day-to-day life?",
+  "What does success look like to you right now — not in general, but specifically?",
+  "Is there something you keep saying you'll do 'one day'? What's actually stopping you?",
+  "Which relationship in your life deserves more of your attention than it's getting?",
+  "Think of someone who challenges you. What might they see in you that you can't see yourself?",
+  "What's something you wish you could say to someone, but haven't yet?",
+  "How have you shown up for the people you care about lately?",
+  "Who do you want to become closer to, and what would that actually require of you?",
+  "What story about yourself do you repeat most often? Is it still true?",
+  "What fear has kept you safe but also kept you small?",
+  "When things go wrong, what's your default — blame, withdrawal, or something else?",
+  "What's something you're genuinely curious about right now, with no practical reason to be?",
+  "What would it mean to be kinder to yourself today than you were yesterday?",
+  "What does your energy feel like this week — where is it going, and is that where you want it?",
+  "What are you pretending not to know?",
+  "If a close friend described you to a stranger, what do you think they'd say?",
+  "What do you need more of right now — rest, connection, challenge, or silence?",
+  "At the end of this year, what do you most want to be able to say you did?",
+];
+
+// ── STATE ──────────────────────────────────────────────────────────────────────
+
+let _uid = null;
+let entries   = [];
+let jTags     = [];
+let currentView     = 'today';
+let editingEntryId  = null;
+let editingType     = null;
+let selectedTagIds  = [];
+let autoSaveTimer   = null;
+let contentChanged  = false;
+let searchQuery     = '';
+let newTagColor     = JOURNAL_TAG_COLORS[0];
+
+const today    = new Date();
+const todayStr = today.toISOString().split('T')[0];
+
+const dayOfYear   = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+const todayPrompt = JOURNAL_PROMPTS[Math.floor(dayOfYear) % 30];
+
+// ── UTILS ──────────────────────────────────────────────────────────────────────
+
+function uid() { return crypto.randomUUID(); }
+
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function stripHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html || '';
+  return tmp.textContent || '';
+}
+
+function getEntryPreview(entry, maxLen = 100) {
+  let text = '';
+  if (entry.type === 'gratitude') {
+    text = [entry.gratitude_1, entry.gratitude_2, entry.gratitude_3]
+      .filter(Boolean).join(' · ');
+  } else {
+    text = stripHtml(entry.content);
+  }
+  text = text.trim().replace(/\s+/g, ' ');
+  return text.length > maxLen ? text.slice(0, maxLen) + '…' : text;
+}
+
+function formatType(type) {
+  return { free_write: 'Free Write', prompt: 'Daily Prompt', gratitude: 'Gratitude' }[type] || type;
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function formatDateShort(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateGroup(dateStr) {
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yStr = yesterday.toISOString().split('T')[0];
+  if (dateStr === todayStr) return 'Today';
+  if (dateStr === yStr) return 'Yesterday';
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US',
+    { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function getTagsForEntry(entry) {
+  if (!entry.tags || !entry.tags.length) return [];
+  return entry.tags.map(id => jTags.find(t => t.id === id)).filter(Boolean);
+}
+
+// ── VIEW SWITCHING ─────────────────────────────────────────────────────────────
+
+function setView(view, el) {
+  currentView = view;
+  document.getElementById('view-today').style.display   = view === 'today'   ? '' : 'none';
+  document.getElementById('view-history').style.display = view === 'history' ? '' : 'none';
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (view === 'today')   renderToday();
+  if (view === 'history') renderHistory();
+  closeMobileMenus();
+}
+
+// ── TODAY VIEW ─────────────────────────────────────────────────────────────────
+
+function renderToday() {
+  document.getElementById('today-heading').textContent = 'Today';
+  document.getElementById('today-subheading').textContent =
+    today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const todayEntries = entries
+    .filter(e => e.created_at && e.created_at.slice(0, 10) === todayStr)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const container = document.getElementById('today-entries');
+
+  if (!todayEntries.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding-top:28px;">
+        <div class="empty-icon">✦</div>
+        <h3>Nothing written yet today</h3>
+        <p>Choose an entry type above to start writing.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="section-header" style="margin-top:24px;margin-bottom:12px;">
+      <div class="section-header-line"></div>
+      <div class="section-header-label">Today's entries</div>
+      <div class="section-header-line"></div>
+    </div>
+    <div class="entries-feed">
+      ${todayEntries.map(e => renderEntryCard(e, 100)).join('')}
+    </div>`;
+}
+
+// ── HISTORY VIEW ───────────────────────────────────────────────────────────────
+
+function renderHistory() {
+  const q = searchQuery.toLowerCase().trim();
+
+  let filtered = q
+    ? entries.filter(e => {
+        const raw = (e.content || '') + ' ' + (e.gratitude_1 || '') + ' ' + (e.gratitude_2 || '') + ' ' + (e.gratitude_3 || '');
+        const text = stripHtml(raw).toLowerCase();
+        const tagNames = getTagsForEntry(e).map(t => t.name.toLowerCase()).join(' ');
+        return text.includes(q) || tagNames.includes(q);
+      })
+    : entries.slice();
+
+  filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const container = document.getElementById('history-entries');
+
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding-top:28px;">
+        <div class="empty-icon">✦</div>
+        <h3>${q ? 'No results found' : 'No entries yet'}</h3>
+        <p>${q ? 'Try different search terms.' : 'Start writing in Today.'}</p>
+      </div>`;
+    return;
+  }
+
+  // Group by date
+  const byDate = {};
+  filtered.forEach(e => {
+    const d = (e.created_at || '').slice(0, 10);
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(e);
+  });
+
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+  container.innerHTML = '<div class="history-feed">' +
+    dates.map(d => `
+      <div class="history-day-group">
+        <div class="history-day-header">${esc(formatDateGroup(d))}</div>
+        <div class="entries-feed">
+          ${byDate[d].map(e => renderEntryCard(e, 150)).join('')}
+        </div>
+      </div>`
+    ).join('') + '</div>';
+}
+
+function onSearchInput(val) {
+  searchQuery = val;
+  renderHistory();
+}
+
+// ── ENTRY CARD ─────────────────────────────────────────────────────────────────
+
+function renderEntryCard(entry, previewLen) {
+  const preview  = getEntryPreview(entry, previewLen);
+  const tags     = getTagsForEntry(entry);
+  const tagsHtml = tags.map(t =>
+    `<span class="entry-tag-chip" style="background:${t.color}22;color:${t.color};border-color:${t.color}55;">${esc(t.name)}</span>`
+  ).join('');
+
+  return `
+    <div class="entry-card" onclick="openEntryPopup(null,'${entry.id}')">
+      <div class="entry-card-header">
+        <span class="entry-type-badge etb-${entry.type}">${esc(formatType(entry.type))}</span>
+        <span class="entry-card-time">${formatTime(entry.created_at)}</span>
+      </div>
+      <div class="entry-card-preview">${esc(preview)}</div>
+      ${tagsHtml ? `<div class="entry-card-tags">${tagsHtml}</div>` : ''}
+    </div>`;
+}
+
+// ── ENTRY POPUP ────────────────────────────────────────────────────────────────
+
+function openEntryPopup(type, entryId) {
+  let entry = null;
+  if (entryId) {
+    entry = entries.find(e => e.id === entryId);
+    if (!entry) return;
+    type = entry.type;
+  }
+
+  editingEntryId = entryId || null;
+  editingType    = type;
+  selectedTagIds = entry ? (entry.tags || []).slice() : [];
+  contentChanged = false;
+
+  // Header
+  document.getElementById('ep-type-label').textContent = formatType(type);
+  document.getElementById('ep-date').textContent = entry
+    ? formatDateShort(entry.created_at)
+    : formatDateShort(new Date().toISOString());
+
+  // Delete button
+  document.getElementById('ep-delete-btn').style.display = entryId ? 'inline-flex' : 'none';
+
+  // Toolbar
+  const showToolbar = (type === 'free_write' || type === 'prompt');
+  document.getElementById('rt-toolbar').style.display = showToolbar ? 'flex' : 'none';
+
+  // Body
+  const body = document.getElementById('ep-body');
+  if (type === 'free_write') {
+    body.innerHTML = `<div class="rt-editor" id="rt-editor" contenteditable="true"
+      data-placeholder="Start writing..."></div>`;
+    if (entry && entry.content) document.getElementById('rt-editor').innerHTML = entry.content;
+    document.getElementById('rt-editor').addEventListener('input', markChanged);
+
+  } else if (type === 'prompt') {
+    body.innerHTML = `
+      <div class="ep-prompt-box">
+        <div class="ep-prompt-label">Today's prompt</div>
+        <div class="ep-prompt-text">${esc(todayPrompt)}</div>
+      </div>
+      <div class="rt-editor" id="rt-editor" contenteditable="true"
+        data-placeholder="Write your response here..."></div>`;
+    if (entry && entry.content) document.getElementById('rt-editor').innerHTML = entry.content;
+    document.getElementById('rt-editor').addEventListener('input', markChanged);
+
+  } else if (type === 'gratitude') {
+    body.innerHTML = `
+      <div class="gratitude-intro">What are you grateful for today?</div>
+      <div class="gratitude-inputs">
+        <div class="gratitude-row">
+          <span class="gratitude-num">1</span>
+          <input class="gratitude-input" type="text" id="grat-1"
+                 value="${esc(entry ? entry.gratitude_1 || '' : '')}"
+                 placeholder="I am grateful for..." oninput="markChanged()">
+        </div>
+        <div class="gratitude-row">
+          <span class="gratitude-num">2</span>
+          <input class="gratitude-input" type="text" id="grat-2"
+                 value="${esc(entry ? entry.gratitude_2 || '' : '')}"
+                 placeholder="I am grateful for..." oninput="markChanged()">
+        </div>
+        <div class="gratitude-row">
+          <span class="gratitude-num">3</span>
+          <input class="gratitude-input" type="text" id="grat-3"
+                 value="${esc(entry ? entry.gratitude_3 || '' : '')}"
+                 placeholder="I am grateful for..." oninput="markChanged()">
+        </div>
+      </div>`;
+  }
+
+  // Tags
+  setAutosaveStatus('');
+  renderTagChips();
+  startAutoSave();
+
+  // Show
+  document.getElementById('entry-overlay').classList.add('open');
+
+  // Focus
+  setTimeout(() => {
+    const ed = document.getElementById('rt-editor');
+    if (ed) {
+      ed.focus();
+      const range = document.createRange();
+      const sel   = window.getSelection();
+      range.selectNodeContents(ed);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      document.getElementById('grat-1')?.focus();
+    }
+  }, 80);
+}
+
+function closeEntryPopup() {
+  stopAutoSave();
+  if (contentChanged) saveCurrentEntry(true);
+  document.getElementById('entry-overlay').classList.remove('open');
+  editingEntryId = null;
+  editingType    = null;
+  contentChanged = false;
+  selectedTagIds = [];
+  if (currentView === 'today')   renderToday();
+  else renderHistory();
+}
+
+// ── AUTO-SAVE ──────────────────────────────────────────────────────────────────
+
+function markChanged() {
+  contentChanged = true;
+  setAutosaveStatus('Unsaved');
+}
+
+function setAutosaveStatus(msg) {
+  const el = document.getElementById('ep-autosave');
+  if (el) el.textContent = msg;
+}
+
+function startAutoSave() {
+  stopAutoSave();
+  autoSaveTimer = setInterval(() => { if (contentChanged) saveCurrentEntry(true); }, 30000);
+}
+
+function stopAutoSave() {
+  if (autoSaveTimer) { clearInterval(autoSaveTimer); autoSaveTimer = null; }
+}
+
+// ── SAVE ───────────────────────────────────────────────────────────────────────
+
+function getCurrentContent() {
+  if (editingType === 'free_write' || editingType === 'prompt') {
+    const ed = document.getElementById('rt-editor');
+    return {
+      content:     ed ? ed.innerHTML : '',
+      prompt_text: editingType === 'prompt' ? todayPrompt : null,
+    };
+  }
+  if (editingType === 'gratitude') {
+    return {
+      gratitude_1: document.getElementById('grat-1')?.value.trim() || null,
+      gratitude_2: document.getElementById('grat-2')?.value.trim() || null,
+      gratitude_3: document.getElementById('grat-3')?.value.trim() || null,
+    };
+  }
+  return {};
+}
+
+function hasAnyContent() {
+  const c = getCurrentContent();
+  if (editingType === 'gratitude') return !!(c.gratitude_1 || c.gratitude_2 || c.gratitude_3);
+  return !!stripHtml(c.content || '').trim();
+}
+
+async function saveCurrentEntry(silent = false) {
+  if (!hasAnyContent() && !editingEntryId) return;
+
+  const now  = new Date().toISOString();
+  const data = { type: editingType, tags: selectedTagIds, updated_at: now, ...getCurrentContent() };
+
+  if (editingEntryId) {
+    const entry = entries.find(e => e.id === editingEntryId);
+    if (entry) Object.assign(entry, data);
+    await _sb.from('journal_entries').update(data).eq('id', editingEntryId).eq('user_id', _uid);
+  } else {
+    const newId    = uid();
+    const newEntry = { id: newId, user_id: _uid, ...data, created_at: now };
+    entries.unshift(newEntry);
+    editingEntryId = newId;
+    document.getElementById('ep-delete-btn').style.display = 'inline-flex';
+    await _sb.from('journal_entries').insert(newEntry);
+  }
+
+  contentChanged = false;
+  setAutosaveStatus('Saved');
+  setTimeout(() => { if (!contentChanged) setAutosaveStatus(''); }, 2000);
+}
+
+// ── RICH TEXT EDITOR ───────────────────────────────────────────────────────────
+
+function rtCmd(cmd) {
+  document.execCommand(cmd, false, null);
+  document.getElementById('rt-editor')?.focus();
+  markChanged();
+}
+
+function rtBlock(tag) {
+  document.execCommand('formatBlock', false, tag);
+  document.getElementById('rt-editor')?.focus();
+  markChanged();
+}
+
+// ── TAG CHIPS IN POPUP ─────────────────────────────────────────────────────────
+
+function renderTagChips() {
+  const container = document.getElementById('ep-tag-chips');
+  if (!container) return;
+
+  if (!jTags.length) {
+    container.innerHTML = `<span class="ep-tags-empty">No tags yet —
+      <span onclick="openTagManager()" style="cursor:pointer;text-decoration:underline;">add some</span>
+    </span>`;
+    return;
+  }
+
+  container.innerHTML = jTags.map(t => {
+    const active = selectedTagIds.includes(t.id);
+    return `<span class="ep-tag-chip${active ? ' active' : ''}"
+      style="border-color:${active ? t.color : 'var(--border)'};
+             background:${active ? t.color + '22' : 'transparent'};
+             color:${active ? t.color : 'var(--text-muted)'};"
+      onclick="toggleTag('${t.id}')">${esc(t.name)}</span>`;
+  }).join('');
+}
+
+function toggleTag(id) {
+  if (selectedTagIds.includes(id)) {
+    selectedTagIds = selectedTagIds.filter(t => t !== id);
+  } else {
+    selectedTagIds.push(id);
+  }
+  markChanged();
+  renderTagChips();
+}
+
+// ── DELETE ENTRY ───────────────────────────────────────────────────────────────
+
+function confirmDeleteEntry() {
+  document.getElementById('confirm-delete-btn').onclick = async () => {
+    closeModal('confirm-delete-modal');
+    await deleteCurrentEntry();
+  };
+  openModal('confirm-delete-modal');
+}
+
+async function deleteCurrentEntry() {
+  if (!editingEntryId) return;
+  const id = editingEntryId;
+  entries = entries.filter(e => e.id !== id);
+  stopAutoSave();
+  document.getElementById('entry-overlay').classList.remove('open');
+  editingEntryId = null;
+  editingType    = null;
+  contentChanged = false;
+  await _sb.from('journal_entries').delete().eq('id', id).eq('user_id', _uid);
+  if (currentView === 'today')   renderToday();
+  else renderHistory();
+}
+
+// ── TAG MANAGER ────────────────────────────────────────────────────────────────
+
+function openTagManager() {
+  newTagColor = JOURNAL_TAG_COLORS[0];
+  renderTagList();
+  renderNewTagColorPicker();
+  document.getElementById('new-tag-name').value = '';
+  openModal('tag-manager-modal');
+}
+
+function renderTagList() {
+  const el = document.getElementById('tag-list');
+  if (!jTags.length) {
+    el.innerHTML = `<p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">No tags yet.</p>`;
+    return;
+  }
+  el.innerHTML = `<div class="tag-manager-list">` +
+    jTags.map(t => `
+      <div class="tag-manager-row">
+        <span class="tag-manager-dot" style="background:${t.color};"></span>
+        <span class="tag-manager-name">${esc(t.name)}</span>
+        <button class="tag-manager-delete" onclick="deleteJournalTag('${t.id}')">✕</button>
+      </div>`).join('') + `</div>`;
+}
+
+function renderNewTagColorPicker() {
+  const picker = document.getElementById('new-tag-color-picker');
+  picker.innerHTML = JOURNAL_TAG_COLORS.map(c =>
+    `<div class="list-color-swatch${c === newTagColor ? ' selected' : ''}"
+          style="background:${c};" onclick="selectNewTagColor('${c}')"></div>`
+  ).join('');
+}
+
+function selectNewTagColor(c) {
+  newTagColor = c;
+  renderNewTagColorPicker();
+}
+
+async function saveNewTag() {
+  const name = document.getElementById('new-tag-name').value.trim();
+  if (!name) { document.getElementById('new-tag-name').focus(); return; }
+  const newTag = { id: uid(), user_id: _uid, name, color: newTagColor };
+  jTags.push(newTag);
+  await _sb.from('journal_tags').insert(newTag);
+  document.getElementById('new-tag-name').value = '';
+  renderTagList();
+  renderTagChips();
+}
+
+async function deleteJournalTag(id) {
+  jTags = jTags.filter(t => t.id !== id);
+  entries.forEach(e => { if (e.tags) e.tags = e.tags.filter(t => t !== id); });
+  await _sb.from('journal_tags').delete().eq('id', id).eq('user_id', _uid);
+  renderTagList();
+  renderTagChips();
+}
+
+// ── MODALS ─────────────────────────────────────────────────────────────────────
+
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ── GLOBAL EVENTS ──────────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  // Escape
+  if (e.key === 'Escape') {
+    if (document.getElementById('entry-overlay').classList.contains('open')) {
+      closeEntryPopup(); return;
+    }
+    document.querySelectorAll('.modal-backdrop.show').forEach(m => m.classList.remove('show'));
+  }
+  // Ctrl/Cmd+S to save
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    if (document.getElementById('entry-overlay').classList.contains('open')) {
+      e.preventDefault();
+      saveCurrentEntry();
+    }
+  }
+});
+
+// ── SIGN OUT ───────────────────────────────────────────────────────────────────
+
+async function signOut() {
+  await _sb.auth.signOut();
+  window.location.href = '../login.html';
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+
+async function init() {
+  const { data: { session } } = await _sb.auth.getSession();
+  if (!session) { window.location.href = '../login.html'; return; }
+  _uid = session.user.id;
+
+  document.getElementById('sidebar-date-label').textContent =
+    today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const [er, tr] = await Promise.all([
+    _sb.from('journal_entries').select('*').eq('user_id', _uid).order('created_at', { ascending: false }),
+    _sb.from('journal_tags').select('*').eq('user_id', _uid).order('created_at'),
+  ]);
+
+  entries = er.data || [];
+  jTags   = tr.data || [];
+
+  renderToday();
+}
+
+init();
+</script>
+
+<script>
+// ── SIDEBAR STATE ──────────────────────────────────────────────────────────────
+
+const _app          = document.getElementById('app');
+const _leftSidebar  = document.getElementById('left-sidebar');
+const _rightSidebar = document.getElementById('right-sidebar');
+const _overlay      = document.getElementById('overlay');
+
+(function restoreState() {
+  if (localStorage.getItem('vg-ls-collapsed') === 'true') {
+    _leftSidebar.classList.add('ls-collapsed');
+    _app.classList.add('ls-collapsed');
+    document.getElementById('ls-collapse-btn').textContent = '›';
+  }
+  if (localStorage.getItem('vg-rs-collapsed') === 'true') {
+    _rightSidebar.classList.add('rs-collapsed');
+    _app.classList.add('rs-collapsed');
+    document.getElementById('rs-collapse-btn').textContent = '‹';
+  }
+})();
+
+function toggleLeftCollapse() {
+  const collapsed = _leftSidebar.classList.toggle('ls-collapsed');
+  _app.classList.toggle('ls-collapsed', collapsed);
+  document.getElementById('ls-collapse-btn').textContent = collapsed ? '›' : '‹';
+  localStorage.setItem('vg-ls-collapsed', collapsed);
+}
+
+function toggleRightCollapse() {
+  const collapsed = _rightSidebar.classList.toggle('rs-collapsed');
+  _app.classList.toggle('rs-collapsed', collapsed);
+  document.getElementById('rs-collapse-btn').textContent = collapsed ? '‹' : '›';
+  localStorage.setItem('vg-rs-collapsed', collapsed);
+}
+
+function openLeftMobile() {
+  _leftSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function openRightMobile() {
+  _rightSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function closeMobileMenus() {
+  _leftSidebar.classList.remove('mobile-open');
+  _rightSidebar.classList.remove('mobile-open');
+  _overlay.classList.remove('show');
+}
+
+function toggleSidebar() { openRightMobile(); }
+function closeSidebar()  { closeMobileMenus(); }
+</script>
+
+</body>
+</html>

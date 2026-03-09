@@ -52,7 +52,7 @@
         <span class="left-nav-icon">◉</span>
         <span class="left-nav-label">Habits</span>
       </a>
-      <a class="left-nav-item disabled">
+      <a class="left-nav-item" href="journal/index.html">
         <span class="left-nav-icon">✦</span>
         <span class="left-nav-label">Journal</span>
       </a>
@@ -754,7 +754,7 @@ function loadJournalPrompt(widget) {
 
   el.innerHTML = `
     <div class="journal-prompt-text">&ldquo;${esc(prompt)}&rdquo;</div>
-    <div class="journal-prompt-tag">Daily reflection</div>
+    <a href="journal/index.html" class="widget-footer-link">Write in Journal →</a>
   `;
 }
 
