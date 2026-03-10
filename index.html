@@ -513,102 +513,161 @@ async function getGeoCoords() {
   });
 }
 
+// NOAA-based solar calculation (accurate to ~1 min, works worldwide)
 function getSunTimes(lat, lng) {
   const now = new Date();
-  const JD = Math.floor(now.getTime() / 86400000) + 2440587.5;
-  const n = Math.round(JD - 2451545.009 + lng / 360);
-  const Jstar = 2451545.009 - lng / 360 + n;
-  const M = ((357.5291 + 0.98560028 * (Jstar - 2451545)) % 360 + 360) % 360;
-  const Mrad = M * Math.PI / 180;
-  const C = 1.9148 * Math.sin(Mrad) + 0.02 * Math.sin(2 * Mrad) + 0.0003 * Math.sin(3 * Mrad);
-  const lambda = (M + C + 180 + 102.9372) % 360;
-  const Jtransit = Jstar + 0.0053 * Math.sin(Mrad) - 0.0069 * Math.sin(2 * lambda * Math.PI / 180);
-  const lambdaRad = lambda * Math.PI / 180;
-  const sinDec = Math.sin(lambdaRad) * Math.sin(23.4397 * Math.PI / 180);
-  const dec = Math.asin(sinDec);
-  const latRad = lat * Math.PI / 180;
-  const cosW = (Math.sin(-0.8333 * Math.PI / 180) - Math.sin(latRad) * sinDec) /
-               (Math.cos(latRad) * Math.cos(dec));
-  if (Math.abs(cosW) > 1) return null;
-  const W = Math.acos(cosW) * 180 / Math.PI;
-  const toDate = jd => new Date((jd - 2440587.5) * 86400000);
-  return { sunrise: toDate(Jtransit - W / 360), sunset: toDate(Jtransit + W / 360), isFallback: false };
+  // Day of year (1–366)
+  const d = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  // Fractional year in radians
+  const γ = (2 * Math.PI / 365) * (d - 1);
+  // Equation of time (minutes)
+  const eqtime = 229.18 * (0.000075 + 0.001868 * Math.cos(γ) - 0.032077 * Math.sin(γ)
+    - 0.014615 * Math.cos(2 * γ) - 0.04089 * Math.sin(2 * γ));
+  // Solar declination (radians)
+  const decl = 0.006918 - 0.399912 * Math.cos(γ) + 0.070257 * Math.sin(γ)
+    - 0.006758 * Math.cos(2 * γ) + 0.000907 * Math.sin(2 * γ)
+    - 0.002697 * Math.cos(3 * γ) + 0.001480 * Math.sin(3 * γ);
+  // Hour angle at sunrise/sunset (degrees, 90.833° accounts for refraction + solar disk)
+  const latR = lat * Math.PI / 180;
+  const cosHA = Math.cos(90.833 * Math.PI / 180) / (Math.cos(latR) * Math.cos(decl))
+    - Math.tan(latR) * Math.tan(decl);
+  if (Math.abs(cosHA) > 1) return null; // polar night or midnight sun
+  const ha = Math.acos(cosHA) * 180 / Math.PI; // degrees
+  // Solar noon in minutes from UTC midnight (lng: positive east, negative west)
+  const solarNoonUTC = 720 - 4 * lng - eqtime;
+  const utcMidnight = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return {
+    sunrise: new Date(utcMidnight + (solarNoonUTC - ha * 4) * 60000),
+    sunset:  new Date(utcMidnight + (solarNoonUTC + ha * 4) * 60000),
+    isFallback: false,
+  };
 }
 
 function getFallbackSunTimes() {
   const d = new Date();
-  const sr = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 6, 30);
-  const ss = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 19, 30);
-  return { sunrise: sr, sunset: ss, isFallback: true };
+  return {
+    sunrise: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 6, 30),
+    sunset:  new Date(d.getFullYear(), d.getMonth(), d.getDate(), 19, 30),
+    isFallback: true,
+  };
+}
+
+function getMoonPhase() {
+  const JD = Date.now() / 86400000 + 2440587.5;
+  // Known new moon: JD 2451550.1 (Jan 6, 2000 18:14 UTC)
+  const age = ((JD - 2451550.1) % 29.530588 + 29.530588) % 29.530588;
+  const phases = [
+    { max:  1.85, emoji: '🌑', name: 'New Moon' },
+    { max:  7.38, emoji: '🌒', name: 'Waxing Crescent' },
+    { max:  9.22, emoji: '🌓', name: 'First Quarter' },
+    { max: 14.77, emoji: '🌔', name: 'Waxing Gibbous' },
+    { max: 16.62, emoji: '🌕', name: 'Full Moon' },
+    { max: 22.15, emoji: '🌖', name: 'Waning Gibbous' },
+    { max: 24.00, emoji: '🌗', name: 'Last Quarter' },
+    { max: 29.53, emoji: '🌘', name: 'Waning Crescent' },
+  ];
+  return phases.find(p => age < p.max) || phases[phases.length - 1];
 }
 
 function renderSolarArc(el, times, now) {
   const { sunrise, sunset, isFallback } = times;
   const srMs = sunrise.getTime(), ssMs = sunset.getTime(), nowMs = now.getTime();
-  const isDay = nowMs >= srMs && nowMs <= ssMs;
+  const HOUR = 3600000;
 
-  // CSS variable values
-  const style = getComputedStyle(document.documentElement);
-  const accent  = style.getPropertyValue('--accent').trim()     || '#E8D5B0';
-  const border2 = style.getPropertyValue('--border2').trim()    || '#3A3A38';
-  const textMut = style.getPropertyValue('--text-muted').trim() || '#888';
+  // Show moon phase: >1h after sunset, or >1h before sunrise
+  const showMoon = (nowMs > ssMs + HOUR) || (nowMs < srMs - HOUR);
 
-  if (!isDay) {
-    // Nighttime: show moon + countdown
-    const nextSunrise = nowMs < srMs ? sunrise : new Date(sunrise.getTime() + 86400000);
-    const minsUntil = Math.round((nextSunrise.getTime() - nowMs) / 60000);
-    const hrs = Math.floor(minsUntil / 60), mins = minsUntil % 60;
-    const countdown = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+  const cs = getComputedStyle(document.documentElement);
+  const accent  = cs.getPropertyValue('--accent').trim()     || '#E8D5B0';
+  const border2 = cs.getPropertyValue('--border2').trim()    || '#3A3A38';
+  const textMut = cs.getPropertyValue('--text-muted').trim() || '#888';
+
+  if (showMoon) {
+    const moon = getMoonPhase();
+    const nextSr = nowMs < srMs ? sunrise : new Date(srMs + 86400000);
+    const srTime = nextSr.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     el.innerHTML = `
       <div class="greeting-solar-night">
-        <div class="greeting-solar-moon">☽</div>
-        <div class="greeting-solar-msg">Sunrise in ${countdown}</div>
+        <div class="greeting-solar-moon">${moon.emoji}</div>
+        <div class="greeting-solar-phase">${moon.name}</div>
+        <div class="greeting-solar-msg">↑ Sunrise ${srTime}</div>
       </div>`;
     return;
   }
 
-  // Daytime arc
-  const W = 400, H = 90;
-  const cx = W / 2, cy = H;
-  const r = W / 2 - 12;
+  // Arc display (daytime + ±1h twilight windows)
+  // SVG coordinate system: cx=200, cy=115, r=105
+  // Arc spans leftX(95)→rightX(305), peak at y≈10
+  const cx = 200, cy = 115, r = 105;
   const leftX = cx - r, rightX = cx + r;
 
-  const p = Math.max(0.001, Math.min(0.999, (nowMs - srMs) / (ssMs - srMs)));
-  const angle = (1 - p) * Math.PI;
-  const sunX = cx + r * Math.cos(angle);
-  const sunY = cy - r * Math.sin(angle);
+  // Sun progress p: 0=sunrise, 1=sunset (can be slightly outside for twilight)
+  const p = (nowMs - srMs) / (ssMs - srMs);
+  const angle = (1 - p) * Math.PI; // π at sunrise (left), 0 at sunset (right)
+  const sunX  = cx + r * Math.cos(angle);
+  const sunY  = cy - r * Math.sin(angle);
+  const sunAbove = (p >= 0 && p <= 1); // true when sun is above horizon
 
-  // Filled arc from left to sun position
-  const fillAngle = (1 - Math.min(p, 0.9995)) * Math.PI;
-  const fillX = cx + r * Math.cos(fillAngle);
-  const fillY = cy - r * Math.sin(fillAngle);
-  const largeArc = p > 0.5 ? 1 : 0;
+  // Filled arc from sunrise (leftX) to current sun position — large-arc-flag always 0
+  let filledArcPath = '';
+  if (sunAbove && p > 0.004) {
+    const fp = Math.min(p, 0.9996);
+    const fa = (1 - fp) * Math.PI;
+    const fx = cx + r * Math.cos(fa);
+    const fy = cy - r * Math.sin(fa);
+    filledArcPath = `<path d="M ${leftX} ${cy} A ${r} ${r} 0 0 1 ${fx} ${fy}"
+          fill="none" stroke="${accent}" stroke-width="2.5" opacity="0.55"/>`;
+  }
 
-  const fmtTime = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  const srLabel = isFallback ? '' : fmtTime(sunrise);
-  const ssLabel = isFallback ? '' : fmtTime(sunset);
+  const fmt = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const srLabel = isFallback ? '' : fmt(sunrise);
+  const ssLabel = isFallback ? '' : fmt(sunset);
 
   el.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H + 22}" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 400 130" xmlns="http://www.w3.org/2000/svg" overflow="visible" style="width:100%;display:block;">
       <defs>
-        <filter id="sg">
-          <feGaussianBlur stdDeviation="3.5" result="b"/>
+        <filter id="sg" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="4" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
-      <!-- Background arc -->
+
+      <!-- Full background arc (sunrise → sunset) -->
       <path d="M ${leftX} ${cy} A ${r} ${r} 0 0 1 ${rightX} ${cy}"
             fill="none" stroke="${border2}" stroke-width="1.5"/>
+
       <!-- Filled arc (sunrise → now) -->
-      <path d="M ${leftX} ${cy} A ${r} ${r} 0 ${largeArc} 1 ${fillX} ${fillY}"
-            fill="none" stroke="${accent}" stroke-width="2" opacity="0.55"/>
-      <!-- Sun dot -->
-      <circle cx="${sunX}" cy="${sunY}" r="6" fill="${accent}" filter="url(#sg)"/>
+      ${filledArcPath}
+
       <!-- Horizon baseline -->
-      <line x1="${leftX - 6}" y1="${cy}" x2="${rightX + 6}" y2="${cy}"
-            stroke="${border2}" stroke-width="1" opacity="0.4"/>
-      ${srLabel ? `<text x="${leftX + 2}" y="${cy + 16}" font-size="9.5" fill="${textMut}" font-family="Geist,sans-serif">↑ ${srLabel}</text>` : ''}
-      ${ssLabel ? `<text x="${rightX - 2}" y="${cy + 16}" font-size="9.5" fill="${textMut}" font-family="Geist,sans-serif" text-anchor="end">↓ ${ssLabel}</text>` : ''}
+      <line x1="${leftX - 10}" y1="${cy}" x2="${rightX + 10}" y2="${cy}"
+            stroke="${border2}" stroke-width="1" opacity="0.3"/>
+
+      <!-- Sun dot -->
+      <circle cx="${sunX}" cy="${sunY}" r="7"
+              fill="${sunAbove ? accent : border2}"
+              opacity="${sunAbove ? '1' : '0.45'}"
+              ${sunAbove ? 'filter="url(#sg)"' : ''}/>
+
+      <!-- ☀ sunrise icon (bottom-left base) -->
+      <text x="${leftX}" y="${cy + 20}" font-size="15"
+            fill="${textMut}" text-anchor="middle"
+            font-family="Geist,sans-serif">☀</text>
+
+      <!-- ☽ sunset icon (bottom-right base) -->
+      <text x="${rightX}" y="${cy + 20}" font-size="15"
+            fill="${textMut}" text-anchor="middle"
+            font-family="Geist,sans-serif">☽</text>
+
+      <!-- Sunrise time label -->
+      ${srLabel ? `<text x="${leftX}" y="${cy + 34}" font-size="9.5"
+            fill="${textMut}" text-anchor="middle"
+            font-family="Geist,sans-serif">${srLabel}</text>` : ''}
+
+      <!-- Sunset time label -->
+      ${ssLabel ? `<text x="${rightX}" y="${cy + 34}" font-size="9.5"
+            fill="${textMut}" text-anchor="middle"
+            font-family="Geist,sans-serif">${ssLabel}</text>` : ''}
     </svg>`;
 }
 

@@ -667,23 +667,30 @@
 /* ── GREETING SOLAR ARC ── */
 .greeting-solar {
   flex: 1;
-  min-height: 80px;
+  min-height: 90px;
   display: flex;
   align-items: flex-end;
-  padding-top: 12px;
-  overflow: hidden;
+  padding-top: 8px;
+  overflow: visible;
 }
-.greeting-solar svg { display: block; overflow: visible; width: 100%; }
+.greeting-solar svg { display: block; width: 100%; overflow: visible; }
 .greeting-solar-night {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
-  gap: 6px;
-  padding-top: 12px;
+  gap: 5px;
+  padding-bottom: 8px;
 }
-.greeting-solar-moon { font-size: 26px; line-height: 1; opacity: 0.45; }
+.greeting-solar-moon { font-size: 36px; line-height: 1; }
+.greeting-solar-phase {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--text);
+}
 .greeting-solar-msg { font-size: 11px; color: var(--text-muted); }
 
 /* ── WIDGET OPTIONS BUTTON ── */
