@@ -426,13 +426,17 @@ async function loadNotifSettings() {
     if (timePicker) timePicker.style.display = row.enabled ? 'flex' : 'none';
 
     if (row.time) {
-      // row.time is "HH:MM:SS" in 24h
-      const [hh, mm] = row.time.split(':').map(Number);
-      const h12 = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
-      const ampm = hh < 12 ? 'AM' : 'PM';
-      const minStr = String(mm).padStart(2,'0');
+      // row.time is "HH:MM:SS" stored in UTC — convert to local time for display
+      const [utcH, utcM] = row.time.split(':').map(Number);
+      const utcDate = new Date();
+      utcDate.setUTCHours(utcH, utcM, 0, 0);
+      const localH = utcDate.getHours();
+      const localM = utcDate.getMinutes();
+
+      const h12 = localH === 0 ? 12 : localH > 12 ? localH - 12 : localH;
+      const ampm = localH < 12 ? 'AM' : 'PM';
       // Round down to nearest 15
-      const minRound = mm < 15 ? '00' : mm < 30 ? '15' : mm < 45 ? '30' : '45';
+      const minRound = localM < 15 ? '00' : localM < 30 ? '15' : localM < 45 ? '30' : '45';
 
       const hourSel = document.getElementById(`hour-${row.type}`);
       const minSel  = document.getElementById(`min-${row.type}`);
@@ -468,7 +472,13 @@ async function saveNotifSetting(type) {
 
   let h24 = hour % 12;
   if (ampm === 'PM') h24 += 12;
-  const timeStr = `${String(h24).padStart(2,'0')}:${min}:00`;
+
+  // Convert local time to UTC before storing
+  const localDate = new Date();
+  localDate.setHours(h24, parseInt(min, 10), 0, 0);
+  const utcH = localDate.getUTCHours();
+  const utcM = localDate.getUTCMinutes();
+  const timeStr = `${String(utcH).padStart(2,'0')}:${String(utcM).padStart(2,'0')}:00`;
 
   const row = {
     user_id: currentUser.id,
