@@ -495,7 +495,7 @@ async function loadHabitCheckin(widget) {
 
   try {
     const [{ data: habits, error: he }, { data: logs }] = await Promise.all([
-      DB.from('habits').select('id, name, emoji, direction').eq('active', true).order('created_at').limit(6),
+      DB.from('habits').select('id, name, emoji, direction').or('active.is.null,active.eq.true').order('created_at').limit(6),
       DB.from('habit_logs').select('habit_id, completed').eq('date', todayStr),
     ]);
 
