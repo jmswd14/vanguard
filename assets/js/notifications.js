@@ -11,22 +11,28 @@
 
   // ── INJECT PANEL HTML ──────────────────────────────────────────────────────
 
+  // Fix 5 — create scrim and panel as separate elements, no fragile double-append
   function injectPanel() {
+    const scrim = document.createElement('div');
+    scrim.className = 'notif-scrim';
+    scrim.id = 'notif-scrim';
+    scrim.onclick = function () { window.closeNotifPanel(); };
+
     const panel = document.createElement('div');
+    panel.className = 'notif-panel';
+    panel.id = 'notif-panel';
     panel.innerHTML = `
-      <div class="notif-scrim" id="notif-scrim" onclick="closeNotifPanel()"></div>
-      <div class="notif-panel" id="notif-panel">
-        <div class="notif-panel-header">
-          <span class="notif-panel-title">Notifications</span>
-          <button class="notif-mark-all-btn" onclick="markAllNotifsRead()">Mark all read</button>
-          <button class="notif-panel-close" onclick="closeNotifPanel()">×</button>
-        </div>
-        <div class="notif-list" id="notif-list">
-          <div class="notif-empty">Loading...</div>
-        </div>
+      <div class="notif-panel-header">
+        <span class="notif-panel-title">Notifications</span>
+        <button class="notif-mark-all-btn" onclick="markAllNotifsRead()">Mark all read</button>
+        <button class="notif-panel-close" onclick="closeNotifPanel()">×</button>
+      </div>
+      <div class="notif-list" id="notif-list">
+        <div class="notif-empty">Loading...</div>
       </div>`;
-    document.body.appendChild(panel.children[0]);
-    document.body.appendChild(panel.children[0]);
+
+    document.body.appendChild(scrim);
+    document.body.appendChild(panel);
   }
 
   // ── INIT ──────────────────────────────────────────────────────────────────
@@ -104,11 +110,18 @@
     const list = document.getElementById('notif-list');
     list.innerHTML = '<div class="notif-empty">Loading...</div>';
 
+    // Fix 4 — handle query errors explicitly
     const { data, error } = await DB.from('notifications')
       .select('*')
       .eq('user_id', currentUserId)
       .order('created_at', { ascending: false })
       .limit(50);
+
+    if (error) {
+      console.error('[notifications] Failed to load notifications:', error);
+      list.innerHTML = '<div class="notif-empty">Could not load notifications</div>';
+      return;
+    }
 
     notifications = data || [];
     renderList();
@@ -124,12 +137,14 @@
     list.innerHTML = notifications.map(n => renderItem(n)).join('');
   }
 
+  // Fix 3 — keys match the actual type strings sent by the cron job
   const TYPE_ICONS = {
-    task:    '☑',
-    habit:   '◉',
-    journal: '✦',
-    finance: '◈',
-    system:  '⊞',
+    task_due_today:    '☑',
+    task_overdue:      '⚠',
+    habit_checkin:     '◉',
+    journal_prompt:    '✦',
+    finance_asset_due: '◈',
+    system:            '⊞',
   };
 
   function renderItem(n) {
