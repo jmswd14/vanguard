@@ -452,9 +452,9 @@ async function loadTasksToday(widget) {
   try {
     const { data: tasks, error } = await DB
       .from('tasks')
-      .select('id, name, priority, completed')
-      .eq('due_date', todayStr)
-      .eq('completed', false)
+      .select('id, name, priority, done')
+      .eq('due', todayStr)
+      .eq('done', false)
       .order('position')
       .limit(8);
 
