@@ -576,12 +576,16 @@ async function loadUpcomingEvents(widget) {
     const end = new Date();
     end.setDate(end.getDate() + 7);
 
+    const todayStr = now.toISOString().slice(0, 10);
+    const endStr   = end.toISOString().slice(0, 10);
+
     const { data: events, error } = await DB
       .from('events')
-      .select('id, title, start_at, end_at, all_day')
-      .gte('start_at', now.toISOString())
-      .lte('start_at', end.toISOString())
-      .order('start_at')
+      .select('id, title, date, time, all_day')
+      .gte('date', todayStr)
+      .lte('date', endStr)
+      .order('date')
+      .order('time', { nullsFirst: true })
       .limit(5);
 
     if (error) throw error;
@@ -600,10 +604,15 @@ async function loadUpcomingEvents(widget) {
     el.innerHTML = `
       <div style="flex:1;overflow:hidden;">
         ${events.map(ev => {
-          const d = new Date(ev.start_at);
-          const timeStr = ev.all_day
-            ? 'All day'
-            : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          const [y, mo, dy] = ev.date.split('-').map(Number);
+          const d = new Date(y, mo - 1, dy);
+          let timeStr = 'All day';
+          if (!ev.all_day && ev.time) {
+            const [h, m] = ev.time.split(':').map(Number);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const hr12 = h % 12 || 12;
+            timeStr = `${hr12}:${String(m).padStart(2,'0')} ${ampm}`;
+          }
           return `
             <div class="event-row-mini">
               <div class="event-date-block">
