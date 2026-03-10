@@ -149,10 +149,20 @@
         <span class="due-banner-link" onclick="setView('assets', document.getElementById('nav-assets'))">View assets →</span>
       </div>
 
-      <!-- 12-month chart -->
+      <!-- Net worth chart -->
       <div class="nw-chart-wrap">
         <div class="nw-chart-header">
-          <span class="nw-chart-title">Net Worth — Last 12 Months</span>
+          <span class="nw-chart-title" id="nw-chart-title">Net Worth</span>
+          <div class="nw-chart-filters" id="nw-chart-filters">
+            <button class="nw-filter-btn" data-filter="1M" onclick="setChartFilter('1M')">1M</button>
+            <button class="nw-filter-btn" data-filter="3M" onclick="setChartFilter('3M')">3M</button>
+            <button class="nw-filter-btn" data-filter="6M" onclick="setChartFilter('6M')">6M</button>
+            <button class="nw-filter-btn" data-filter="YTD" onclick="setChartFilter('YTD')">YTD</button>
+            <button class="nw-filter-btn active" data-filter="1Y" onclick="setChartFilter('1Y')">1Y</button>
+            <button class="nw-filter-btn" data-filter="3Y" onclick="setChartFilter('3Y')">3Y</button>
+            <button class="nw-filter-btn" data-filter="5Y" onclick="setChartFilter('5Y')">5Y</button>
+            <button class="nw-filter-btn" data-filter="All" onclick="setChartFilter('All')">All</button>
+          </div>
         </div>
         <svg class="nw-chart-svg" id="nw-chart" height="160" viewBox="0 0 800 160" preserveAspectRatio="none"></svg>
       </div>
@@ -221,6 +231,7 @@
         <option value="Cash">Cash</option>
         <option value="Checking &amp; Savings">Checking &amp; Savings</option>
         <option value="Crypto">Crypto</option>
+        <option value="Health Savings Account (HSA)">Health Savings Account (HSA)</option>
         <option value="Physical Assets">Physical Assets</option>
         <option value="Real Estate">Real Estate</option>
         <option value="Retirement">Retirement</option>
@@ -299,29 +310,32 @@ const DB = window.supabaseClient;
 
 const ASSET_TYPES = [
   'Brokerage/Investments','Business Equity','Cash','Checking & Savings',
-  'Crypto','Physical Assets','Real Estate','Retirement'
+  'Crypto','Health Savings Account (HSA)','Physical Assets','Real Estate','Retirement'
 ];
 
 // Type -> accent color dot
 const TYPE_COLORS = {
-  'Brokerage/Investments': '#A78BCA',
-  'Business Equity':       '#C87B7B',
-  'Cash':                  '#C8C07B',
-  'Checking & Savings':    '#7BA3C8',
-  'Crypto':                '#7BC8C0',
-  'Physical Assets':       '#B0C87B',
-  'Real Estate':           '#C8A67B',
-  'Retirement':            '#E8D5B0',
+  'Brokerage/Investments':       '#A78BCA',
+  'Business Equity':             '#C87B7B',
+  'Cash':                        '#C8C07B',
+  'Checking & Savings':          '#7BA3C8',
+  'Crypto':                      '#7BC8C0',
+  'Health Savings Account (HSA)':'#7BC87B',
+  'Physical Assets':             '#B0C87B',
+  'Real Estate':                 '#C8A67B',
+  'Retirement':                  '#E8D5B0',
 };
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 
-let currentUser  = null;
-let assets       = [];   // array of asset rows
-let logs         = [];   // array of all log rows
-let currentView  = 'overview';
-let currentAsset = null; // asset open in detail panel
-let typeFilter   = null; // string or null — filter assets view by type
+let currentUser    = null;
+let assets         = [];   // array of asset rows
+let logs           = [];   // array of all log rows
+let currentView    = 'overview';
+let currentAsset   = null; // asset open in detail panel
+let typeFilter     = null; // string or null — filter assets view by type
+let chartTimeFilter = '1Y'; // active time filter for net worth chart
+let activeCatTypes  = null; // Set of active category types (null = all)
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
@@ -401,21 +415,49 @@ function calcNetWorth() {
   return assets.reduce((sum, a) => sum + getAssetCurrentValue(a), 0);
 }
 
-// For the 12-month chart: for each month, find each asset's most recent log
-// on or before the last day of that month, sum values.
-function calcMonthlyNetWorth() {
+// Returns start Date for a given chart time filter
+function getChartStartDate(filter) {
   const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (filter) {
+    case '1M': { const d = new Date(today); d.setMonth(d.getMonth() - 1); return d; }
+    case '3M': { const d = new Date(today); d.setMonth(d.getMonth() - 3); return d; }
+    case '6M': { const d = new Date(today); d.setMonth(d.getMonth() - 6); return d; }
+    case 'YTD': return new Date(today.getFullYear(), 0, 1);
+    case '1Y':  { const d = new Date(today); d.setFullYear(d.getFullYear() - 1); return d; }
+    case '3Y':  { const d = new Date(today); d.setFullYear(d.getFullYear() - 3); return d; }
+    case '5Y':  { const d = new Date(today); d.setFullYear(d.getFullYear() - 5); return d; }
+    case 'All': {
+      if (!logs.length) { const d = new Date(today); d.setFullYear(d.getFullYear() - 1); return d; }
+      const earliest = logs.map(l => l.logged_at).sort()[0];
+      const [y, m] = earliest.slice(0, 7).split('-').map(Number);
+      return new Date(y, m - 1, 1);
+    }
+    default: { const d = new Date(today); d.setFullYear(d.getFullYear() - 1); return d; }
+  }
+}
+
+// For the chart: for each month in the selected range, find each (active) asset's
+// most recent log on or before the last day of that month, sum values.
+function calcMonthlyNetWorth(filterTypes) {
+  const now = new Date();
+  const start = getChartStartDate(chartTimeFilter);
+  const startYear = start.getFullYear();
+  const startMonth = start.getMonth();
+  const endYear = now.getFullYear();
+  const endMonth = now.getMonth();
+  const totalMonths = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+
   const months = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const year = d.getFullYear();
-    const month = d.getMonth(); // 0-indexed
-    const lastDay = new Date(year, month + 1, 0);
-    const cutoff = lastDay.toISOString().slice(0, 10); // YYYY-MM-DD
+  for (let i = 0; i < totalMonths; i++) {
+    const d = new Date(startYear, startMonth + i, 1);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    const cutoff = lastDay.toISOString().slice(0, 10);
     const label = d.toLocaleString('default', { month: 'short' });
 
     let total = 0;
     for (const asset of assets) {
+      if (filterTypes && !filterTypes.has(asset.type)) continue;
       const assetLogs = logs.filter(l => l.asset_id === asset.id && l.logged_at <= cutoff);
       if (assetLogs.length) {
         const latest = assetLogs[assetLogs.length - 1];
@@ -463,8 +505,19 @@ function renderOverview() {
 
 function renderNWChart() {
   const svg = document.getElementById('nw-chart');
-  const monthly = calcMonthlyNetWorth();
+  const filterTypes = activeCatTypes;
+  const monthly = calcMonthlyNetWorth(filterTypes);
   svg.innerHTML = '';
+
+  if (monthly.length < 2) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x','400'); t.setAttribute('y','80');
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12');
+    t.setAttribute('fill','#666'); t.setAttribute('font-family','Geist, sans-serif');
+    t.textContent = 'Not enough data for this range';
+    svg.appendChild(t);
+    return;
+  }
 
   const W = 800, H = 160, padL = 0, padR = 0, padT = 16, padB = 32;
   const vals = monthly.map(m => m.total);
@@ -485,10 +538,6 @@ function renderNWChart() {
       </linearGradient>
     </defs>`;
 
-  // Area path
-  const points = monthly.map((m, i) => `${xPos(i)},${yPos(m.total)}`).join(' ');
-  const areaPath = `M${xPos(0)},${H - padB} L${points.split(' ').map((p,i)=> i===0?`${xPos(0)},${yPos(monthly[0].total)}`:p).join(' L')} L${xPos(monthly.length-1)},${H - padB} Z`;
-  // simpler: polyline + manual close
   const polyPts = monthly.map((m, i) => `${xPos(i)},${yPos(m.total)}`).join(' ');
   const closedPts = `${xPos(0)},${H - padB} ${polyPts} ${xPos(monthly.length-1)},${H - padB}`;
 
@@ -497,7 +546,6 @@ function renderNWChart() {
   area.setAttribute('fill', `url(#${gradId})`);
   svg.appendChild(area);
 
-  // Line
   const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
   line.setAttribute('points', polyPts);
   line.setAttribute('fill', 'none');
@@ -505,10 +553,11 @@ function renderNWChart() {
   line.setAttribute('stroke-width', '1.5');
   svg.appendChild(line);
 
-  // Month labels
+  // Label density: show every Nth label to avoid crowding
+  const n = monthly.length;
+  const step = n <= 6 ? 1 : n <= 12 ? 2 : n <= 24 ? 3 : n <= 48 ? 6 : 12;
   monthly.forEach((m, i) => {
-    // Show every other label to avoid crowding
-    if (monthly.length > 6 && i % 2 !== 0 && i !== monthly.length - 1) return;
+    if (i % step !== 0 && i !== n - 1) return;
     const t = document.createElementNS('http://www.w3.org/2000/svg','text');
     t.setAttribute('x', xPos(i));
     t.setAttribute('y', H - 6);
@@ -520,14 +569,22 @@ function renderNWChart() {
     svg.appendChild(t);
   });
 
-  // Dots on last point
-  const lastI = monthly.length - 1;
+  // Dot on last point
+  const lastI = n - 1;
   const dot = document.createElementNS('http://www.w3.org/2000/svg','circle');
   dot.setAttribute('cx', xPos(lastI));
   dot.setAttribute('cy', yPos(monthly[lastI].total));
   dot.setAttribute('r', '3');
   dot.setAttribute('fill', '#E8D5B0');
   svg.appendChild(dot);
+}
+
+function setChartFilter(filter) {
+  chartTimeFilter = filter;
+  document.querySelectorAll('.nw-filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  renderNWChart();
 }
 
 function renderCategoryGrid() {
@@ -545,13 +602,31 @@ function renderCategoryGrid() {
     byType[asset.type].count++;
   }
 
-  grid.innerHTML = Object.entries(byType).map(([type, data]) => `
-    <div class="cat-card">
+  // Init activeCatTypes with all types on first render
+  const allTypes = Object.keys(byType);
+  if (!activeCatTypes) activeCatTypes = new Set(allTypes);
+
+  grid.innerHTML = Object.entries(byType).map(([type, data]) => {
+    const isActive = activeCatTypes.has(type);
+    return `
+    <div class="cat-card${isActive ? '' : ' cat-inactive'}" onclick="toggleCatType('${esc(type)}')">
       <div class="cat-card-type">${esc(type)}</div>
       <div class="cat-card-value">${fmtUSD(data.total)}</div>
       <div class="cat-card-count">${data.count} asset${data.count !== 1 ? 's' : ''}</div>
     </div>
-  `).join('');
+  `;}).join('');
+}
+
+function toggleCatType(type) {
+  if (!activeCatTypes) return;
+  if (activeCatTypes.has(type)) {
+    if (activeCatTypes.size <= 1) return; // always keep at least one active
+    activeCatTypes.delete(type);
+  } else {
+    activeCatTypes.add(type);
+  }
+  renderCategoryGrid();
+  renderNWChart();
 }
 
 function renderAssetsView() {
