@@ -575,22 +575,77 @@ async function loadUpcomingEvents(widget) {
     const now = new Date();
     const end = new Date();
     end.setDate(end.getDate() + 7);
-
     const todayStr = now.toISOString().slice(0, 10);
     const endStr   = end.toISOString().slice(0, 10);
 
-    const { data: events, error } = await DB
-      .from('events')
-      .select('id, title, date, time, all_day')
-      .gte('date', todayStr)
-      .lte('date', endStr)
-      .order('date')
-      .order('time', { nullsFirst: true })
-      .limit(5);
+    // Fetch Vanguard events and tasks in parallel
+    const [{ data: vEvents }, { data: tasksDue }] = await Promise.all([
+      DB.from('events')
+        .select('id, title, date, time, all_day')
+        .gte('date', todayStr)
+        .lte('date', endStr)
+        .order('date')
+        .order('time', { nullsFirst: true }),
+      DB.from('tasks')
+        .select('id, name, due')
+        .eq('done', false)
+        .gte('due', todayStr)
+        .lte('due', endStr)
+        .order('due'),
+    ]);
 
-    if (error) throw error;
+    // Fetch Google Calendar events if connected
+    let gcalItems = [];
+    try {
+      const { data: tokenRow } = await DB
+        .from('google_tokens')
+        .select('access_token, expires_at')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      if (tokenRow) {
+        let token = tokenRow.access_token;
+        if (new Date(tokenRow.expires_at).getTime() < Date.now() + 300000) {
+          const { data: refreshed } = await DB.functions.invoke('refresh-google-token', {});
+          if (refreshed?.access_token) token = refreshed.access_token;
+        }
+        const params = new URLSearchParams({
+          singleEvents: 'true',
+          orderBy:      'startTime',
+          timeMin:      now.toISOString(),
+          timeMax:      end.toISOString(),
+          maxResults:   '20',
+        });
+        const resp = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (resp.ok) {
+          const gData = await resp.json();
+          gcalItems = (gData.items || []).map(item => {
+            if (!item.start) return null;
+            const isAllDay = !!item.start.date;
+            const date = isAllDay ? item.start.date : item.start.dateTime?.slice(0, 10);
+            const time = isAllDay ? null : item.start.dateTime?.slice(11, 16);
+            return { title: item.summary || '(No title)', date, time, all_day: isAllDay, source: 'gcal' };
+          }).filter(Boolean);
+        }
+      }
+    } catch (_) { /* Google Calendar is optional — skip silently */ }
 
-    if (!events || events.length === 0) {
+    // Merge all sources and sort by date then time
+    const allItems = [
+      ...(vEvents  || []).map(e => ({ ...e, source: 'event' })),
+      ...(tasksDue || []).map(t => ({ title: t.name, date: t.due, time: null, all_day: true, source: 'task' })),
+      ...gcalItems,
+    ].sort((a, b) => {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      if (!a.time && !b.time) return 0;
+      if (!a.time) return 1;
+      if (!b.time) return -1;
+      return a.time < b.time ? -1 : 1;
+    }).slice(0, 8);
+
+    if (!allItems.length) {
       el.innerHTML = `
         <div class="widget-empty">
           <div class="widget-empty-icon">◫</div>
@@ -603,16 +658,21 @@ async function loadUpcomingEvents(widget) {
 
     el.innerHTML = `
       <div style="flex:1;overflow:hidden;">
-        ${events.map(ev => {
+        ${allItems.map(ev => {
           const [y, mo, dy] = ev.date.split('-').map(Number);
           const d = new Date(y, mo - 1, dy);
-          let timeStr = 'All day';
-          if (!ev.all_day && ev.time) {
+          let timeStr;
+          if (ev.source === 'task') {
+            timeStr = 'Due';
+          } else if (ev.all_day || !ev.time) {
+            timeStr = 'All day';
+          } else {
             const [h, m] = ev.time.split(':').map(Number);
             const ampm = h >= 12 ? 'PM' : 'AM';
             const hr12 = h % 12 || 12;
             timeStr = `${hr12}:${String(m).padStart(2,'0')} ${ampm}`;
           }
+          const sourceLabel = ev.source === 'gcal' ? ' · Google' : '';
           return `
             <div class="event-row-mini">
               <div class="event-date-block">
@@ -621,7 +681,7 @@ async function loadUpcomingEvents(widget) {
               </div>
               <div class="event-info">
                 <div class="event-name-mini">${esc(ev.title)}</div>
-                <div class="event-time-mini">${timeStr}</div>
+                <div class="event-time-mini">${timeStr}${sourceLabel}</div>
               </div>
             </div>
           `;
