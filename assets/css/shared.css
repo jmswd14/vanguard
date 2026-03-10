@@ -444,8 +444,6 @@ select option { background: var(--surface2); }
 }
 .ls-signout { font-size: 12px; color: #666666; color: var(--text-muted); cursor: pointer; transition: color 0.15s; display: block; }
 .ls-signout:hover { color: #FF6B6B; color: var(--p-high); }
-.theme-toggle-btn { background: none; border: none; cursor: pointer; width: 100%; text-align: left; padding: 0; margin-bottom: 6px; }
-
 /* Left sidebar — collapsed state (class added to .app by JS) */
 .app.ls-collapsed .left-sidebar        { width: 60px; }
 .app.ls-collapsed .left-sidebar-brand  { padding: 22px 0; justify-content: center; }
