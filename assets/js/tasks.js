@@ -322,7 +322,7 @@ function renderTaskItem(t) {
   }
 
   const priorityClass = { high: 'priority-high', medium: 'priority-medium', low: 'priority-low' }[t.priority] || 'priority-medium';
-  const priorityLabel = { high: '↑ High', medium: '→ Med', low: '↓ Low' }[t.priority] || 'Med';
+  const priorityLabel = { high: '[!] HIGH', medium: '[~] MED', low: '[.] LOW' }[t.priority] || '[~] MED';
   const menuId   = `task-menu-${t.id}`;
   const safeName = t.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 

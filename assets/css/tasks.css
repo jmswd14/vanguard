@@ -253,15 +253,17 @@
 .priority-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-size: 9px;
   font-weight: 500;
+  letter-spacing: 0.07em;
+  border: 1px solid;
+  font-family: var(--font-mono, monospace);
 }
-.priority-high   { background: var(--p-high-bg);   color: var(--p-high); }
-.priority-medium { background: var(--p-medium-bg); color: var(--p-medium); }
-.priority-low    { background: var(--p-low-bg);    color: var(--p-low); }
+.priority-high   { background: var(--p-high-bg);   color: var(--p-high);   border-color: var(--p-high); }
+.priority-medium { background: var(--p-medium-bg); color: var(--p-medium); border-color: var(--p-medium); }
+.priority-low    { background: var(--p-low-bg);    color: var(--p-low);    border-color: var(--p-low); }
 
 .due-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); }
 .due-badge.overdue { color: var(--p-high); }
