@@ -89,7 +89,6 @@
       <button class="settings-tab" onclick="switchTab('notifications', this)">Notifications</button>
       <button class="settings-tab" onclick="switchTab('appearance', this)">Appearance</button>
       <button class="settings-tab" onclick="switchTab('calendar', this)">Calendar</button>
-      <button class="settings-tab" onclick="switchTab('integrations', this)">Integrations</button>
       <button class="settings-tab" onclick="switchTab('data', this)">Data &amp; Privacy</button>
     </div>
 
@@ -280,22 +279,6 @@
           <button class="btn btn-primary" onclick="saveCalendarPrefs()">Save</button>
         </div>
         <div class="settings-note" id="calendar-status"></div>
-      </div>
-    </div>
-
-    <!-- ── INTEGRATIONS ── -->
-    <div class="settings-panel" id="panel-integrations">
-      <div class="settings-form-max">
-        <div class="settings-section">Movie Pick</div>
-        <div class="form-group">
-          <label>TMDB API Key</label>
-          <input type="text" id="tmdb-api-key" placeholder="Paste key from themoviedb.org" autocomplete="off">
-          <div class="settings-note">Free key from <span style="color:var(--accent)">themoviedb.org</span>. Used by the Movie Pick dashboard widget.</div>
-        </div>
-        <div class="settings-btn-row">
-          <button class="btn btn-primary" onclick="saveIntegrations()">Save</button>
-        </div>
-        <div class="settings-note" id="integrations-status"></div>
       </div>
     </div>
 
@@ -519,7 +502,6 @@ async function loadPreferences() {
   if (prefs.font_size)    document.getElementById('pref-font-size').value    = prefs.font_size;
   if (prefs.week_start)   document.getElementById('pref-week-start').value   = prefs.week_start;
   if (prefs.default_view) document.getElementById('pref-default-view').value = prefs.default_view;
-  if (prefs.tmdb_api_key) document.getElementById('tmdb-api-key').value      = prefs.tmdb_api_key;
 
   // Retro colors
   const c1 = prefs.retro_color1 || localStorage.getItem('vg-retro-c1') || '#00FF41';
@@ -587,13 +569,6 @@ async function saveAppearance() {
   ]);
   VG_THEME.applyRetroColors(c1, c2);
   showToast('Appearance saved');
-}
-
-async function saveIntegrations() {
-  const key = document.getElementById('tmdb-api-key').value.trim();
-  await savePref('tmdb_api_key', key);
-  document.getElementById('integrations-status').textContent = 'Saved.';
-  setTimeout(() => { document.getElementById('integrations-status').textContent = ''; }, 2000);
 }
 
 async function saveCalendarPrefs() {

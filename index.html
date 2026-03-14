@@ -217,7 +217,7 @@ const dashSelectedTags = {};   // { widgetId: string[] }
 const dashInlineTagColor = {}; // { widgetId: string }
 const greetingSolarData  = {}; // { widgetId: { sunrise: Date, sunset: Date, isFallback: boolean } }
 let greetingsCache = null;    // fetched once from Supabase greetings table
-let tmdbApiKey     = '';      // loaded from user_preferences on init
+const TMDB_API_KEY = '2a9ab8fbca5a5c52399da22ba0a7c7c9';
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 
@@ -232,7 +232,7 @@ async function init() {
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   document.getElementById('dash-date').textContent = dateStr;
 
-  await Promise.all([loadLayout(), loadDashLists(), loadDashTags(), fetchGreetings(), loadUserPrefs()]);
+  await Promise.all([loadLayout(), loadDashLists(), loadDashTags(), fetchGreetings()]);
   renderGrid();
   loadAllWidgetData();
 
@@ -430,15 +430,6 @@ function addWidget(type, size) {
   renderGrid();
   loadAllWidgetData();
   saveLayout();
-}
-
-async function loadUserPrefs() {
-  try {
-    const { data } = await DB.from('user_preferences').select('key,value').eq('user_id', currentUser.id);
-    (data || []).forEach(r => {
-      if (r.key === 'tmdb_api_key') tmdbApiKey = r.value || '';
-    });
-  } catch(_) {}
 }
 
 // ── WIDGET DATA LOADERS ───────────────────────────────────────────────────────
@@ -1440,7 +1431,7 @@ async function loadMovieSuggest(widget) {
   const el = document.getElementById(`wb-${widget.id}`);
   if (!el) return;
   const config = widget.config || {};
-  const apiKey = tmdbApiKey;
+  const apiKey = TMDB_API_KEY;
 
   if (!apiKey) {
     el.innerHTML = `<div class="widget-empty">
