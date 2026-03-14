@@ -288,10 +288,11 @@ const TAG_COLORS = [
 ];
 
 // ── DATA ──
-let tasks      = [];
-let events     = [];
-let categories = [];
-let tags       = [];
+let tasks              = [];
+let events             = [];
+let categories         = [];
+let tags               = [];
+let recurringTemplates = [];
 
 // ── CALENDAR VIEW STATE ──
 const WEEK_START_DAY = 0;
@@ -389,7 +390,39 @@ function eventOccursOn(ev, dateStr) {
 }
 
 function getEventsForDay(dateStr) { return events.filter(e => eventOccursOn(e, dateStr)); }
-function getTasksForDay(dateStr)  { return tasks.filter(t => !t.done && t.due === dateStr); }
+
+function recurringOccursOn(rt, dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (rt.frequency === 'daily')   return true;
+  if (rt.frequency === 'weekly')  return d.getDay() === rt.frequency_day;
+  if (rt.frequency === 'monthly') {
+    if (rt.frequency_day === 0) {
+      return d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    }
+    return d.getDate() === rt.frequency_day;
+  }
+  return false;
+}
+
+function getTasksForDay(dateStr) {
+  const real = tasks.filter(t => !t.done && t.due === dateStr);
+  const realRtIds = new Set(real.map(t => t.recurringTaskId).filter(Boolean));
+  const virtual = recurringTemplates
+    .filter(rt => !realRtIds.has(rt.id) && recurringOccursOn(rt, dateStr))
+    .map(rt => ({
+      id:                'rt-virtual-' + rt.id,
+      name:              rt.name,
+      category:          rt.list_id || '',
+      priority:          rt.priority,
+      due:               dateStr,
+      tags:              rt.tags || [],
+      notes:             rt.notes || '',
+      done:              false,
+      isVirtualRecurring: true,
+      recurringTaskId:   rt.id,
+    }));
+  return [...real, ...virtual];
+}
 
 // ── PERIOD LABEL ──
 function getPeriodLabel() {
@@ -533,12 +566,14 @@ function renderMonthDayCell(dateStr, dayNum, otherMonth) {
       const cat   = getCategory(item.category);
       const color = cat ? cat.color : '#666666';
       const safe  = item.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const rtBadge = (item.recurringTaskId || item.isVirtualRecurring) ? '<span style="opacity:0.5;margin-right:3px;font-size:10px;">↻</span>' : '';
+      const clickFn = item.isVirtualRecurring ? '' : `onclick="event.stopPropagation();editTask('${item.id}')"`;
       return `<div class="cal-bar task-bar"
-                   style="background:${color}22;border-left:3px solid ${color};"
-                   onclick="event.stopPropagation();editTask('${item.id}')"
+                   style="background:${color}22;border-left:3px solid ${color};${item.isVirtualRecurring ? 'opacity:0.65;' : ''}"
+                   ${clickFn}
                    title="${safe}">
         <span class="cal-bar-dot" style="background:${color};"></span>
-        <span class="cal-bar-text">${item.name}</span>
+        <span class="cal-bar-text">${rtBadge}${item.name}</span>
       </div>`;
     } else if (type === 'event') {
       const cat   = getCategory(item.category_id);
@@ -621,10 +656,12 @@ function buildTimedView(days) {
     const gcalAllDayItems = getGoogleEventsForDay(dateStr).filter(e => e.all_day);
     const items = [
       ...dayTasks.map(t => {
-        const cat   = getCategory(t.category);
-        const color = cat ? cat.color : '#666666';
-        return `<div class="cal-allday-item" style="background:${color}22;border-left:2px solid ${color};"
-                     onclick="editTask('${t.id}')" title="${t.name.replace(/"/g,'&quot;')}">${t.name}</div>`;
+        const cat     = getCategory(t.category);
+        const color   = cat ? cat.color : '#666666';
+        const rtBadge = (t.recurringTaskId || t.isVirtualRecurring) ? '<span style="opacity:0.5;margin-right:3px;">↻</span>' : '';
+        const clickFn = t.isVirtualRecurring ? '' : `onclick="editTask('${t.id}')"`;
+        return `<div class="cal-allday-item" style="background:${color}22;border-left:2px solid ${color};${t.isVirtualRecurring ? 'opacity:0.65;' : ''}"
+                     ${clickFn} title="${t.name.replace(/"/g,'&quot;')}">${rtBadge}${t.name}</div>`;
       }),
       ...alldayEvents.map(e => {
         const cat   = getCategory(e.category_id);
@@ -753,13 +790,16 @@ function renderDayPanel() {
     if (dayTasks.length) {
       html += `<div class="day-panel-section-label">Tasks</div>`;
       html += dayTasks.map(t => {
-        const cat   = getCategory(t.category);
-        const color = cat ? cat.color : '#666666';
-        return `<div class="day-panel-item" onclick="editTask('${t.id}')">
+        const cat     = getCategory(t.category);
+        const color   = cat ? cat.color : '#666666';
+        const rtBadge = (t.recurringTaskId || t.isVirtualRecurring) ? '<span style="opacity:0.45;margin-right:4px;font-size:12px;">↻</span>' : '';
+        const clickFn = t.isVirtualRecurring ? '' : `onclick="editTask('${t.id}')"`;
+        const meta    = [cat ? cat.name : '', t.isVirtualRecurring ? 'Recurring — not yet generated' : ''].filter(Boolean).join(' · ');
+        return `<div class="day-panel-item" ${clickFn} style="${t.isVirtualRecurring ? 'opacity:0.65;cursor:default;' : ''}">
           <span class="day-panel-dot" style="background:${color};"></span>
           <div class="day-panel-item-body">
-            <div class="day-panel-item-name">${t.name}</div>
-            ${cat ? `<div class="day-panel-item-meta">${cat.name}</div>` : ''}
+            <div class="day-panel-item-name">${rtBadge}${t.name}</div>
+            ${meta ? `<div class="day-panel-item-meta">${meta}</div>` : ''}
           </div>
         </div>`;
       }).join('');
@@ -1373,11 +1413,12 @@ async function init() {
     console.error('Google OAuth callback error:', err);
   }
 
-  const [tr, lr, gr, er] = await Promise.all([
-    _sb.from('tasks').select('id, name, category_id, priority, due, tags, notes, done').eq('user_id', _uid),
+  const [tr, lr, gr, er, rtr] = await Promise.all([
+    _sb.from('tasks').select('id, name, category_id, priority, due, tags, notes, done, recurring_task_id').eq('user_id', _uid),
     _sb.from('lists').select('*').eq('user_id', _uid),
     _sb.from('tags').select('*').eq('user_id', _uid),
     _sb.from('events').select('*').eq('user_id', _uid),
+    _sb.from('recurring_tasks').select('*').eq('user_id', _uid).eq('active', true),
   ]);
 
   tasks = (tr.data || []).map(t => ({
@@ -1385,7 +1426,9 @@ async function init() {
     category: t.category_id || t.list_id || '',
     priority: t.priority || 'medium', due: t.due || '',
     tags: t.tags || [], notes: t.notes || '', done: t.done || false,
+    recurringTaskId: t.recurring_task_id || null,
   }));
+  recurringTemplates = rtr.data || [];
   categories = lr.data || [];
   tags       = gr.data || [];
   events     = (er.data || []).map(e => ({
