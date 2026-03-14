@@ -1482,6 +1482,7 @@ function renderMovieWidget(el, movie) {
     ? movie.overview.slice(0, 180) + (movie.overview.length > 180 ? '…' : '')
     : '';
 
+  const widgetId = el.id.replace('wb-', '');
   el.innerHTML = `
     <div class="movie-wrap">
       <div class="movie-poster-col">${poster}</div>
@@ -1489,9 +1490,16 @@ function renderMovieWidget(el, movie) {
         <div class="movie-title">${esc(movie.title)}</div>
         <div class="movie-meta">${esc(year)}&nbsp;&nbsp;★ ${esc(rating)}</div>
         <div class="movie-blurb">${esc(blurb)}</div>
+        <button class="movie-refresh" onclick="refreshMovieWidget('${widgetId}')" title="New suggestion">↺</button>
       </div>
     </div>
   `;
+}
+
+function refreshMovieWidget(widgetId) {
+  Object.keys(localStorage).filter(k => k.startsWith(`vg-movie-${widgetId}`)).forEach(k => localStorage.removeItem(k));
+  const widget = widgets.find(w => w.id === widgetId);
+  if (widget) loadMovieSuggest(widget);
 }
 
 // ON THIS DAY ──────────────────────────────────────────────────────────────────

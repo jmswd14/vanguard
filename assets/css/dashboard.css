@@ -1011,3 +1011,15 @@
 .hist-l2-sec-row    { display: flex; gap: 10px; align-items: baseline; }
 .hist-l2-sec-year   { font-size: 11px; color: var(--accent); flex-shrink: 0; opacity: 0.6; width: 40px; letter-spacing: 0.03em; }
 .hist-l2-sec-text   { font-size: 11px; color: var(--text-muted); opacity: 0.6; line-height: 1.45; }
+.movie-refresh {
+  margin-top: 8px;
+  background: none;
+  border: 1px solid var(--border2);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: border-color 0.15s, color 0.15s;
+}
+.movie-refresh:hover { border-color: var(--accent); color: var(--accent); }
