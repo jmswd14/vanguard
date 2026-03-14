@@ -757,14 +757,14 @@ function buildMonthDaySelect(selId) {
   const sel = document.getElementById(selId);
   if (!sel || sel.options.length) return;
   const ordinal = n => { const s=['th','st','nd','rd']; const v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
-  const lastOpt = document.createElement('option');
-  lastOpt.value = 0; lastOpt.textContent = 'Last day';
-  sel.appendChild(lastOpt);
   for (let d = 1; d <= 28; d++) {
     const o = document.createElement('option');
     o.value = d; o.textContent = ordinal(d);
     sel.appendChild(o);
   }
+  const lastOpt = document.createElement('option');
+  lastOpt.value = 0; lastOpt.textContent = 'Last day';
+  sel.appendChild(lastOpt);
 }
 
 function openModal_addRecurring() {

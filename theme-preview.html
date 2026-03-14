@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Theme Preview — Motherboard</title>
+  <title>Preview Lab — Motherboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&family=Fraunces:ital,wght@1,300;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
@@ -169,7 +169,7 @@
   </style>
 </head>
 <body>
-  <h1>Motherboard — Theme Preview</h1>
+  <h1>Motherboard — Preview Lab</h1>
   <div class="grid">
 
     <!-- ── BLOOMBERG ── -->
@@ -369,5 +369,101 @@
     </div>
 
   </div>
+
+  <!-- ── PRIORITY INDICATOR SAMPLES ── -->
+  <div style="max-width:960px;margin:48px auto 0;padding-top:36px;border-top:1px solid #1e1e1e;">
+    <div style="font-size:10px;color:#444;letter-spacing:0.12em;text-transform:uppercase;text-align:center;margin-bottom:20px;font-family:'Share Tech Mono',monospace;">
+      Priority Indicator Samples
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+
+      <!-- A: Phosphor Status Squares — colored solid squares + text -->
+      <div style="background:#0a0a0a;border:1px solid #1e1e1e;overflow:hidden;font-family:'Share Tech Mono',monospace;">
+        <div style="padding:8px 12px;border-bottom:1px solid #1e1e1e;font-size:9px;color:#444;letter-spacing:0.12em;text-transform:uppercase;">A &mdash; PHOSPHOR</div>
+        <div style="padding:12px;">
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;color:#FF5050;letter-spacing:0.06em;"><span style="width:8px;height:8px;background:#FF5050;flex-shrink:0;"></span>HIGH</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;color:#FFAA00;letter-spacing:0.06em;"><span style="width:8px;height:8px;background:#FFAA00;flex-shrink:0;"></span>MED</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:10px;color:#3A7A3A;letter-spacing:0.06em;"><span style="width:8px;height:8px;background:#3A7A3A;flex-shrink:0;"></span>LOW</span>
+          </div>
+          <div style="border-top:1px solid #1a1a1a;padding-top:8px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="width:6px;height:6px;background:#FF5050;flex-shrink:0;"></span>Pay rent</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="width:6px;height:6px;background:#FFAA00;flex-shrink:0;"></span>Send invoice</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#555;"><span style="width:6px;height:6px;background:#3A7A3A;flex-shrink:0;"></span>Buy groceries</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B: Fill Bars — ASCII block fill showing level -->
+      <div style="background:#0a0a0a;border:1px solid #1e1e1e;overflow:hidden;font-family:'Share Tech Mono',monospace;">
+        <div style="padding:8px 12px;border-bottom:1px solid #1e1e1e;font-size:9px;color:#444;letter-spacing:0.12em;text-transform:uppercase;">B &mdash; FILL BARS</div>
+        <div style="padding:12px;">
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <span style="font-size:12px;color:#00FF41;letter-spacing:0.05em;">&#x2593;&#x2593;&#x2593; HIGH</span>
+            <span style="font-size:12px;color:#00FF41;opacity:0.55;letter-spacing:0.05em;">&#x2593;&#x2593;&#x2591; MED</span>
+            <span style="font-size:12px;color:#00FF41;opacity:0.25;letter-spacing:0.05em;">&#x2593;&#x2591;&#x2591; LOW</span>
+          </div>
+          <div style="border-top:1px solid #1a1a1a;padding-top:8px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="color:#00FF41;font-size:11px;line-height:1;">&#x2593;&#x2593;&#x2593;</span>Pay rent</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="color:#00FF41;opacity:0.55;font-size:11px;line-height:1;">&#x2593;&#x2593;&#x2591;</span>Send invoice</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#555;"><span style="color:#00FF41;opacity:0.25;font-size:11px;line-height:1;">&#x2593;&#x2591;&#x2591;</span>Buy groceries</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C: Alert Code Tags — colored bracketed chips -->
+      <div style="background:#0a0a0a;border:1px solid #1e1e1e;overflow:hidden;font-family:'Share Tech Mono',monospace;">
+        <div style="padding:8px 12px;border-bottom:1px solid #1e1e1e;font-size:9px;color:#444;letter-spacing:0.12em;text-transform:uppercase;">C &mdash; ALERT TAGS</div>
+        <div style="padding:12px;">
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <span style="display:inline-block;font-size:9px;padding:2px 7px;background:rgba(255,80,80,0.13);border:1px solid rgba(255,80,80,0.35);color:#FF6060;letter-spacing:0.07em;">[!] HIGH</span>
+            <span style="display:inline-block;font-size:9px;padding:2px 7px;background:rgba(255,170,0,0.11);border:1px solid rgba(255,170,0,0.3);color:#FFAA00;letter-spacing:0.07em;">[~] MED</span>
+            <span style="display:inline-block;font-size:9px;padding:2px 7px;background:rgba(80,160,80,0.09);border:1px solid rgba(80,160,80,0.25);color:#55AA55;letter-spacing:0.07em;">[.] LOW</span>
+          </div>
+          <div style="border-top:1px solid #1a1a1a;padding-top:8px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="font-size:9px;padding:1px 5px;background:rgba(255,80,80,0.13);border:1px solid rgba(255,80,80,0.35);color:#FF6060;">[!]</span>Pay rent</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="font-size:9px;padding:1px 5px;background:rgba(255,170,0,0.11);border:1px solid rgba(255,170,0,0.3);color:#FFAA00;">[~]</span>Send invoice</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#555;"><span style="font-size:9px;padding:1px 5px;background:rgba(80,160,80,0.09);border:1px solid rgba(80,160,80,0.25);color:#55AA55;">[.]</span>Buy groceries</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D: Geometric Shapes — shape encodes urgency -->
+      <div style="background:#0a0a0a;border:1px solid #1e1e1e;overflow:hidden;font-family:'Share Tech Mono',monospace;">
+        <div style="padding:8px 12px;border-bottom:1px solid #1e1e1e;font-size:9px;color:#444;letter-spacing:0.12em;text-transform:uppercase;">D &mdash; SHAPES</div>
+        <div style="padding:12px;">
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <span style="font-size:11px;color:#FF5050;letter-spacing:0.06em;">&#x25B2; HIGH</span>
+            <span style="font-size:11px;color:#FFAA00;letter-spacing:0.06em;">&#x25A0; MED</span>
+            <span style="font-size:11px;color:#3A5A3A;letter-spacing:0.06em;">&#x25BD; LOW</span>
+          </div>
+          <div style="border-top:1px solid #1a1a1a;padding-top:8px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="color:#FF5050;">&#x25B2;</span>Pay rent</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="color:#FFAA00;">&#x25A0;</span>Send invoice</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#555;"><span style="color:#3A5A3A;">&#x25BD;</span>Buy groceries</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- E: Severity Log Tags — left-border colored chip, log-level style -->
+      <div style="background:#0a0a0a;border:1px solid #1e1e1e;overflow:hidden;font-family:'Share Tech Mono',monospace;">
+        <div style="padding:8px 12px;border-bottom:1px solid #1e1e1e;font-size:9px;color:#444;letter-spacing:0.12em;text-transform:uppercase;">E &mdash; LOG LEVEL</div>
+        <div style="padding:12px;">
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;">
+            <span style="display:inline-block;font-size:9px;padding:2px 8px 2px 7px;border-left:3px solid #FF5050;background:rgba(255,80,80,0.08);color:#FF6060;letter-spacing:0.09em;">CRIT</span>
+            <span style="display:inline-block;font-size:9px;padding:2px 8px 2px 7px;border-left:3px solid #FFAA00;background:rgba(255,170,0,0.08);color:#FFAA00;letter-spacing:0.09em;">NORM</span>
+            <span style="display:inline-block;font-size:9px;padding:2px 8px 2px 7px;border-left:3px solid #333;background:rgba(255,255,255,0.03);color:#4a4a4a;letter-spacing:0.09em;">LOW</span>
+          </div>
+          <div style="border-top:1px solid #1a1a1a;padding-top:8px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="font-size:8px;padding:1px 5px;border-left:2px solid #FF5050;background:rgba(255,80,80,0.08);color:#FF6060;">CRIT</span>Pay rent</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#777;"><span style="font-size:8px;padding:1px 5px;border-left:2px solid #FFAA00;background:rgba(255,170,0,0.08);color:#FFAA00;">NORM</span>Send invoice</div>
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#555;"><span style="font-size:8px;padding:1px 5px;border-left:2px solid #333;background:rgba(255,255,255,0.03);color:#4a4a4a;">LOW</span>Buy groceries</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </body>
 </html>
