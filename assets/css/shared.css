@@ -448,7 +448,7 @@ select option { background: var(--surface2); }
 .app.ls-collapsed .left-sidebar        { width: 60px; }
 .app.ls-collapsed .left-sidebar-brand  { padding: 22px 0; justify-content: center; }
 .app.ls-collapsed .ls-brand-full       { display: none; }
-.app.ls-collapsed .ls-brand-short      { display: block; }
+.app.ls-collapsed .ls-brand-short      { display: none; }
 .app.ls-collapsed .left-nav-item       { padding: 10px 0; justify-content: center; gap: 0; }
 .app.ls-collapsed .left-nav-label      { opacity: 0; width: 0; overflow: hidden; }
 .app.ls-collapsed .left-sidebar-footer { padding: 14px 0; display: flex; justify-content: center; }
