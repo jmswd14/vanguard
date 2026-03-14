@@ -143,6 +143,7 @@ const WIDGET_LABELS = {
   'quick-task':      'Quick Add Task',
   'journal-prompt':  'Journal Prompt',
   'goals-progress':  'Goals Progress',
+  'movie-suggest':   'Movie Pick',
 };
 
 const WIDGET_CATALOG = [
@@ -154,6 +155,7 @@ const WIDGET_CATALOG = [
   { type: 'quick-task',      size: 'large', icon: '+', name: 'Quick Add Task',   desc: 'Add a task instantly' },
   { type: 'journal-prompt',  size: 'small', icon: '✦', name: 'Journal Prompt',  desc: 'Daily reflection prompt' },
   { type: 'goals-progress',  size: 'large', icon: '◎', name: 'Goals Progress',  desc: 'Track long-term goals' },
+  { type: 'movie-suggest',   size: 'wide',  icon: '▶', name: 'Movie Pick',       desc: 'Daily film suggestion' },
 ];
 
 const JOURNAL_PROMPTS = [
@@ -439,6 +441,7 @@ function loadAllWidgetData() {
     'quick-task':      loadQuickTask,
     'journal-prompt':  loadJournalPrompt,
     'goals-progress':  loadGoalsProgress,
+    'movie-suggest':   loadMovieSuggest,
   };
   widgets.forEach(w => {
     if (loaders[w.widget_type]) loaders[w.widget_type](w);
@@ -1418,6 +1421,70 @@ async function loadGoalsProgress(widget) {
   }
 }
 
+// MOVIE PICK ──────────────────────────────────────────────────────────────────
+
+async function loadMovieSuggest(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+  const config = widget.config || {};
+  const apiKey = config.api_key || '';
+
+  if (!apiKey) {
+    el.innerHTML = `<div class="widget-empty">
+      <div class="widget-empty-icon">▶</div>
+      <div class="widget-empty-text">Add your TMDB API key in widget settings</div>
+    </div>`;
+    return;
+  }
+
+  const cacheKey = `vg-movie-${widget.id}-${todayStr}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) { renderMovieWidget(el, JSON.parse(cached)); return; }
+
+  try {
+    const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+    const page = (dayOfYear % 10) + 1;
+    const genre = config.genre_id ? `&with_genres=${config.genre_id}` : '';
+    const minRating = config.min_rating || 7;
+    const url = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&sort_by=vote_average.desc&vote_count.gte=500&vote_average.gte=${minRating}&page=${page}${genre}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('TMDB error');
+    const data = await res.json();
+    const results = data.results || [];
+    const movie = results[dayOfYear % results.length];
+    if (!movie) throw new Error('no results');
+
+    localStorage.setItem(cacheKey, JSON.stringify(movie));
+    renderMovieWidget(el, movie);
+  } catch (e) {
+    el.innerHTML = `<div class="widget-empty"><div class="widget-empty-text">Couldn't load suggestion</div></div>`;
+  }
+}
+
+function renderMovieWidget(el, movie) {
+  const posterBase = 'https://image.tmdb.org/t/p/w300';
+  const poster = movie.poster_path
+    ? `<img class="movie-poster" src="${posterBase}${movie.poster_path}" alt="">`
+    : `<div class="movie-poster-placeholder">▶</div>`;
+  const year = (movie.release_date || '').slice(0, 4);
+  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '—';
+  const blurb = movie.overview
+    ? movie.overview.slice(0, 180) + (movie.overview.length > 180 ? '…' : '')
+    : '';
+
+  el.innerHTML = `
+    <div class="movie-wrap">
+      <div class="movie-poster-col">${poster}</div>
+      <div class="movie-info-col">
+        <div class="movie-title">${esc(movie.title)}</div>
+        <div class="movie-meta">${esc(year)}&nbsp;&nbsp;★ ${esc(rating)}</div>
+        <div class="movie-blurb">${esc(blurb)}</div>
+      </div>
+    </div>
+  `;
+}
+
 // ── WIDGET OPTIONS ────────────────────────────────────────────────────────────
 
 let optionsWidgetId = null;
@@ -1610,6 +1677,38 @@ function buildOptionsForm(widget, config, habits) {
           ).join('')}
         </select>
       </div>`;
+
+  } else if (type === 'movie-suggest') {
+    rows = `
+      <div class="widget-option-row">
+        <label class="widget-option-label">TMDB API Key</label>
+        <input class="widget-option-input" type="text" id="wo-movie-key"
+          value="${esc(config.api_key || '')}" placeholder="Paste key from themoviedb.org">
+      </div>
+      <div class="widget-option-row">
+        <label class="widget-option-label">Genre</label>
+        <select class="widget-option-select" id="wo-movie-genre">
+          <option value="">Any</option>
+          <option value="28"    ${config.genre_id==='28'    ?'selected':''}>Action</option>
+          <option value="35"    ${config.genre_id==='35'    ?'selected':''}>Comedy</option>
+          <option value="18"    ${config.genre_id==='18'    ?'selected':''}>Drama</option>
+          <option value="27"    ${config.genre_id==='27'    ?'selected':''}>Horror</option>
+          <option value="878"   ${config.genre_id==='878'   ?'selected':''}>Sci-Fi</option>
+          <option value="53"    ${config.genre_id==='53'    ?'selected':''}>Thriller</option>
+          <option value="10749" ${config.genre_id==='10749' ?'selected':''}>Romance</option>
+          <option value="16"    ${config.genre_id==='16'    ?'selected':''}>Animation</option>
+          <option value="99"    ${config.genre_id==='99'    ?'selected':''}>Documentary</option>
+        </select>
+      </div>
+      <div class="widget-option-row">
+        <label class="widget-option-label">Min rating</label>
+        <select class="widget-option-select" id="wo-movie-rating">
+          <option value="6"   ${config.min_rating==6   ?'selected':''}>6.0+</option>
+          <option value="7"   ${!config.min_rating||config.min_rating==7   ?'selected':''}>7.0+ (default)</option>
+          <option value="7.5" ${config.min_rating==7.5 ?'selected':''}>7.5+</option>
+          <option value="8"   ${config.min_rating==8   ?'selected':''}>8.0+</option>
+        </select>
+      </div>`;
   }
 
   return sizeRow + rows;
@@ -1666,6 +1765,14 @@ function saveWidgetOptions() {
     newConfig.rotation = getVal('wo-rotation') || 'daily';
   } else if (type === 'goals-progress') {
     newConfig.currency = getVal('wo-currency') || 'USD';
+  } else if (type === 'movie-suggest') {
+    newConfig.api_key    = document.getElementById('wo-movie-key')?.value.trim() || '';
+    newConfig.genre_id   = getVal('wo-movie-genre') || '';
+    newConfig.min_rating = parseFloat(getVal('wo-movie-rating')) || 7;
+    // Clear cache so new settings take effect immediately
+    Object.keys(localStorage)
+      .filter(k => k.startsWith(`vg-movie-${id}`))
+      .forEach(k => localStorage.removeItem(k));
   }
 
   widget.config = newConfig;
