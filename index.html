@@ -215,6 +215,7 @@ const dashTagOpen      = {};   // { widgetId: boolean }
 const dashSelectedTags = {};   // { widgetId: string[] }
 const dashInlineTagColor = {}; // { widgetId: string }
 const greetingSolarData  = {}; // { widgetId: { sunrise: Date, sunset: Date, isFallback: boolean } }
+let greetingsCache = null;    // fetched once from Supabase greetings table
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 
@@ -229,7 +230,7 @@ async function init() {
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   document.getElementById('dash-date').textContent = dateStr;
 
-  await Promise.all([loadLayout(), loadDashLists(), loadDashTags()]);
+  await Promise.all([loadLayout(), loadDashLists(), loadDashTags(), fetchGreetings()]);
   renderGrid();
   loadAllWidgetData();
 
@@ -440,20 +441,45 @@ function loadAllWidgetData() {
 
 // GREETING ────────────────────────────────────────────────────────────────────
 
+async function fetchGreetings() {
+  try {
+    const { data, error } = await DB.from('greetings').select('text, time_window').eq('enabled', true);
+    if (!error && data) greetingsCache = data;
+  } catch(_) {}
+}
+
 function pickGreeting(h) {
-  // Daily seed — consistent within the day, changes each morning
-  const seed = Math.floor(Date.now() / 86400000);
-  const morning   = ['Good morning', 'Rise and shine', 'Morning', 'Top of the morning', 'Wakey wakey', 'Morning, sunshine', 'Early bird'];
-  const afternoon = ['Good afternoon', 'Afternoon', "Hope the day's treating you well", "Afternoon already?", 'Getting through the day'];
-  const evening   = ['Good evening', 'Evening', 'Hope you had a great day', 'Wind-down time', 'Almost there'];
-  const night     = ['Burning the midnight oil', 'Night owl hours', 'Still at it?', 'Late night session', 'Up late?'];
-  const anytime   = ['Howdy, partner', 'Hey there', 'Hello, friend', 'Salutations', "What's good?", 'Welcome back', 'Well, hello', 'Hey, you'];
+  // Map hour to time_window
+  let windows;
+  if      (h <  5) windows = ['overnight'];
+  else if (h <  8) windows = ['early_morning'];
+  else if (h < 12) windows = ['morning'];
+  else if (h < 14) windows = ['midday'];
+  else if (h < 18) windows = ['afternoon'];
+  else if (h < 21) windows = ['evening'];
+  else             windows = ['night'];
+
+  // Fallback hardcoded list if Supabase hasn't loaded
+  const fallback = {
+    overnight:     ['Burning the midnight oil', 'Night owl hours', 'Still at it?'],
+    early_morning: ['Rise and shine', 'Good morning', 'Up early'],
+    morning:       ['Good morning', 'Morning', 'Hope your coffee\'s strong'],
+    midday:        ['Good afternoon', 'Midday check-in', 'Halfway through the day'],
+    afternoon:     ['Good afternoon', 'Afternoon', 'Getting through the day'],
+    evening:       ['Good evening', 'Hope you had a great day', 'Wind-down time'],
+    night:         ['Good night', 'Winding down?', 'Getting late'],
+    anytime:       ['Howdy, partner', 'Hey there', 'Welcome back', 'What\'s good?'],
+  };
+
   let pool;
-  if (h < 12)      pool = [...morning, ...anytime];
-  else if (h < 17) pool = [...afternoon, ...anytime];
-  else if (h < 21) pool = [...evening, ...anytime];
-  else             pool = [...night, ...anytime];
-  return pool[seed % pool.length];
+  if (greetingsCache) {
+    pool = greetingsCache.filter(g => windows.includes(g.time_window) || g.time_window === 'anytime').map(g => g.text);
+  } else {
+    pool = [...(fallback[windows[0]] || []), ...fallback.anytime];
+  }
+
+  if (!pool.length) pool = ['Hello'];
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function loadGreeting(widget) {
