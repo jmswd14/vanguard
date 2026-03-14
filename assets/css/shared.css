@@ -143,6 +143,33 @@ body {
 }
 .sidebar-signout:hover { color: var(--p-high); }
 
+/* ── PRIORITY CHIP PICKER ── */
+.priority-picker {
+  display: flex;
+  gap: 6px;
+}
+
+.prio-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  font-family: var(--font-mono, monospace);
+  border: 1px solid;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+  user-select: none;
+}
+.prio-chip:hover        { opacity: 0.65; }
+.prio-chip.active       { opacity: 1; }
+.prio-chip.prio-high    { background: var(--p-high-bg);   color: var(--p-high);   border-color: var(--p-high); }
+.prio-chip.prio-medium  { background: var(--p-medium-bg); color: var(--p-medium); border-color: var(--p-medium); }
+.prio-chip.prio-low     { background: var(--p-low-bg);    color: var(--p-low);    border-color: var(--p-low); }
+
 .tag-chip-sm {
   display: inline-flex;
   align-items: center;

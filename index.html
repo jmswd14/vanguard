@@ -340,6 +340,15 @@ function createWidgetEl(widget, idx) {
   return div;
 }
 
+function setPriorityChip(inputId, value) {
+  const input = document.getElementById(inputId);
+  if (input) input.value = value;
+  const picker = document.getElementById(inputId + '-picker');
+  if (picker) picker.querySelectorAll('.prio-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.prio === value)
+  );
+}
+
 function esc(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -1153,11 +1162,12 @@ function loadQuickTask(widget) {
         </select>
         <input class="ft-date-input" type="date" id="ft-due-${wid}">
       </div>
-      <select class="quick-add-select" id="ft-priority-${wid}">
-        <option value="high"   ${defPriority === 'high'   ? 'selected' : ''}>[!] HIGH</option>
-        <option value="medium" ${defPriority === 'medium' ? 'selected' : ''}>[~] MED</option>
-        <option value="low"    ${defPriority === 'low'    ? 'selected' : ''}>[.] LOW</option>
-      </select>
+      <div class="priority-picker" id="ft-priority-${wid}-picker">
+        <span class="prio-chip prio-high   ${defPriority === 'high'   ? 'active' : ''}" data-prio="high"   onclick="setPriorityChip('ft-priority-${wid}','high')">[!] HIGH</span>
+        <span class="prio-chip prio-medium ${defPriority === 'medium' ? 'active' : ''}" data-prio="medium" onclick="setPriorityChip('ft-priority-${wid}','medium')">[~] MED</span>
+        <span class="prio-chip prio-low    ${defPriority === 'low'    ? 'active' : ''}" data-prio="low"    onclick="setPriorityChip('ft-priority-${wid}','low')">[.] LOW</span>
+      </div>
+      <input type="hidden" id="ft-priority-${wid}" value="${defPriority}">
       <div class="tag-dropdown-wrap" id="tag-dropdown-wrap-${wid}">
         <div class="tag-dropdown-trigger" id="tag-dropdown-trigger-${wid}" onclick="toggleDashTagDropdown(event,'${wid}')">
           <div class="tag-dropdown-selected" id="tag-dropdown-selected-${wid}">
@@ -1314,8 +1324,7 @@ async function fullAddTask(e, wid) {
     if (notesEl) notesEl.value = '';
 
     // Reset priority to medium (same default as the task modal)
-    const prioEl = document.getElementById(`ft-priority-${wid}`);
-    if (prioEl) prioEl.value = 'medium';
+    setPriorityChip(`ft-priority-${wid}`, 'medium');
 
     // Reset tags
     dashSelectedTags[wid] = [];

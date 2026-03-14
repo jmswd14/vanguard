@@ -168,11 +168,12 @@
       </div>
       <div class="form-group">
         <label>Priority</label>
-        <select id="task-priority-input">
-          <option value="high">[!] HIGH</option>
-          <option value="medium" selected>[~] MED</option>
-          <option value="low">[.] LOW</option>
-        </select>
+        <div class="priority-picker" id="task-priority-input-picker">
+          <span class="prio-chip prio-high"         data-prio="high"   onclick="setPriorityChip('task-priority-input','high')">[!] HIGH</span>
+          <span class="prio-chip prio-medium active" data-prio="medium" onclick="setPriorityChip('task-priority-input','medium')">[~] MED</span>
+          <span class="prio-chip prio-low"          data-prio="low"    onclick="setPriorityChip('task-priority-input','low')">[.] LOW</span>
+        </div>
+        <input type="hidden" id="task-priority-input" value="medium">
       </div>
     </div>
     <div class="form-row">
@@ -341,6 +342,15 @@ let googleEvents      = [];
 
 // ── UTILS ──
 function uid()        { return crypto.randomUUID(); }
+
+function setPriorityChip(inputId, value) {
+  const input = document.getElementById(inputId);
+  if (input) input.value = value;
+  const picker = document.getElementById(inputId + '-picker');
+  if (picker) picker.querySelectorAll('.prio-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.prio === value)
+  );
+}
 function getCategory(id) { return categories.find(c => c.id === id); }
 function getTag(id)   { return tags.find(t => t.id === id); }
 
@@ -888,7 +898,7 @@ function editTask(tid) {
   document.getElementById('editing-task-id').value = tid;
   document.getElementById('task-name-input').value  = t.name;
   document.getElementById('task-name-input').style.borderColor = '';
-  document.getElementById('task-priority-input').value = t.priority;
+  setPriorityChip('task-priority-input', t.priority);
   document.getElementById('task-due-input').value  = t.due || '';
   document.getElementById('task-notes-input').value = t.notes || '';
   selectedTaskTags = [...(t.tags || [])];

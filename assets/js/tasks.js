@@ -46,6 +46,15 @@ const todayStr = today.toISOString().split('T')[0];
 // ────────── UTILS ──────────
 function uid() { return crypto.randomUUID(); }
 
+function setPriorityChip(inputId, value) {
+  const input = document.getElementById(inputId);
+  if (input) input.value = value;
+  const picker = document.getElementById(inputId + '-picker');
+  if (picker) picker.querySelectorAll('.prio-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.prio === value)
+  );
+}
+
 function formatDate(ds) {
   if (!ds) return '';
   const d = new Date(ds + 'T00:00:00');
@@ -448,7 +457,7 @@ async function editTask(tid) {
   document.getElementById('task-name-input').value = t.name;
   document.getElementById('task-name-input').style.borderColor = '';
   document.getElementById('task-category-input').style.borderColor = '';
-  document.getElementById('task-priority-input').value = t.priority;
+  setPriorityChip('task-priority-input', t.priority);
   document.getElementById('task-due-input').value = t.due || '';
   document.getElementById('task-notes-input').value = t.notes || '';
   selectedTaskTags = [...(t.tags || [])];
@@ -776,7 +785,7 @@ function openModal_addRecurring() {
   editingRecurringId = null;
   document.getElementById('rt-modal-title').textContent = 'New Recurring Task';
   document.getElementById('rt-name-input').value = '';
-  document.getElementById('rt-priority-input').value = 'medium';
+  setPriorityChip('rt-priority-input', 'medium');
   document.getElementById('rt-notes-input').value = '';
   setRecurringFrequency('daily');
   populateRecurringModal('');
@@ -791,7 +800,7 @@ function openEditRecurringModal(id) {
   editingRecurringId = id;
   document.getElementById('rt-modal-title').textContent = 'Edit Recurring Task';
   document.getElementById('rt-name-input').value = rt.name;
-  document.getElementById('rt-priority-input').value = rt.priority;
+  setPriorityChip('rt-priority-input', rt.priority);
   document.getElementById('rt-notes-input').value = rt.notes || '';
   setRecurringFrequency(rt.frequency, rt.frequency_day);
   populateRecurringModal(rt.list_id || '');
@@ -1071,7 +1080,7 @@ function openModal(mid) {
     document.getElementById('task-name-input').value = '';
     document.getElementById('task-name-input').style.borderColor = '';
     document.getElementById('task-category-input').style.borderColor = '';
-    document.getElementById('task-priority-input').value = 'medium';
+    setPriorityChip('task-priority-input', 'medium');
     document.getElementById('task-due-input').value = '';
     document.getElementById('task-notes-input').value = '';
     selectedTaskTags = [];

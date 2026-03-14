@@ -222,11 +222,12 @@
       </div>
       <div class="form-group">
         <label>Priority</label>
-        <select id="task-priority-input">
-          <option value="high">[!] HIGH</option>
-          <option value="medium" selected>[~] MED</option>
-          <option value="low">[.] LOW</option>
-        </select>
+        <div class="priority-picker" id="task-priority-input-picker">
+          <span class="prio-chip prio-high"          data-prio="high"   onclick="setPriorityChip('task-priority-input','high')">[!] HIGH</span>
+          <span class="prio-chip prio-medium active"  data-prio="medium" onclick="setPriorityChip('task-priority-input','medium')">[~] MED</span>
+          <span class="prio-chip prio-low"           data-prio="low"    onclick="setPriorityChip('task-priority-input','low')">[.] LOW</span>
+        </div>
+        <input type="hidden" id="task-priority-input" value="medium">
       </div>
     </div>
     <div class="form-row">
@@ -365,11 +366,12 @@
       </div>
       <div class="form-group">
         <label>Priority</label>
-        <select id="rt-priority-input">
-          <option value="high">[!] HIGH</option>
-          <option value="medium" selected>[~] MED</option>
-          <option value="low">[.] LOW</option>
-        </select>
+        <div class="priority-picker" id="rt-priority-input-picker">
+          <span class="prio-chip prio-high"         data-prio="high"   onclick="setPriorityChip('rt-priority-input','high')">[!] HIGH</span>
+          <span class="prio-chip prio-medium active" data-prio="medium" onclick="setPriorityChip('rt-priority-input','medium')">[~] MED</span>
+          <span class="prio-chip prio-low"          data-prio="low"    onclick="setPriorityChip('rt-priority-input','low')">[.] LOW</span>
+        </div>
+        <input type="hidden" id="rt-priority-input" value="medium">
       </div>
     </div>
     <div class="form-group">
