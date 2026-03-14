@@ -502,6 +502,42 @@
 .freq-btn:hover { background: var(--surface2); color: var(--text); }
 .freq-btn.active { background: var(--surface2); color: var(--accent); }
 
+/* task-freq-btn shares the same styles as freq-btn */
+.task-freq-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.task-freq-btn:last-child { border-right: none; }
+.task-freq-btn:hover { background: var(--surface2); color: var(--text); }
+.task-freq-btn.active { background: var(--surface2); color: var(--accent); }
+
+/* Recurring toggle in task modal */
+.recurring-toggle-row { margin-bottom: 2px; }
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  user-select: none;
+}
+.toggle-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.toggle-label:hover { color: var(--text); }
+
 /* ── MOBILE OVERRIDES ── */
 @media (max-width: 740px) {
   .task-menu-btn { opacity: 1; }

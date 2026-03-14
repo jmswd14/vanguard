@@ -469,6 +469,10 @@ async function editTask(tid) {
     document.getElementById('task-reminder-rows').innerHTML = '';
   }
 
+  // Hide recurring toggle in edit mode
+  document.getElementById('task-recurring-toggle-row').style.display = 'none';
+  document.getElementById('task-recurring-fields').style.display = 'none';
+  document.getElementById('task-due-group').style.display = '';
   document.getElementById('add-task-modal').classList.add('show');
   setTimeout(() => document.getElementById('task-name-input')?.focus(), 80);
   const deleteBtn = document.getElementById('modal-delete-btn');
@@ -492,7 +496,56 @@ async function saveTask() {
     if (!category) document.getElementById('task-category-input').style.borderColor = 'var(--p-high)';
     return;
   }
-  const tid  = document.getElementById('editing-task-id').value;
+  const tid = document.getElementById('editing-task-id').value;
+
+  // If recurring toggle is on (new task only), create a recurring template + instance
+  const recurringToggle = document.getElementById('task-recurring-toggle');
+  if (!tid && recurringToggle && recurringToggle.checked) {
+    const activeFreqBtn = document.querySelector('.task-freq-btn.active');
+    const freq = activeFreqBtn ? activeFreqBtn.dataset.freq : 'daily';
+    let freqDay = null;
+    if (freq === 'weekly')  freqDay = parseInt(document.getElementById('task-rt-week-select').value, 10);
+    if (freq === 'monthly') freqDay = parseInt(document.getElementById('task-rt-month-select').value, 10);
+    const rtPayload = {
+      id:            uid(),
+      user_id:       _uid,
+      name,
+      list_id:       category || null,
+      priority:      document.getElementById('task-priority-input').value,
+      tags:          [...selectedTaskTags],
+      notes:         document.getElementById('task-notes-input').value.trim(),
+      frequency:     freq,
+      frequency_day: freqDay,
+      active:        true,
+    };
+    closeModal('add-task-modal');
+    const { data: rtData } = await _sb.from('recurring_tasks').insert(rtPayload).select().single();
+    const rt = rtData || rtPayload;
+    recurringTasks.push(rt);
+    // Generate instance for today
+    const newId  = uid();
+    const minPos = tasks.length ? Math.min(...tasks.map(t => t.order || 0)) : 0;
+    const { data: taskData } = await _sb.from('tasks').insert({
+      id:               newId,
+      user_id:          _uid,
+      name:             rt.name,
+      category_id:      rt.list_id || null,
+      priority:         rt.priority,
+      due:              todayStr,
+      tags:             rt.tags || [],
+      notes:            rt.notes || '',
+      done:             false,
+      position:         minPos - 1,
+      recurring_task_id: rt.id,
+      recurring_date:   todayStr,
+    }).select().single();
+    if (taskData) tasks.unshift(fromDbTask(taskData));
+    await _sb.from('recurring_tasks').update({ last_generated_date: todayStr }).eq('id', rt.id);
+    rt.last_generated_date = todayStr;
+    renderTasks();
+    renderSidebar();
+    return;
+  }
   const data = {
     name,
     priority: document.getElementById('task-priority-input').value,
@@ -602,7 +655,14 @@ function shouldGenerateToday(rt) {
   if (rt.last_generated_date === todayStr) return false;
   if (rt.frequency === 'daily')   return true;
   if (rt.frequency === 'weekly')  return today.getDay() === rt.frequency_day;
-  if (rt.frequency === 'monthly') return today.getDate() === rt.frequency_day;
+  if (rt.frequency === 'monthly') {
+    if (rt.frequency_day === 0) {
+      // Last day of month
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      return today.getDate() === lastDay;
+    }
+    return today.getDate() === rt.frequency_day;
+  }
   return false;
 }
 
@@ -644,7 +704,7 @@ function frequencyLabel(rt) {
   };
   if (rt.frequency === 'daily')   return 'Daily';
   if (rt.frequency === 'weekly')  return 'Weekly — ' + (days[rt.frequency_day] || '');
-  if (rt.frequency === 'monthly') return 'Monthly — ' + ordinal(rt.frequency_day);
+  if (rt.frequency === 'monthly') return 'Monthly — ' + (rt.frequency_day === 0 ? 'Last day' : ordinal(rt.frequency_day));
   return '';
 }
 
@@ -693,10 +753,13 @@ function renderRecurringView() {
 
 let editingRecurringId = null;
 
-function buildMonthDaySelect() {
-  const sel = document.getElementById('rt-month-select');
+function buildMonthDaySelect(selId) {
+  const sel = document.getElementById(selId);
   if (!sel || sel.options.length) return;
   const ordinal = n => { const s=['th','st','nd','rd']; const v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+  const lastOpt = document.createElement('option');
+  lastOpt.value = 0; lastOpt.textContent = 'Last day';
+  sel.appendChild(lastOpt);
   for (let d = 1; d <= 28; d++) {
     const o = document.createElement('option');
     o.value = d; o.textContent = ordinal(d);
@@ -705,7 +768,7 @@ function buildMonthDaySelect() {
 }
 
 function openModal_addRecurring() {
-  buildMonthDaySelect();
+  buildMonthDaySelect('rt-month-select');
   editingRecurringId = null;
   document.getElementById('rt-modal-title').textContent = 'New Recurring Task';
   document.getElementById('rt-name-input').value = '';
@@ -718,7 +781,7 @@ function openModal_addRecurring() {
 }
 
 function openEditRecurringModal(id) {
-  buildMonthDaySelect();
+  buildMonthDaySelect('rt-month-select');
   const rt = recurringTasks.find(r => r.id === id);
   if (!rt) return;
   editingRecurringId = id;
@@ -738,7 +801,7 @@ function populateRecurringModal(selectedListId) {
 }
 
 function setRecurringFrequency(freq, day) {
-  document.querySelectorAll('.freq-btn').forEach(b => b.classList.toggle('active', b.dataset.freq === freq));
+  document.querySelectorAll('#add-recurring-modal .freq-btn').forEach(b => b.classList.toggle('active', b.dataset.freq === freq));
   const weekSel  = document.getElementById('rt-freq-week');
   const monthSel = document.getElementById('rt-freq-month');
   weekSel.style.display  = freq === 'weekly'  ? '' : 'none';
@@ -747,6 +810,27 @@ function setRecurringFrequency(freq, day) {
   const mSel = document.getElementById('rt-month-select');
   if (freq === 'weekly'  && day != null && wSel) wSel.value = day;
   if (freq === 'monthly' && day != null && mSel) mSel.value = day;
+}
+
+function onTaskRecurringToggle() {
+  const on = document.getElementById('task-recurring-toggle').checked;
+  document.getElementById('task-due-group').style.display = on ? 'none' : '';
+  document.getElementById('task-recurring-fields').style.display = on ? '' : 'none';
+  if (on) {
+    // Reset reminders since no due date when recurring
+    document.getElementById('task-reminders-section').style.display = 'none';
+    taskReminders = [];
+    document.getElementById('task-reminder-rows').innerHTML = '';
+    setTaskRecurringFrequency('daily');
+  }
+}
+
+function setTaskRecurringFrequency(freq) {
+  document.querySelectorAll('.task-freq-btn').forEach(b => b.classList.toggle('active', b.dataset.freq === freq));
+  const weekDiv  = document.getElementById('task-rt-freq-week');
+  const monthDiv = document.getElementById('task-rt-freq-month');
+  if (weekDiv)  weekDiv.style.display  = freq === 'weekly'  ? '' : 'none';
+  if (monthDiv) monthDiv.style.display = freq === 'monthly' ? '' : 'none';
 }
 
 async function saveRecurringTask() {
@@ -962,6 +1046,14 @@ function openModal(mid) {
     taskReminders = [];
     document.getElementById('task-reminders-section').style.display = 'none';
     document.getElementById('task-reminder-rows').innerHTML = '';
+    // Reset recurring toggle
+    const recurringToggle = document.getElementById('task-recurring-toggle');
+    if (recurringToggle) recurringToggle.checked = false;
+    document.getElementById('task-recurring-fields').style.display = 'none';
+    document.getElementById('task-due-group').style.display = '';
+    document.getElementById('task-recurring-toggle-row').style.display = '';
+    buildMonthDaySelect('task-rt-month-select');
+    setTaskRecurringFrequency('daily');
     const deleteBtn  = document.getElementById('modal-delete-btn');
     const actions    = document.getElementById('task-modal-actions');
     if (deleteBtn) deleteBtn.style.display = 'none';

@@ -223,14 +223,14 @@
       <div class="form-group">
         <label>Priority</label>
         <select id="task-priority-input">
-          <option value="high">🔴 High</option>
-          <option value="medium" selected>🟡 Medium</option>
-          <option value="low">🟢 Low</option>
+          <option value="high">[!] High</option>
+          <option value="medium" selected>[-] Medium</option>
+          <option value="low">[.] Low</option>
         </select>
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
+      <div class="form-group" id="task-due-group">
         <label>Due Date</label>
         <input type="date" id="task-due-input" onchange="onDueDateChange()">
       </div>
@@ -261,6 +261,40 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+    <!-- RECURRING TOGGLE — hidden in edit mode -->
+    <div class="form-group recurring-toggle-row" id="task-recurring-toggle-row">
+      <label class="toggle-label">
+        <input type="checkbox" id="task-recurring-toggle" onchange="onTaskRecurringToggle()">
+        <span>Make recurring</span>
+      </label>
+    </div>
+    <!-- RECURRING FIELDS — shown when toggle is on -->
+    <div id="task-recurring-fields" style="display:none;">
+      <div class="form-group">
+        <label>Frequency</label>
+        <div class="freq-selector">
+          <button type="button" class="task-freq-btn active" data-freq="daily"   onclick="setTaskRecurringFrequency('daily')">Daily</button>
+          <button type="button" class="task-freq-btn"        data-freq="weekly"  onclick="setTaskRecurringFrequency('weekly')">Weekly</button>
+          <button type="button" class="task-freq-btn"        data-freq="monthly" onclick="setTaskRecurringFrequency('monthly')">Monthly</button>
+        </div>
+      </div>
+      <div class="form-group" id="task-rt-freq-week" style="display:none;">
+        <label>Day of Week</label>
+        <select id="task-rt-week-select">
+          <option value="0">Sunday</option>
+          <option value="1">Monday</option>
+          <option value="2">Tuesday</option>
+          <option value="3">Wednesday</option>
+          <option value="4">Thursday</option>
+          <option value="5">Friday</option>
+          <option value="6">Saturday</option>
+        </select>
+      </div>
+      <div class="form-group" id="task-rt-freq-month" style="display:none;">
+        <label>Day of Month</label>
+        <select id="task-rt-month-select"></select>
       </div>
     </div>
     <!-- REMINDERS — shown only when a due date is set -->
@@ -332,9 +366,9 @@
       <div class="form-group">
         <label>Priority</label>
         <select id="rt-priority-input">
-          <option value="high">🔴 High</option>
-          <option value="medium" selected>🟡 Medium</option>
-          <option value="low">🟢 Low</option>
+          <option value="high">[!] High</option>
+          <option value="medium" selected>[-] Medium</option>
+          <option value="low">[.] Low</option>
         </select>
       </div>
     </div>
