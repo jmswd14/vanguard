@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>(function(){var t=localStorage.getItem('vg-theme')||'dark';var el=document.documentElement;if(t==='retro'){el.setAttribute('data-theme','retro');el.style.setProperty('--retro-c1',localStorage.getItem('vg-retro-c1')||'#00FF41');el.style.setProperty('--retro-c2',localStorage.getItem('vg-retro-c2')||'#FF6600');}else if(t==='light'||(t==='system'&&window.matchMedia('(prefers-color-scheme:light)').matches)){el.setAttribute('data-theme','light');}})()</script>
+<script>(function(){var el=document.documentElement;el.style.setProperty('--retro-c1',localStorage.getItem('vg-retro-c1')||'#00FF41');el.style.setProperty('--retro-c2',localStorage.getItem('vg-retro-c2')||'#FF6600');})()</script>
 <script src="assets/js/theme.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/shared.css">
 <style>
-body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 28px; }
 
 .login-card {
   background: var(--surface);
@@ -68,6 +68,7 @@ body { display: flex; align-items: center; justify-content: center; min-height: 
 </style>
 </head>
 <body>
+<div class="retro-page-brand" style="letter-spacing:8px;text-align:center;">MOTHERBOARD</div>
 <div class="login-card">
   <div class="login-title">Portal</div>
   <div class="login-sub" id="login-sub">Sign in to continue</div>

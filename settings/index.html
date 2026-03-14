@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>(function(){var t=localStorage.getItem('vg-theme')||'dark';var el=document.documentElement;if(t==='retro'){el.setAttribute('data-theme','retro');el.style.setProperty('--retro-c1',localStorage.getItem('vg-retro-c1')||'#00FF41');el.style.setProperty('--retro-c2',localStorage.getItem('vg-retro-c2')||'#FF6600');}else if(t==='light'||(t==='system'&&window.matchMedia('(prefers-color-scheme:light)').matches)){el.setAttribute('data-theme','light');}})()</script>
+<script>(function(){var el=document.documentElement;el.style.setProperty('--retro-c1',localStorage.getItem('vg-retro-c1')||'#00FF41');el.style.setProperty('--retro-c2',localStorage.getItem('vg-retro-c2')||'#FF6600');})()</script>
 <script src="../assets/js/theme.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -80,6 +80,7 @@
 
   <!-- ── MAIN CONTENT ── -->
   <main class="content">
+    <div class="retro-page-brand">MOTHERBOARD</div>
     <div class="topbar">
       <div class="topbar-left">
         <h2>Settings</h2>
@@ -237,23 +238,12 @@
     <div class="settings-panel" id="panel-appearance">
       <div class="settings-form-max">
         <div class="form-group">
-          <label>Theme</label>
-          <select id="pref-theme" onchange="onThemeSelectChange()">
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-            <option value="system">System</option>
-            <option value="retro">Retro Terminal</option>
-          </select>
+          <label>Primary Color</label>
+          <div class="retro-swatches" id="rc1-swatches"></div>
         </div>
-        <div id="retro-colors" style="display:none;">
-          <div class="form-group">
-            <label>Primary Color</label>
-            <div class="retro-swatches" id="rc1-swatches"></div>
-          </div>
-          <div class="form-group">
-            <label>Accent Color</label>
-            <div class="retro-swatches" id="rc2-swatches"></div>
-          </div>
+        <div class="form-group">
+          <label>Accent Color</label>
+          <div class="retro-swatches" id="rc2-swatches"></div>
         </div>
         <div class="form-group">
           <label>Font Size</label>
@@ -513,7 +503,6 @@ async function loadPreferences() {
   const prefs = {};
   (data || []).forEach(r => { prefs[r.key] = r.value; });
 
-  if (prefs.theme)      { document.getElementById('pref-theme').value = prefs.theme; VG_THEME.apply(prefs.theme); }
   if (prefs.font_size)    document.getElementById('pref-font-size').value    = prefs.font_size;
   if (prefs.week_start)   document.getElementById('pref-week-start').value   = prefs.week_start;
   if (prefs.default_view) document.getElementById('pref-default-view').value = prefs.default_view;
@@ -522,7 +511,6 @@ async function loadPreferences() {
   const c1 = prefs.retro_color1 || localStorage.getItem('vg-retro-c1') || '#00FF41';
   const c2 = prefs.retro_color2 || localStorage.getItem('vg-retro-c2') || '#FF6600';
   buildRetroSwatches(c1, c2);
-  if (prefs.theme === 'retro') document.getElementById('retro-colors').style.display = '';
 }
 
 async function savePref(key, value) {
@@ -573,24 +561,16 @@ function getSelectedSwatch(containerId) {
   return sel ? sel.getAttribute('data-color') : (containerId === 'rc1-swatches' ? '#00FF41' : '#FF6600');
 }
 
-function onThemeSelectChange() {
-  const theme = document.getElementById('pref-theme').value;
-  document.getElementById('retro-colors').style.display = theme === 'retro' ? '' : 'none';
-  VG_THEME.apply(theme);
-}
-
 async function saveAppearance() {
-  const theme    = document.getElementById('pref-theme').value;
   const fontSize = document.getElementById('pref-font-size').value;
-  const saves = [savePref('theme', theme), savePref('font_size', fontSize)];
-  if (theme === 'retro') {
-    const c1 = getSelectedSwatch('rc1-swatches');
-    const c2 = getSelectedSwatch('rc2-swatches');
-    saves.push(savePref('retro_color1', c1), savePref('retro_color2', c2));
-    VG_THEME.applyRetroColors(c1, c2);
-  }
-  await Promise.all(saves);
-  VG_THEME.apply(theme);
+  const c1 = getSelectedSwatch('rc1-swatches');
+  const c2 = getSelectedSwatch('rc2-swatches');
+  await Promise.all([
+    savePref('font_size', fontSize),
+    savePref('retro_color1', c1),
+    savePref('retro_color2', c2),
+  ]);
+  VG_THEME.applyRetroColors(c1, c2);
   showToast('Appearance saved');
 }
 

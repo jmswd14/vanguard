@@ -7,6 +7,19 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── RETRO PAGE WORDMARK ── */
+.retro-page-brand {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 8px;
+  color: var(--text);
+  opacity: 0.6;
+  text-shadow: 0 0 8px currentColor, 0 0 18px currentColor;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--bg);
