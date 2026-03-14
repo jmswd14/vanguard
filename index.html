@@ -24,8 +24,9 @@
 
 <!-- Mobile toggle -->
 <button class="hamburger" onclick="openLeftMobile()" title="Menu">☰</button>
+<button class="rs-mobile-btn" id="rs-mobile-btn" onclick="openRightMobile()" title="Layouts">⊟</button>
 
-<div class="app left-only" id="app">
+<div class="app dual-sidebar" id="app">
 
   <!-- ── LEFT SIDEBAR — global nav ── -->
   <nav class="left-sidebar" id="left-sidebar">
@@ -93,6 +94,18 @@
 
     <div class="widget-grid" id="widget-grid"></div>
   </main>
+
+  <!-- ── RIGHT SIDEBAR — layout slots ── -->
+  <nav class="right-sidebar" id="right-sidebar">
+    <div class="right-sidebar-header">
+      <button class="rs-collapse-btn" id="rs-collapse-btn" onclick="toggleRightCollapse()" title="Collapse">›</button>
+      <div class="rs-header-text">
+        <h2>Layouts</h2>
+      </div>
+      <span class="rs-header-icon">⊟</span>
+    </div>
+    <div class="right-sidebar-body" id="slot-list"></div>
+  </nav>
 
 </div>
 
@@ -221,6 +234,9 @@ const greetingSolarData  = {}; // { widgetId: { sunrise: Date, sunset: Date, isF
 let greetingsCache = null;    // fetched once from Supabase greetings table
 const TMDB_API_KEY = '2a9ab8fbca5a5c52399da22ba0a7c7c9';
 
+let dashboardSlots = [];
+let activeSlotIndex = parseInt(localStorage.getItem('vg-active-slot') || '0');
+
 // ── INIT ─────────────────────────────────────────────────────────────────────
 
 async function init() {
@@ -234,9 +250,11 @@ async function init() {
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   document.getElementById('dash-date').textContent = dateStr;
 
+  await loadSlots();
   await Promise.all([loadLayout(), loadDashLists(), loadDashTags(), fetchGreetings()]);
   renderGrid();
   loadAllWidgetData();
+  renderSlotSidebar();
 
   clockInterval = setInterval(updateGreetingClocks, 30000);
 }
@@ -244,45 +262,31 @@ async function init() {
 // ── LAYOUT PERSISTENCE ────────────────────────────────────────────────────────
 
 async function loadLayout() {
+  const slot = dashboardSlots.find(s => s.slot_index === activeSlotIndex);
+  if (slot && Array.isArray(slot.widgets) && slot.widgets.length > 0) {
+    widgets = slot.widgets.map(w => ({ ...w, user_id: currentUser.id }));
+    widgets.forEach((w, i) => { w.position = i; });
+    return;
+  }
+  // Migration: load from legacy dashboard_widgets table if slots are empty
   try {
-    const { data, error } = await DB
-      .from('dashboard_widgets')
-      .select('*')
-      .order('position');
-
+    const { data, error } = await DB.from('dashboard_widgets').select('*').order('position');
     if (!error && data && data.length > 0) {
       widgets = data;
-    } else {
-      widgets = DEFAULT_LAYOUT.map(w => ({
-        ...w,
-        id: crypto.randomUUID(),
-        user_id: currentUser.id,
-      }));
-      saveLayout();
+      _persistSlot(0, widgets); // migrate to slot 0
+      return;
     }
-  } catch (e) {
-    widgets = DEFAULT_LAYOUT.map(w => ({
-      ...w,
-      id: crypto.randomUUID(),
-      user_id: currentUser.id,
-    }));
-  }
+  } catch(e) {}
+  // Default layout
+  widgets = DEFAULT_LAYOUT.map(w => ({
+    ...w,
+    id: crypto.randomUUID(),
+    user_id: currentUser.id,
+  }));
 }
 
 async function saveLayout() {
-  try {
-    const rows = widgets.map((w, i) => ({
-      id: w.id,
-      user_id: currentUser.id,
-      widget_type: w.widget_type,
-      size: w.size,
-      position: i,
-      config: w.config || {},
-    }));
-    await DB.from('dashboard_widgets').upsert(rows, { onConflict: 'id' });
-  } catch (e) {
-    console.error('Dashboard save error:', e);
-  }
+  await _persistSlot(activeSlotIndex, widgets);
 }
 
 // ── GRID RENDER ───────────────────────────────────────────────────────────────
@@ -1995,6 +1999,135 @@ function saveWidgetOptions() {
   loadAllWidgetData();
 }
 
+// ── DASHBOARD SLOTS ───────────────────────────────────────────────────────────
+
+async function loadSlots() {
+  try {
+    const { data, error } = await DB.from('dashboard_slots').select('*').order('slot_index');
+    if (!error && data && data.length > 0) {
+      dashboardSlots = data;
+      for (let i = 0; i < 3; i++) {
+        if (!dashboardSlots.find(s => s.slot_index === i)) {
+          dashboardSlots.push({ slot_index: i, name: `Slot ${i + 1}`, widgets: [], updated_at: null, user_id: currentUser.id });
+        }
+      }
+      dashboardSlots.sort((a, b) => a.slot_index - b.slot_index);
+    } else {
+      dashboardSlots = [0, 1, 2].map(i => ({
+        slot_index: i, name: `Slot ${i + 1}`, widgets: [], updated_at: null, user_id: currentUser.id,
+      }));
+    }
+  } catch(e) {
+    dashboardSlots = [0, 1, 2].map(i => ({
+      slot_index: i, name: `Slot ${i + 1}`, widgets: [], updated_at: null, user_id: currentUser.id,
+    }));
+  }
+}
+
+async function _persistSlot(slotIndex, widgetData) {
+  const slot = dashboardSlots.find(s => s.slot_index === slotIndex);
+  if (!slot) return;
+  const widgetsJson = widgetData.map((w, i) => ({ ...w, position: i }));
+  const now = new Date().toISOString();
+  slot.widgets = widgetsJson;
+  slot.updated_at = now;
+  try {
+    await DB.from('dashboard_slots').upsert({
+      user_id: currentUser.id,
+      slot_index: slotIndex,
+      name: slot.name,
+      widgets: widgetsJson,
+      updated_at: now,
+    }, { onConflict: 'user_id,slot_index' });
+    renderSlotSidebar();
+  } catch(e) {
+    console.error('Slot save error:', e);
+  }
+}
+
+async function saveSlot(index) {
+  activeSlotIndex = index;
+  localStorage.setItem('vg-active-slot', String(index));
+  await _persistSlot(index, widgets);
+}
+
+function loadSlot(index) {
+  const slot = dashboardSlots.find(s => s.slot_index === index);
+  if (!slot || !Array.isArray(slot.widgets) || !slot.widgets.length) return;
+  activeSlotIndex = index;
+  localStorage.setItem('vg-active-slot', String(index));
+  widgets = slot.widgets.map(w => ({ ...w, user_id: currentUser.id }));
+  widgets.forEach((w, i) => { w.position = i; });
+  renderGrid();
+  loadAllWidgetData();
+  renderSlotSidebar();
+}
+
+function startRenameSlot(index) {
+  const wrap = document.getElementById(`slot-name-wrap-${index}`);
+  if (!wrap) return;
+  const slot = dashboardSlots.find(s => s.slot_index === index);
+  if (!slot) return;
+  const isActive = index === activeSlotIndex;
+  wrap.innerHTML = `
+    ${isActive ? '<span class="slot-active-dot"></span>' : ''}
+    <input class="slot-name-input" id="slot-name-input-${index}"
+           value="${esc(slot.name)}" maxlength="20"
+           onkeydown="if(event.key==='Enter'){this.blur();}if(event.key==='Escape'){renderSlotSidebar();}"
+           onblur="saveSlotName(${index})">
+  `;
+  document.getElementById(`slot-name-input-${index}`)?.select();
+}
+
+async function saveSlotName(index) {
+  const input = document.getElementById(`slot-name-input-${index}`);
+  if (!input) return;
+  const name = input.value.trim() || `Slot ${index + 1}`;
+  const slot = dashboardSlots.find(s => s.slot_index === index);
+  if (!slot) return;
+  slot.name = name;
+  renderSlotSidebar();
+  try {
+    await DB.from('dashboard_slots').upsert({
+      user_id: currentUser.id,
+      slot_index: index,
+      name,
+      widgets: slot.widgets || [],
+    }, { onConflict: 'user_id,slot_index' });
+  } catch(e) { console.error('Rename slot error:', e); }
+}
+
+function formatSlotDate(isoStr) {
+  if (!isoStr) return '';
+  return new Date(isoStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function renderSlotSidebar() {
+  const list = document.getElementById('slot-list');
+  if (!list) return;
+  list.innerHTML = dashboardSlots.map(slot => {
+    const isActive = slot.slot_index === activeSlotIndex;
+    const hasData  = Array.isArray(slot.widgets) && slot.widgets.length > 0;
+    const savedStr = slot.updated_at ? formatSlotDate(slot.updated_at) : null;
+    return `
+      <div class="slot-card${isActive ? ' active' : ''}" id="slot-card-${slot.slot_index}">
+        <div class="slot-card-header">
+          <div class="slot-card-name-wrap" id="slot-name-wrap-${slot.slot_index}">
+            ${isActive ? '<span class="slot-active-dot"></span>' : ''}
+            <span class="slot-name">${esc(slot.name)}</span>
+            <button class="slot-rename-btn" onclick="startRenameSlot(${slot.slot_index})" title="Rename">✎</button>
+          </div>
+        </div>
+        <div class="slot-card-meta">${savedStr ? 'Saved ' + savedStr : 'Not saved'}</div>
+        <div class="slot-card-actions">
+          <button class="slot-btn slot-load-btn" onclick="loadSlot(${slot.slot_index})"${!hasData ? ' disabled' : ''}>Load</button>
+          <button class="slot-btn slot-save-btn" onclick="saveSlot(${slot.slot_index})">Save</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 
 async function signOut() {
@@ -2030,7 +2163,32 @@ function openLeftMobile() {
 
 function closeMobileMenus() {
   _leftSidebar.classList.remove('mobile-open');
+  _rightSidebar.classList.remove('mobile-open');
   _overlay.classList.remove('show');
+}
+
+// ── RIGHT SIDEBAR ─────────────────────────────────────────────────────────────
+
+const _rightSidebar = document.getElementById('right-sidebar');
+
+(function restoreRightState() {
+  if (localStorage.getItem('vg-rs-collapsed') === 'true') {
+    _rightSidebar.classList.add('rs-collapsed');
+    _app.classList.add('rs-collapsed');
+    document.getElementById('rs-collapse-btn').textContent = '‹';
+  }
+})();
+
+function toggleRightCollapse() {
+  const collapsed = _rightSidebar.classList.toggle('rs-collapsed');
+  _app.classList.toggle('rs-collapsed', collapsed);
+  document.getElementById('rs-collapse-btn').textContent = collapsed ? '‹' : '›';
+  localStorage.setItem('vg-rs-collapsed', collapsed);
+}
+
+function openRightMobile() {
+  _rightSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
 }
 
 // Close any open tag dropdowns when clicking outside

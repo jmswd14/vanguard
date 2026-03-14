@@ -1025,6 +1025,98 @@
 }
 .widget-option-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ── DASHBOARD SLOTS (right sidebar) ──────────────────────────────────────── */
+
+.right-sidebar-body#slot-list { padding: 16px 0 24px; }
+
+.slot-card {
+  margin: 0 12px 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  transition: border-color 0.15s;
+}
+.slot-card:last-child { margin-bottom: 0; }
+.slot-card.active {
+  border-color: var(--border2);
+  background: var(--surface3);
+}
+
+.slot-card-header { margin-bottom: 3px; }
+.slot-card-name-wrap { display: flex; align-items: center; gap: 6px; }
+
+.slot-active-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.slot-name {
+  font-size: 12px;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.slot-rename-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 1px 3px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  line-height: 1;
+}
+.slot-card:hover .slot-rename-btn { opacity: 1; }
+.slot-rename-btn:hover { color: var(--text); }
+
+.slot-name-input {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  padding: 2px 6px;
+  flex: 1;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+}
+
+.slot-card-meta {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+  margin-bottom: 10px;
+  padding-left: 11px;
+}
+.slot-card.active .slot-card-meta { padding-left: 17px; }
+
+.slot-card-actions { display: flex; gap: 6px; }
+.slot-btn {
+  flex: 1;
+  padding: 5px 8px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  transition: border-color 0.15s, color 0.15s;
+}
+.slot-btn:hover:not(:disabled) { border-color: var(--border2); color: var(--text); }
+.slot-btn:disabled { opacity: 0.3; cursor: default; }
+.slot-save-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
 /* ── NEWS FEED ─────────────────────────────────────────────────────────────── */
 
 .news-headline {
