@@ -519,29 +519,32 @@ async function saveTask() {
       active:        true,
     };
     closeModal('add-task-modal');
-    const { data: rtData } = await _sb.from('recurring_tasks').insert(rtPayload).select().single();
-    const rt = rtData || rtPayload;
+    const { data: rtData, error: rtErr } = await _sb.from('recurring_tasks').insert(rtPayload).select().single();
+    if (rtErr) { console.error('[recurring] insert error:', rtErr.message); return; }
+    const rt = rtData || { ...rtPayload, last_generated_date: null };
     recurringTasks.push(rt);
-    // Generate instance for today
-    const newId  = uid();
-    const minPos = tasks.length ? Math.min(...tasks.map(t => t.order || 0)) : 0;
-    const { data: taskData } = await _sb.from('tasks').insert({
-      id:               newId,
-      user_id:          _uid,
-      name:             rt.name,
-      category_id:      rt.list_id || null,
-      priority:         rt.priority,
-      due:              todayStr,
-      tags:             rt.tags || [],
-      notes:            rt.notes || '',
-      done:             false,
-      position:         minPos - 1,
-      recurring_task_id: rt.id,
-      recurring_date:   todayStr,
-    }).select().single();
-    if (taskData) tasks.unshift(fromDbTask(taskData));
-    await _sb.from('recurring_tasks').update({ last_generated_date: todayStr }).eq('id', rt.id);
-    rt.last_generated_date = todayStr;
+    // Only generate an instance today if the schedule actually fires today
+    if (shouldGenerateToday(rt)) {
+      const newId  = uid();
+      const minPos = tasks.length ? Math.min(...tasks.map(t => t.order || 0)) : 0;
+      const { data: taskData } = await _sb.from('tasks').insert({
+        id:               newId,
+        user_id:          _uid,
+        name:             rt.name,
+        category_id:      rt.list_id || null,
+        priority:         rt.priority,
+        due:              todayStr,
+        tags:             rt.tags || [],
+        notes:            rt.notes || '',
+        done:             false,
+        position:         minPos - 1,
+        recurring_task_id: rt.id,
+        recurring_date:   todayStr,
+      }).select().single();
+      if (taskData) tasks.unshift(fromDbTask(taskData));
+      await _sb.from('recurring_tasks').update({ last_generated_date: todayStr }).eq('id', rt.id);
+      rt.last_generated_date = todayStr;
+    }
     renderTasks();
     renderSidebar();
     return;

@@ -421,7 +421,6 @@ function getTasksForDay(dateStr) {
       isVirtualRecurring: true,
       recurringTaskId:   rt.id,
     }));
-  if (virtual.length) console.log('[cal] virtual recurring for', dateStr, virtual.map(v => v.name));
   return [...real, ...virtual];
 }
 
@@ -1422,8 +1421,6 @@ async function init() {
     _sb.from('recurring_tasks').select('*').eq('user_id', _uid),
   ]);
 
-  if (tr.error)  console.error('[cal] tasks query error:', tr.error.message);
-  if (rtr.error) console.error('[cal] recurring_tasks query error:', rtr.error.message, '— migration 006 run?');
 
   tasks = (tr.data || []).map(t => ({
     id: t.id, name: t.name,
@@ -1433,7 +1430,6 @@ async function init() {
     recurringTaskId: t.recurring_task_id || null,
   }));
   recurringTemplates = (rtr.data || []).filter(rt => rt.active);
-  console.log('[cal] recurringTemplates loaded:', recurringTemplates.length, recurringTemplates.map(r => r.name + '/' + r.frequency));
   categories = lr.data || [];
   tags       = gr.data || [];
   events     = (er.data || []).map(e => ({
