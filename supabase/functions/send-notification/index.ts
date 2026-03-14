@@ -61,36 +61,7 @@ serve(async (req) => {
       })
     }
 
-    const emailHtml = buildEmailHtml(display_name ?? null, body, items ?? null)
-
-    // ── Send email via Resend ────────────────────────────────────────────────
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'Motherboard <notifications@resend.dev>',
-        to: [to],
-        subject,
-        html: emailHtml,
-      }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      console.error('[send-notification] Resend error:', JSON.stringify(data))
-      return new Response(JSON.stringify({ error: data }), {
-        status: res.status,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-
-    console.log('[send-notification] Email sent, id:', data.id)
-
-    // ── Write in-app notification row ────────────────────────────────────────
+    // ── Write in-app notification row FIRST (always runs) ────────────────────
     let dbError: string | null = null
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
@@ -131,10 +102,49 @@ serve(async (req) => {
       }
     }
 
+    // ── Send email via Resend (best-effort — failure doesn't affect response) ─
+    let emailId: string | null = null
+    let emailError: string | null = null
+
+    if (!RESEND_API_KEY) {
+      emailError = 'RESEND_API_KEY not set — skipping email'
+      console.warn('[send-notification]', emailError)
+    } else {
+      try {
+        const emailHtml = buildEmailHtml(display_name ?? null, body, items ?? null)
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Motherboard <notifications@resend.dev>',
+            to: [to],
+            subject,
+            html: emailHtml,
+          }),
+        })
+
+        const data = await res.json()
+        if (!res.ok) {
+          emailError = `Resend error (${res.status}): ${JSON.stringify(data)}`
+          console.warn('[send-notification]', emailError)
+        } else {
+          emailId = data.id
+          console.log('[send-notification] Email sent, id:', emailId)
+        }
+      } catch (emailErr) {
+        emailError = String(emailErr)
+        console.warn('[send-notification] Email send threw:', emailError)
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      email_id: data.id,
-      ...(dbError ? { db_error: dbError } : {}),
+      ...(emailId    ? { email_id:    emailId    } : {}),
+      ...(emailError ? { email_error: emailError } : {}),
+      ...(dbError    ? { db_error:    dbError    } : {}),
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

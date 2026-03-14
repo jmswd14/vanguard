@@ -240,6 +240,143 @@ let saveTimer = null;
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 
+async function checkAndGenerateNotifications() {
+  if (!currentUser) return;
+
+  // Load enabled notification settings for this user
+  const { data: settings, error: settingsErr } = await DB
+    .from('user_notification_settings')
+    .select('type, enabled')
+    .eq('user_id', currentUser.id);
+
+  if (settingsErr || !settings || settings.length === 0) return;
+
+  const enabledTypes = new Set(settings.filter(s => s.enabled).map(s => s.type));
+  if (enabledTypes.size === 0) return;
+
+  // Find which types already have a notification created today (dedup)
+  const todayStart = todayStr + 'T00:00:00.000Z';
+  const tomorrowStart = new Date(new Date(todayStr).getTime() + 86400000).toISOString().split('T')[0] + 'T00:00:00.000Z';
+  const { data: existing } = await DB
+    .from('notifications')
+    .select('type')
+    .eq('user_id', currentUser.id)
+    .gte('created_at', todayStart)
+    .lt('created_at', tomorrowStart);
+
+  const alreadySentToday = new Set((existing || []).map(n => n.type));
+
+  const displayName = currentUser.user_metadata?.display_name || '';
+
+  // Helper to invoke the Edge Function
+  async function sendNotification(payload) {
+    try {
+      await DB.functions.invoke('send-notification', { body: payload });
+    } catch (e) {
+      console.warn('[notifications] Edge Function call failed:', e);
+    }
+  }
+
+  // ── task_due_today ──────────────────────────────────────────────────────────
+  if (enabledTypes.has('task_due_today') && !alreadySentToday.has('task_due_today')) {
+    const { data: dueTasks } = await DB
+      .from('tasks')
+      .select('name')
+      .eq('user_id', currentUser.id)
+      .eq('due', todayStr)
+      .eq('done', false)
+      .limit(10);
+
+    if (dueTasks && dueTasks.length > 0) {
+      const names = dueTasks.map(t => t.name);
+      await sendNotification({
+        to: currentUser.email,
+        subject: `${names.length} task${names.length > 1 ? 's' : ''} due today`,
+        body: 'You have tasks due today:',
+        user_id: currentUser.id,
+        type: 'task_due_today',
+        link: 'tasks/index.html',
+        items: names,
+        display_name: displayName,
+      });
+    }
+  }
+
+  // ── task_overdue ────────────────────────────────────────────────────────────
+  if (enabledTypes.has('task_overdue') && !alreadySentToday.has('task_overdue')) {
+    const { data: overdueTasks } = await DB
+      .from('tasks')
+      .select('name')
+      .eq('user_id', currentUser.id)
+      .lt('due', todayStr)
+      .eq('done', false)
+      .limit(10);
+
+    if (overdueTasks && overdueTasks.length > 0) {
+      const names = overdueTasks.map(t => t.name);
+      await sendNotification({
+        to: currentUser.email,
+        subject: `${names.length} overdue task${names.length > 1 ? 's' : ''}`,
+        body: 'These tasks are overdue:',
+        user_id: currentUser.id,
+        type: 'task_overdue',
+        link: 'tasks/index.html',
+        items: names,
+        display_name: displayName,
+      });
+    }
+  }
+
+  // ── habit_checkin ───────────────────────────────────────────────────────────
+  if (enabledTypes.has('habit_checkin') && !alreadySentToday.has('habit_checkin')) {
+    const { data: habits } = await DB
+      .from('habits')
+      .select('id, name')
+      .eq('user_id', currentUser.id)
+      .eq('active', true)
+      .limit(50);
+
+    if (habits && habits.length > 0) {
+      const { data: completedLogs } = await DB
+        .from('habit_logs')
+        .select('habit_id')
+        .eq('date', todayStr)
+        .eq('completed', true)
+        .in('habit_id', habits.map(h => h.id));
+
+      const completedIds = new Set((completedLogs || []).map(l => l.habit_id));
+      const pending = habits.filter(h => !completedIds.has(h.id)).slice(0, 10);
+
+      if (pending.length > 0) {
+        await sendNotification({
+          to: currentUser.email,
+          subject: `${pending.length} habit${pending.length > 1 ? 's' : ''} to check in`,
+          body: 'Time to check in on your habits:',
+          user_id: currentUser.id,
+          type: 'habit_checkin',
+          link: 'habits/index.html',
+          items: pending.map(h => h.name),
+          display_name: displayName,
+        });
+      }
+    }
+  }
+
+  // ── journal_prompt ──────────────────────────────────────────────────────────
+  if (enabledTypes.has('journal_prompt') && !alreadySentToday.has('journal_prompt')) {
+    await sendNotification({
+      to: currentUser.email,
+      subject: 'Your journal is waiting',
+      body: 'Your journal is waiting for you. Take a few minutes to reflect.',
+      user_id: currentUser.id,
+      type: 'journal_prompt',
+      link: 'journal/index.html',
+      items: null,
+      display_name: displayName,
+    });
+  }
+}
+
 async function init() {
   const { data: { session } } = await DB.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
@@ -258,6 +395,7 @@ async function init() {
   renderSlotSidebar();
 
   clockInterval = setInterval(updateGreetingClocks, 30000);
+  checkAndGenerateNotifications(); // fire-and-forget; don't block dashboard load
 }
 
 // ── LAYOUT PERSISTENCE ────────────────────────────────────────────────────────
