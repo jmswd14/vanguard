@@ -116,11 +116,13 @@
 
 /* ── Habit info ── */
 .habit-emoji {
-  font-size: 20px;
+  font-size: 15px;
+  font-family: var(--font-sans);
   flex-shrink: 0;
   line-height: 1;
-  width: 28px;
+  width: 22px;
   text-align: center;
+  color: var(--retro-c1, #00FF41);
 }
 
 .habit-info {
@@ -295,7 +297,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 20px;
+  font-size: 16px;
+  font-family: var(--font-sans);
   line-height: 1;
   transition: border-color 0.15s;
 }
@@ -319,26 +322,42 @@
   border-radius: var(--radius-sm);
   padding: 8px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  /* 8 per row: 8 × 34px buttons + 7 × 3px gaps + 16px padding = ~327px */
-  width: 320px;
+  /* 7 per row */
+  width: 322px;
   display: none;
 }
-.emoji-dropdown-panel.open { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.emoji-dropdown-panel.open { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 
 .emoji-btn {
   background: transparent;
   border: 2px solid transparent;
-  border-radius: 6px;
-  font-size: 18px;
+  border-radius: 0;
+  font-family: var(--font-sans);
   width: 100%;
-  aspect-ratio: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
+  padding: 5px 2px;
+}
+.icon-sym {
+  font-size: 15px;
   line-height: 1;
-  padding: 0;
+  color: var(--retro-c1, #00FF41);
+}
+.icon-lbl {
+  font-size: 8px;
+  line-height: 1;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .emoji-btn:hover { background: var(--surface3); }
 .emoji-btn.selected {
@@ -549,7 +568,7 @@
   margin-bottom: 14px;
 }
 
-.all-habit-emoji { font-size: 24px; flex-shrink: 0; line-height: 1; }
+.all-habit-emoji { font-size: 18px; font-family: var(--font-sans); color: var(--retro-c1, #00FF41); flex-shrink: 0; line-height: 1; }
 
 .all-habit-info {
   display: flex;
@@ -627,8 +646,9 @@
 
   .date-nav { gap: 8px; }
 
-  .emoji-dropdown-panel.open { width: 280px; }
-  .emoji-btn { font-size: 17px; }
+  .emoji-dropdown-panel.open { width: 280px; grid-template-columns: repeat(7, 1fr); }
+  .icon-sym { font-size: 13px; }
+  .icon-lbl { font-size: 7px; }
 }
 
 /* ─────────────────────────────────────────

@@ -219,7 +219,7 @@
       <div class="emoji-dropdown-wrap" id="emoji-dropdown-wrap">
         <button type="button" class="emoji-dropdown-trigger" id="emoji-dropdown-trigger"
                 onclick="toggleEmojiDropdown(event)">
-          <span id="emoji-display">⭐</span>
+          <span id="emoji-display">▷</span>
           <span class="emoji-dropdown-arrow">▼</span>
         </button>
         <div class="emoji-dropdown-panel" id="emoji-dropdown-panel"></div>
@@ -259,12 +259,42 @@ const _sb = window.supabaseClient;
 let _uid = null;
 
 // ── CONSTANTS ──
-const EMOJIS = [
-  '💪','🏃','🧘','🚴','🏊','🤸','🎯','🏋️','🚶','🧗',
-  '⚽','🎾','🏀','🧠','📚','✍️','🎨','🎵','🧩','💡',
-  '😴','💤','🛌','⏰','🌅','🌙','💊','🥗','🥤','💧',
-  '🍎','🥦','🚭','🍷','☕','❤️','🫀','🫁','🦷','👁️',
-  '🧴','🛁','🌿','🌱','☀️','🌊','🔥','⭐','✅','🎁',
+const HABIT_ICONS = [
+  { s: '▷',  label: 'Run'        },
+  { s: '◯',  label: 'Walk'       },
+  { s: '◁',  label: 'Cycle'      },
+  { s: '≋',  label: 'Swim'       },
+  { s: '◈',  label: 'Workout'    },
+  { s: '✦',  label: 'Yoga'       },
+  { s: '◎',  label: 'Meditate'   },
+  { s: '▽',  label: 'Drink Water'},
+  { s: '△',  label: 'Eat Healthy'},
+  { s: '▲',  label: 'Cook'       },
+  { s: '◑',  label: 'Sleep'      },
+  { s: '●',  label: 'Vitamins'   },
+  { s: '⊘',  label: 'No Alcohol' },
+  { s: '⊗',  label: 'No Sugar'   },
+  { s: '▤',  label: 'Read'       },
+  { s: '◇',  label: 'Study'      },
+  { s: '♡',  label: 'Gratitude'  },
+  { s: '▣',  label: 'Journal'    },
+  { s: '◐',  label: 'Reflect'    },
+  { s: '◆',  label: 'Strength'   },
+  { s: '■',  label: 'Deep Work'  },
+  { s: '◧',  label: 'Review'     },
+  { s: '⊟',  label: 'No Phone'   },
+  { s: '↑',  label: 'Early Rise' },
+  { s: '↓',  label: 'Early Bed'  },
+  { s: '⊕',  label: 'Connect'    },
+  { s: '◬',  label: 'Nature'     },
+  { s: '✱',  label: 'Mindful'    },
+  { s: '◌',  label: 'Rest'       },
+  { s: '▦',  label: 'Track'      },
+  { s: '✲',  label: 'Breathe'    },
+  { s: '◒',  label: 'Balance'    },
+  { s: '⊞',  label: 'Routine'    },
+  { s: '✳',  label: 'Sunlight'   },
+  { s: '◉',  label: 'Goal'       },
 ];
 
 const HABIT_COLORS = [
@@ -286,7 +316,7 @@ let openMenuId      = null;
 
 let habitDirection  = 'building';
 let selectedColor   = HABIT_COLORS[0];
-let selectedEmoji   = '⭐';
+let selectedEmoji   = '▷';
 
 const today    = new Date();
 const todayStr = today.toISOString().split('T')[0];
@@ -932,7 +962,7 @@ function renderChart(habit) {
 function openNewHabit() {
   habitDirection = 'building';
   selectedColor  = HABIT_COLORS[0];
-  selectedEmoji  = '⭐';
+  selectedEmoji  = '▷';
 
   document.getElementById('habit-modal-title').textContent = 'New Habit';
   document.getElementById('editing-habit-id').value = '';
@@ -960,7 +990,7 @@ function openEditHabit(id) {
 
   habitDirection = h.habit_direction || 'building';
   selectedColor  = h.color || HABIT_COLORS[0];
-  selectedEmoji  = h.emoji || '⭐';
+  selectedEmoji  = h.emoji || '▷';
 
   document.getElementById('habit-modal-title').textContent = 'Edit Habit';
   document.getElementById('editing-habit-id').value = id;
@@ -999,9 +1029,12 @@ function renderEmojiPicker() {
   const display = document.getElementById('emoji-display');
   if (display) display.textContent = selectedEmoji;
   if (!panel) return;
-  panel.innerHTML = EMOJIS.map(e =>
-    `<button type="button" class="emoji-btn${e === selectedEmoji ? ' selected' : ''}"
-             onclick="selectEmoji('${e}')">${e}</button>`
+  panel.innerHTML = HABIT_ICONS.map(ic =>
+    `<button type="button" class="emoji-btn${ic.s === selectedEmoji ? ' selected' : ''}"
+             title="${ic.label}" onclick="selectEmoji('${ic.s}')">
+       <span class="icon-sym">${ic.s}</span>
+       <span class="icon-lbl">${ic.label}</span>
+     </button>`
   ).join('');
 }
 

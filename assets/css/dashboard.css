@@ -385,7 +385,7 @@
 .habit-row.habit-done { background: rgba(107,203,119,0.04); border-color: rgba(107,203,119,0.18); }
 .habit-row-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 .habit-row-right { display: flex; align-items: center; flex-shrink: 0; }
-.habit-emoji { font-size: 18px; flex-shrink: 0; line-height: 1; width: 22px; text-align: center; }
+.habit-emoji { font-size: 14px; font-family: var(--font-sans); color: var(--retro-c1, #00FF41); flex-shrink: 0; line-height: 1; width: 20px; text-align: center; }
 .habit-name { font-size: 13px; color: var(--text); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .habit-yn-btns { display: flex; gap: 5px; }
 .habit-yn-btn {
