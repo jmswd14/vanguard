@@ -1,2 +1,8 @@
 [functions.send-notification]
 verify_jwt = false
+
+[functions.refresh-google-token]
+verify_jwt = false
+
+[functions.google-oauth-exchange]
+verify_jwt = false
