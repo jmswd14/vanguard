@@ -554,7 +554,7 @@ function toggleEditMode() {
     cancelBtn.style.display = 'none';
     addBtn.classList.remove('visible');
     closeAddPanel();
-    debouncedSave();
+    saveLayout(); // save immediately (not debounced) so navigating away doesn't drop the change
   }
 
   renderGrid();
