@@ -556,9 +556,9 @@ function toggleEditMode() {
 function removeWidget(id) {
   widgets = widgets.filter(w => w.id !== id);
   widgets.forEach((w, i) => { w.position = i; });
-  DB.from('dashboard_widgets').delete().eq('id', id);
   renderGrid();
   loadAllWidgetData();
+  debouncedSave();
 }
 
 // ── ADD WIDGET PANEL ──────────────────────────────────────────────────────────
@@ -2212,18 +2212,43 @@ async function _persistSlot(slotIndex, widgetData) {
   const now = new Date().toISOString();
   slot.widgets = widgetsJson;
   slot.updated_at = now;
-  try {
-    await DB.from('dashboard_slots').upsert({
-      user_id: currentUser.id,
-      slot_index: slotIndex,
-      name: slot.name,
-      widgets: widgetsJson,
-      updated_at: now,
-    }, { onConflict: 'user_id,slot_index' });
+
+  const upsertData = {
+    user_id:    currentUser.id,
+    slot_index: slotIndex,
+    name:       slot.name,
+    widgets:    widgetsJson,
+    updated_at: now,
+  };
+  if (slot.id) upsertData.id = slot.id;
+
+  const { data, error } = await DB.from('dashboard_slots')
+    .upsert(upsertData, { onConflict: 'user_id,slot_index' })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('Slot save error:', error);
+    showDashToast('Layout save failed: ' + error.message, true);
+  } else {
+    if (data?.id && !slot.id) slot.id = data.id; // store id for future upserts
     renderSlotSidebar();
-  } catch(e) {
-    console.error('Slot save error:', e);
   }
+}
+
+function showDashToast(msg, isError) {
+  let t = document.getElementById('dash-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'dash-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:var(--font-sans);font-size:12px;padding:8px 18px;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.2s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.borderColor = isError ? '#E03030' : 'var(--border2)';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
 }
 
 async function activateSlot(index) {
