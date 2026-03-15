@@ -2248,16 +2248,21 @@ async function _persistSlot(slotIndex, widgetData) {
   };
   if (slot.id) upsertData.id = slot.id;
 
-  const { data, error } = await DB.from('dashboard_slots')
-    .upsert(upsertData, { onConflict: 'user_id,slot_index' })
-    .select('id');
-
-  if (error) {
-    console.error('Slot save error:', error);
-    showDashToast('Layout save failed: ' + error.message, true);
-  } else {
-    if (data?.[0]?.id && !slot.id) slot.id = data[0].id;
-    renderSlotSidebar();
+  try {
+    const { data, error } = await DB.from('dashboard_slots')
+      .upsert(upsertData, { onConflict: 'user_id,slot_index' })
+      .select('id');
+    if (error) {
+      console.error('Slot save error:', error);
+      showDashToast('Save failed: ' + error.message, true);
+    } else {
+      if (data?.[0]?.id && !slot.id) slot.id = data[0].id;
+      showDashToast('Layout saved', false);
+      renderSlotSidebar();
+    }
+  } catch(e) {
+    console.error('Slot save exception:', e);
+    showDashToast('Save failed: ' + e.message, true);
   }
 }
 
