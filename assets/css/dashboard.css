@@ -977,95 +977,27 @@
   font-size: 12px;
   color: var(--text-dim);
   line-height: 1.55;
+  margin-bottom: 10px;
 }
-
-/* ── MOVIE DETAIL MODAL ── */
-#movie-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.75);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-#movie-modal.open { display: flex; }
-.movie-modal-box {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  width: min(560px, 92vw);
-  max-height: 85vh;
-  overflow-y: auto;
-  position: relative;
-  padding: 28px;
-}
-.movie-modal-close {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 18px;
-  cursor: pointer;
-  line-height: 1;
-}
-.movie-modal-close:hover { color: var(--text); }
-.movie-modal-inner {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-.movie-modal-poster img,
-.movie-modal-poster-placeholder {
-  width: 100px;
-  border-radius: var(--radius-sm);
+.movie-title {
+  text-decoration: none;
   display: block;
-  flex-shrink: 0;
 }
-.movie-modal-poster-placeholder {
-  height: 150px;
-  background: var(--surface2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  color: var(--text-muted);
-}
-.movie-modal-info { flex: 1; min-width: 0; }
-.movie-modal-title {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-size: 20px;
-  color: var(--text);
-  line-height: 1.3;
-  margin-bottom: 6px;
-  padding-right: 24px;
-}
-.movie-modal-meta {
-  font-size: 12px;
-  color: var(--text-muted);
-  letter-spacing: 0.03em;
-  margin-bottom: 14px;
-}
-.movie-modal-overview {
-  font-size: 13px;
-  color: var(--text-dim);
-  line-height: 1.6;
-  margin-bottom: 20px;
-}
-.movie-modal-refresh-btn {
+.movie-title:hover { opacity: 0.8; }
+.movie-poster-col { text-decoration: none; flex-shrink: 0; }
+.movie-poster-col:hover { opacity: 0.85; }
+.movie-refresh-btn {
   background: none;
   border: 1px solid var(--border2);
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-family: var(--font-sans);
-  font-size: 12px;
-  padding: 7px 16px;
+  font-size: 11px;
+  padding: 4px 10px;
   cursor: pointer;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.movie-modal-refresh-btn:hover { color: var(--text); border-color: var(--text-muted); }
+.movie-refresh-btn:hover { color: var(--text); border-color: var(--text-muted); }
 
 /* ── ON THIS DAY WIDGET ── */
 

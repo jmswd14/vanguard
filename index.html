@@ -124,22 +124,6 @@
   </div>
 </div>
 
-<!-- Movie Detail Modal -->
-<div id="movie-modal" onclick="closeMovieModal()">
-  <div class="movie-modal-box" onclick="event.stopPropagation()">
-    <button class="movie-modal-close" onclick="closeMovieModal()">✕</button>
-    <div class="movie-modal-inner">
-      <div id="movie-modal-poster"></div>
-      <div class="movie-modal-info">
-        <div class="movie-modal-title" id="movie-modal-title"></div>
-        <div class="movie-modal-meta" id="movie-modal-meta"></div>
-        <div class="movie-modal-overview" id="movie-modal-overview"></div>
-        <button class="movie-modal-refresh-btn" id="movie-modal-refresh">↻ New Suggestion</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Add Widget Panel -->
 <div class="add-widget-panel" id="add-panel">
   <div class="add-panel-header">
@@ -1634,9 +1618,14 @@ async function loadMovieSuggest(widget) {
 
   try {
     const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-    const genre = config.genre_id ? `&with_genres=${config.genre_id}` : '';
+    const genre    = config.genre_id   ? `&with_genres=${config.genre_id}` : '';
+    const lang     = config.language   ? `&with_original_language=${config.language}` : '';
     const minRating = config.min_rating || 7;
-    const base = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&sort_by=vote_average.desc&vote_count.gte=500&vote_average.gte=${minRating}${genre}`;
+    const sortBy   = config.sort_by    || 'vote_average.desc';
+    const decadeFrom = config.decade   ? `&primary_release_date.gte=${config.decade}-01-01` : '';
+    const decadeTo   = config.decade   ? `&primary_release_date.lte=${parseInt(config.decade) + 9}-12-31` : '';
+    const voteCount  = sortBy === 'vote_average.desc' ? '&vote_count.gte=500' : '&vote_count.gte=100';
+    const base = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&sort_by=${sortBy}${voteCount}&vote_average.gte=${minRating}${genre}${lang}${decadeFrom}${decadeTo}`;
 
     // Try a seeded page first; fall back to page 1 if it returns nothing
     let results = [];
@@ -1668,49 +1657,22 @@ function renderMovieWidget(el, movie, widgetId) {
   const blurb = movie.overview
     ? movie.overview.slice(0, 160) + (movie.overview.length > 160 ? '…' : '')
     : '';
+  const lbUrl = movie.id ? `https://letterboxd.com/tmdb/${movie.id}/` : '#';
 
-  const wid = widgetId ? `data-widget-id="${widgetId}"` : '';
   el.innerHTML = `
-    <div class="movie-wrap" style="cursor:pointer;" onclick="openMovieModal('${widgetId}')" ${wid}>
-      <div class="movie-poster-col">${poster}</div>
+    <div class="movie-wrap">
+      <a class="movie-poster-col" href="${lbUrl}" target="_blank" rel="noopener" title="View on Letterboxd">${poster}</a>
       <div class="movie-info-col">
-        <div class="movie-title">${esc(movie.title)}</div>
+        <a class="movie-title" href="${lbUrl}" target="_blank" rel="noopener">${esc(movie.title)}</a>
         <div class="movie-meta">${esc(year)}&nbsp;&nbsp;★ ${esc(rating)}</div>
         <div class="movie-blurb">${esc(blurb)}</div>
+        <button class="movie-refresh-btn" onclick="refreshMovieWidget('${widgetId}')">↻ New suggestion</button>
       </div>
     </div>
   `;
 }
 
-function openMovieModal(widgetId) {
-  const localToday = new Date().toISOString().split('T')[0];
-  const salt = parseInt(localStorage.getItem(`vg-movie-${widgetId}-salt-${localToday}`) || '0');
-  const cacheKey = `vg-movie-${widgetId}-${localToday}-${salt}`;
-  const cached = localStorage.getItem(cacheKey);
-  if (!cached) return;
-  const movie = JSON.parse(cached);
-
-  const posterBase = 'https://image.tmdb.org/t/p/w342';
-  const poster = movie.poster_path
-    ? `<img class="movie-modal-poster" src="${posterBase}${movie.poster_path}" alt="">`
-    : `<div class="movie-modal-poster-placeholder">▶</div>`;
-  const year = (movie.release_date || '').slice(0, 4);
-  const rating = movie.vote_average ? movie.vote_average.toFixed(1) : '—';
-
-  document.getElementById('movie-modal-poster').innerHTML = poster;
-  document.getElementById('movie-modal-title').textContent = movie.title || '';
-  document.getElementById('movie-modal-meta').textContent = [year, `★ ${rating}`].filter(Boolean).join('  ·  ');
-  document.getElementById('movie-modal-overview').textContent = movie.overview || '';
-  document.getElementById('movie-modal-refresh').onclick = () => refreshMovieWidget(widgetId);
-  document.getElementById('movie-modal').classList.add('open');
-}
-
-function closeMovieModal() {
-  document.getElementById('movie-modal').classList.remove('open');
-}
-
 function refreshMovieWidget(widgetId) {
-  closeMovieModal();
   closeWidgetOptions();
   const localToday = new Date().toISOString().split('T')[0];
   const saltKey = `vg-movie-${widgetId}-salt-${localToday}`;
@@ -2127,6 +2089,40 @@ function buildOptionsForm(widget, config, habits) {
         </select>
       </div>
       <div class="widget-option-row">
+        <label class="widget-option-label">Decade</label>
+        <select class="widget-option-select" id="wo-movie-decade">
+          <option value="">Any</option>
+          <option value="1960" ${config.decade==='1960'?'selected':''}>1960s</option>
+          <option value="1970" ${config.decade==='1970'?'selected':''}>1970s</option>
+          <option value="1980" ${config.decade==='1980'?'selected':''}>1980s</option>
+          <option value="1990" ${config.decade==='1990'?'selected':''}>1990s</option>
+          <option value="2000" ${config.decade==='2000'?'selected':''}>2000s</option>
+          <option value="2010" ${config.decade==='2010'?'selected':''}>2010s</option>
+          <option value="2020" ${config.decade==='2020'?'selected':''}>2020s</option>
+        </select>
+      </div>
+      <div class="widget-option-row">
+        <label class="widget-option-label">Language</label>
+        <select class="widget-option-select" id="wo-movie-lang">
+          <option value="">Any</option>
+          <option value="en" ${config.language==='en'?'selected':''}>English</option>
+          <option value="ko" ${config.language==='ko'?'selected':''}>Korean</option>
+          <option value="ja" ${config.language==='ja'?'selected':''}>Japanese</option>
+          <option value="fr" ${config.language==='fr'?'selected':''}>French</option>
+          <option value="es" ${config.language==='es'?'selected':''}>Spanish</option>
+          <option value="it" ${config.language==='it'?'selected':''}>Italian</option>
+          <option value="de" ${config.language==='de'?'selected':''}>German</option>
+        </select>
+      </div>
+      <div class="widget-option-row">
+        <label class="widget-option-label">Sort by</label>
+        <select class="widget-option-select" id="wo-movie-sort">
+          <option value="vote_average.desc"  ${!config.sort_by||config.sort_by==='vote_average.desc' ?'selected':''}>Top Rated</option>
+          <option value="popularity.desc"    ${config.sort_by==='popularity.desc'   ?'selected':''}>Most Popular</option>
+          <option value="primary_release_date.desc" ${config.sort_by==='primary_release_date.desc'?'selected':''}>Newest</option>
+        </select>
+      </div>
+      <div class="widget-option-row">
         <label class="widget-option-label">Min rating</label>
         <select class="widget-option-select" id="wo-movie-rating">
           <option value="6"   ${config.min_rating==6   ?'selected':''}>6.0+</option>
@@ -2198,6 +2194,9 @@ function saveWidgetOptions() {
       .forEach(k => localStorage.removeItem(k));
   } else if (type === 'movie-suggest') {
     newConfig.genre_id   = getVal('wo-movie-genre') || '';
+    newConfig.decade     = getVal('wo-movie-decade') || '';
+    newConfig.language   = getVal('wo-movie-lang') || '';
+    newConfig.sort_by    = getVal('wo-movie-sort') || 'vote_average.desc';
     newConfig.min_rating = parseFloat(getVal('wo-movie-rating')) || 7;
     Object.keys(localStorage)
       .filter(k => k.startsWith(`vg-movie-${id}`))
