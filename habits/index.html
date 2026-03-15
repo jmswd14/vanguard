@@ -1031,10 +1031,7 @@ function renderEmojiPicker() {
   if (!panel) return;
   panel.innerHTML = HABIT_ICONS.map(ic =>
     `<button type="button" class="emoji-btn${ic.s === selectedEmoji ? ' selected' : ''}"
-             title="${ic.label}" onclick="selectEmoji('${ic.s}')">
-       <span class="icon-sym">${ic.s}</span>
-       <span class="icon-lbl">${ic.label}</span>
-     </button>`
+             title="${ic.label}" onclick="selectEmoji('${ic.s}')">${ic.s}</button>`
   ).join('');
 }
 
