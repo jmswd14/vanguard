@@ -359,7 +359,7 @@ let gratitudeItems    = [''];
 let newTagColor       = JOURNAL_TAG_COLORS[0];
 
 const today    = new Date();
-const todayStr = today.toISOString().split('T')[0];
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
 const dayOfYear   = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
 const todayPrompt = JOURNAL_PROMPTS[Math.floor(dayOfYear) % 30];
@@ -411,7 +411,7 @@ function formatDateShort(ts) {
 function formatDateGroup(dateStr) {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yStr = yesterday.toISOString().split('T')[0];
+  const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
   if (dateStr === todayStr) return 'Today';
   if (dateStr === yStr) return 'Yesterday';
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US',

@@ -310,7 +310,7 @@ const EMPTY_COLOR   = 'var(--surface3)';
 let habits          = [];
 let logs            = [];
 let currentView     = 'today';
-let selectedDate    = new Date().toISOString().split('T')[0];
+let selectedDate    = (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })();
 let progressHabitId = 'all';
 let openMenuId      = null;
 
@@ -319,7 +319,7 @@ let selectedColor   = HABIT_COLORS[0];
 let selectedIcon   = '▷';
 
 const today    = new Date();
-const todayStr = today.toISOString().split('T')[0];
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
 // ── UTILS ──
 function uid()           { return crypto.randomUUID(); }
@@ -353,7 +353,7 @@ function dirIcon(habit) {
 function addDays(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function fmtDateLong(dateStr) {

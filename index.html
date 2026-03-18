@@ -393,7 +393,7 @@ async function init() {
   VG_THEME.sync();
 
   const today = new Date();
-  todayStr = today.toISOString().split('T')[0];
+  todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   document.getElementById('dash-date').textContent = dateStr;
 
@@ -406,7 +406,7 @@ async function init() {
   clockInterval = setInterval(() => {
     updateGreetingClocks();
     // detect midnight rollover — refresh todayStr and reload widgets
-    const newDate = new Date().toISOString().split('T')[0];
+    const newDate = (() => { const _d = new Date(); return \`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}\`; })();
     if (newDate !== todayStr) {
       todayStr = newDate;
       document.getElementById('dash-date').textContent =
@@ -1294,7 +1294,7 @@ async function loadHabitStreaks(widget) {
       let streak = 0;
       const cur = new Date();
       while (streak < 365) {
-        const ds = cur.toISOString().split('T')[0];
+        const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
         if (dates.has(ds)) { streak++; cur.setDate(cur.getDate() - 1); }
         else break;
       }
@@ -1639,7 +1639,7 @@ async function loadMovieSuggest(widget) {
     return;
   }
 
-  const localToday = new Date().toISOString().split('T')[0];
+  const localToday = (() => { const _d = new Date(); return \`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}\`; })();
   const salt = parseInt(localStorage.getItem(`vg-movie-${widget.id}-salt-${localToday}`) || '0');
   const cacheKey = `vg-movie-${widget.id}-${localToday}-${salt}`;
   const cached = localStorage.getItem(cacheKey);
@@ -1708,7 +1708,7 @@ function renderMovieWidget(el, movie, widgetId) {
 
 function refreshMovieWidget(widgetId) {
   closeWidgetOptions();
-  const localToday = new Date().toISOString().split('T')[0];
+  const localToday = (() => { const _d = new Date(); return \`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}\`; })();
   const saltKey = `vg-movie-${widgetId}-salt-${localToday}`;
   const newSalt = parseInt(localStorage.getItem(saltKey) || '0') + 1;
   localStorage.setItem(saltKey, newSalt);

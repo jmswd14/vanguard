@@ -328,7 +328,7 @@ let selectedTaskTags = [];
 let tagDropdownOpen  = false;
 
 const today    = new Date();
-const todayStr = today.toISOString().split('T')[0];
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
 // ── GOOGLE CALENDAR ──
 const GCAL_CLIENT_ID = '24557710513-s14v9scfguh13ke3p01nb46vcke2kbn4.apps.googleusercontent.com';
