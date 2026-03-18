@@ -406,7 +406,7 @@ async function init() {
   clockInterval = setInterval(() => {
     updateGreetingClocks();
     // detect midnight rollover — refresh todayStr and reload widgets
-    const newDate = (() => { const _d = new Date(); return \`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}\`; })();
+    const newDate = (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })();
     if (newDate !== todayStr) {
       todayStr = newDate;
       document.getElementById('dash-date').textContent =
@@ -1639,7 +1639,7 @@ async function loadMovieSuggest(widget) {
     return;
   }
 
-  const localToday = (() => { const _d = new Date(); return \`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}\`; })();
+  const localToday = (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })();
   const salt = parseInt(localStorage.getItem(`vg-movie-${widget.id}-salt-${localToday}`) || '0');
   const cacheKey = `vg-movie-${widget.id}-${localToday}-${salt}`;
   const cached = localStorage.getItem(cacheKey);
@@ -1708,7 +1708,7 @@ function renderMovieWidget(el, movie, widgetId) {
 
 function refreshMovieWidget(widgetId) {
   closeWidgetOptions();
-  const localToday = (() => { const _d = new Date(); return \`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}\`; })();
+  const localToday = (() => { const _d = new Date(); return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`; })();
   const saltKey = `vg-movie-${widgetId}-salt-${localToday}`;
   const newSalt = parseInt(localStorage.getItem(saltKey) || '0') + 1;
   localStorage.setItem(saltKey, newSalt);
