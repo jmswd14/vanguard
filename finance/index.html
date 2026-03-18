@@ -1335,10 +1335,10 @@ async function loadMarkets() {
 // ── NEWS ──────────────────────────────────────────────────────────────────────
 
 const NEWS_CATEGORIES = [
-  { id: 'general',    label: 'General Markets',    feed: 'https://www.cnbc.com/id/15839135/device/rss/rss.html' },
+  { id: 'general',    label: 'General Markets',    feed: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml' },
   { id: 'credit',     label: 'Private Credit',     feed: 'https://privatedebtinvestor.com/feed/' },
   { id: 'abf',        label: 'Asset-Based Finance', feed: 'https://www.abfjournal.com/feed/' },
-  { id: 'macro',      label: 'Macro',              feed: 'https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines' },
+  { id: 'macro',      label: 'Macro',              feed: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258' },
   { id: 'realestate', label: 'Real Estate',        feed: 'https://therealdeal.com/feed/' },
 ];
 
@@ -1386,10 +1386,21 @@ async function loadNews() {
     if (cached) {
       items = JSON.parse(cached);
     } else {
-      const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(cat.feed)}&count=20`;
-      const res = await fetch(url);
-      const data = await res.json();
-      items = (data.items || []).filter(i => i.title && i.link);
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(cat.feed)}`;
+      const res = await fetch(proxyUrl);
+      const text = await res.text();
+      const xml = new DOMParser().parseFromString(text, 'text/xml');
+      items = [...xml.querySelectorAll('item, entry')].slice(0, 20).map(n => {
+        const txt = s => n.querySelector(s)?.textContent?.trim() || '';
+        const link = txt('link') || n.querySelector('link')?.getAttribute('href') || '';
+        return {
+          title:       txt('title'),
+          link,
+          pubDate:     txt('pubDate') || txt('published') || txt('updated'),
+          description: txt('description') || txt('summary') || txt('content'),
+          author:      txt('author name') || txt('creator') || '',
+        };
+      }).filter(i => i.title && i.link);
       if (items.length) localStorage.setItem(cacheKey, JSON.stringify(items));
     }
 
