@@ -1340,7 +1340,7 @@ const NEWS_CATEGORIES = [
   { id: 'abf',        label: 'Asset-Based Finance', feed: 'https://www.abfjournal.com/feed/' },
   { id: 'macro',      label: 'Macro',              feed: 'https://feeds.reuters.com/reuters/businessNews' },
   { id: 'realestate', label: 'Real Estate',        feed: 'https://www.globest.com/feed/' },
-  { id: 'levine',     label: 'Matt Levine',        feed: 'https://www.bloomberg.com/opinion/authors/ARbTQlRLRjE/matthew-s-levine.rss' },
+  { id: 'levine',     label: 'Matt Levine',        feed: 'https://www.bloomberg.com/opinion/authors/ARbTQlRLRjE/matthew-s-levine.rss', proxy: true },
 ];
 
 let activeNewsCategory = 'general';
@@ -1387,18 +1387,38 @@ async function loadNews() {
     if (cached) {
       items = JSON.parse(cached);
     } else {
-      const rssUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(cat.feed)}`;
-      const res = await fetch(rssUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.status !== 'ok') throw new Error(data.message || 'RSS error');
-      items = (data.items || []).slice(0, 20).map(n => ({
-        title:       n.title || '',
-        link:        n.link  || '',
-        pubDate:     n.pubDate || '',
-        description: n.description || n.content || '',
-        author:      n.author || '',
-      })).filter(i => i.title && i.link);
+      if (cat.proxy) {
+        // Use CORS proxy + DOMParser for feeds that block rss2json (e.g. Bloomberg)
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(cat.feed)}`;
+        const res = await fetch(proxyUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        const xml = new DOMParser().parseFromString(text, 'text/xml');
+        items = [...xml.querySelectorAll('item, entry')].slice(0, 20).map(n => {
+          const txt = s => n.querySelector(s)?.textContent?.trim() || '';
+          const link = txt('link') || n.querySelector('link')?.getAttribute('href') || '';
+          return {
+            title:       txt('title'),
+            link,
+            pubDate:     txt('pubDate') || txt('published') || txt('updated'),
+            description: txt('description') || txt('summary') || txt('content'),
+            author:      txt('author') || txt('creator') || '',
+          };
+        }).filter(i => i.title && i.link);
+      } else {
+        const rssUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(cat.feed)}`;
+        const res = await fetch(rssUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.status !== 'ok') throw new Error(data.message || 'RSS error');
+        items = (data.items || []).slice(0, 20).map(n => ({
+          title:       n.title || '',
+          link:        n.link  || '',
+          pubDate:     n.pubDate || '',
+          description: n.description || n.content || '',
+          author:      n.author || '',
+        })).filter(i => i.title && i.link);
+      }
       if (items.length) localStorage.setItem(cacheKey, JSON.stringify(items));
     }
 
