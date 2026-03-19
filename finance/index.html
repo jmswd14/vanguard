@@ -1386,21 +1386,18 @@ async function loadNews() {
     if (cached) {
       items = JSON.parse(cached);
     } else {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(cat.feed)}`;
-      const res = await fetch(proxyUrl);
-      const text = await res.text();
-      const xml = new DOMParser().parseFromString(text, 'text/xml');
-      items = [...xml.querySelectorAll('item, entry')].slice(0, 20).map(n => {
-        const txt = s => n.querySelector(s)?.textContent?.trim() || '';
-        const link = txt('link') || n.querySelector('link')?.getAttribute('href') || '';
-        return {
-          title:       txt('title'),
-          link,
-          pubDate:     txt('pubDate') || txt('published') || txt('updated'),
-          description: txt('description') || txt('summary') || txt('content'),
-          author:      txt('author name') || txt('creator') || '',
-        };
-      }).filter(i => i.title && i.link);
+      const rssUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(cat.feed)}`;
+      const res = await fetch(rssUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status !== 'ok') throw new Error(data.message || 'RSS error');
+      items = (data.items || []).slice(0, 20).map(n => ({
+        title:       n.title || '',
+        link:        n.link  || '',
+        pubDate:     n.pubDate || '',
+        description: n.description || n.content || '',
+        author:      n.author || '',
+      })).filter(i => i.title && i.link);
       if (items.length) localStorage.setItem(cacheKey, JSON.stringify(items));
     }
 
@@ -1423,7 +1420,7 @@ async function loadNews() {
       </div>`;
     }).join('<hr class="news-divider">');
   } catch(e) {
-    el.innerHTML = '<div class="news-loading">Could not load news feed.</div>';
+    el.innerHTML = `<div class="news-loading">Could not load news feed: ${e.message}</div>`;
   }
 }
 
