@@ -1425,8 +1425,8 @@ function openModal(id) {
   if (id === 'add-asset-modal') {
     const editingId = document.getElementById('editing-asset-id').value;
     if (!editingId) {
-      // New asset: show initial value field
-      document.getElementById('initial-value-group').style.display = '';
+      // For new assets, visibility is controlled by setAccountMode — don't override here
+      assetTypeChanged();
     }
   }
 }
