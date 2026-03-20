@@ -98,14 +98,6 @@
         </div>
       </div>
 
-      <div class="sidebar-item" id="nav-assets" onclick="setView('assets', this)">
-        <div class="sidebar-item-left">
-          <span class="sidebar-icon">◈</span>
-          <span class="rs-nav-label">All Assets</span>
-        </div>
-        <span class="sidebar-count" id="count-assets">0</span>
-      </div>
-
       <div class="sidebar-item" id="nav-markets" onclick="setView('markets', this)">
         <div class="sidebar-item-left">
           <span class="sidebar-icon">↗</span>
@@ -159,7 +151,7 @@
       <div class="due-banner" id="due-banner" style="display:none">
         <span class="due-banner-icon">⚑</span>
         <span class="due-banner-text" id="due-banner-text"></span>
-        <span class="due-banner-link" onclick="setView('assets', document.getElementById('nav-assets'))">View assets →</span>
+        <span class="due-banner-link" onclick="setView('overview', document.getElementById('nav-overview'))">View assets →</span>
       </div>
 
       <!-- Net worth chart -->
@@ -202,6 +194,57 @@
     <div id="view-news" style="display:none">
       <div class="news-chips" id="news-chips"></div>
       <div id="news-body"></div>
+    </div>
+
+    <!-- ACCOUNT VIEW -->
+    <div id="view-account" style="display:none">
+      <div class="ac-breadcrumb" id="ac-breadcrumb"></div>
+      <div class="ac-hero">
+        <div class="ac-hero-name" id="ac-name"></div>
+        <div class="ac-hero-value" id="ac-value"></div>
+        <div class="ac-hero-sub" id="ac-sub"></div>
+      </div>
+      <div class="ac-tab-bar" id="ac-tab-bar" style="display:none">
+        <button class="ac-tab active" id="act-btn-holdings" onclick="setAccountTab('holdings')">Holdings</button>
+        <button class="ac-tab" id="act-btn-transactions" onclick="setAccountTab('transactions')">Transactions</button>
+        <button class="ac-tab" id="act-btn-overview" onclick="setAccountTab('overview')">Overview</button>
+      </div>
+      <div id="act-btn-overview-only" style="display:none">
+        <button class="ac-tab active">Overview</button>
+      </div>
+      <!-- Holdings pane -->
+      <div id="act-pane-holdings" style="display:none">
+        <div class="ac-toolbar">
+          <button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="openAddHoldingModal()">+ Add Holding</button>
+          <button class="btn" style="font-size:11px;padding:5px 12px;" onclick="refreshHoldingPrices()">↺ Prices</button>
+          <div class="col-picker-wrap" style="margin-left:auto">
+            <button class="btn" style="font-size:11px;padding:5px 12px;" onclick="toggleColPicker(event)">⊞ Columns</button>
+            <div class="col-picker-dropdown" id="col-picker-dropdown"></div>
+          </div>
+        </div>
+        <div id="ac-holdings-table"></div>
+      </div>
+      <!-- Transactions pane -->
+      <div id="act-pane-transactions" style="display:none">
+        <div class="ac-toolbar">
+          <button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="openAddTransactionModal()">+ Add Transaction</button>
+        </div>
+        <div id="ac-transactions-table"></div>
+      </div>
+      <!-- Overview pane -->
+      <div id="act-pane-overview" style="display:none">
+        <div class="ac-overview-actions">
+          <button class="btn btn-primary" onclick="openLogModal()">+ Log Value</button>
+          <button class="btn" onclick="openEditAsset()">Edit</button>
+          <button class="btn btn-danger" onclick="confirmDeleteAsset()" style="margin-left:auto">Delete</button>
+        </div>
+        <div class="detail-chart-wrap">
+          <div class="detail-section-label">Value History</div>
+          <svg class="detail-chart-svg" id="ac-chart" height="160" viewBox="0 0 800 160" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="detail-section-label">Log Entries</div>
+        <div class="detail-log-list" id="ac-log-list"></div>
+      </div>
     </div>
   </main>
 
@@ -476,6 +519,7 @@ let logs           = [];   // array of all log rows
 let currentView    = 'overview';
 let currentAsset   = null; // asset open in detail panel
 let currentDetailTab = 'overview';
+let currentAccountTab = 'holdings';
 let currentHoldings = [];
 let currentTransactions = [];
 let holdingPrices = {};
@@ -827,6 +871,7 @@ function setView(view, el) {
   document.getElementById('view-assets').style.display   = view === 'assets'   ? '' : 'none';
   document.getElementById('view-markets').style.display  = view === 'markets'  ? '' : 'none';
   document.getElementById('view-news').style.display     = view === 'news'     ? '' : 'none';
+  document.getElementById('view-account').style.display  = 'none';
 
   // Show/hide New Asset button
   const assetBtn = document.querySelector('.topbar-right .btn-primary');
@@ -850,6 +895,7 @@ function filterByType(type, el) {
   document.getElementById('view-assets').style.display = '';
   document.getElementById('view-markets').style.display = 'none';
   document.getElementById('view-news').style.display = 'none';
+  document.getElementById('view-account').style.display = 'none';
   document.getElementById('view-title').textContent = type;
 
   document.querySelectorAll('.sidebar-item[id^="nav-"]').forEach(i => i.classList.remove('active'));
@@ -864,53 +910,400 @@ function filterByType(type, el) {
 
 function updateTypeSidebarNav() {
   const nav = document.getElementById('type-nav');
-  // Get types that have at least 1 asset
   const typesWithAssets = [...new Set(assets.map(a => a.type))];
   if (!typesWithAssets.length) {
     nav.innerHTML = '<div style="padding:6px 24px;font-size:12px;color:var(--text-muted);">No assets yet</div>';
     return;
   }
+  // Restore open groups from localStorage
+  let openGroups;
+  try { openGroups = new Set(JSON.parse(localStorage.getItem('vg-fin-open-groups') || '[]')); }
+  catch { openGroups = new Set(); }
+
   nav.innerHTML = typesWithAssets.map(type => {
-    const count = assets.filter(a => a.type === type).length;
+    const typeAssets = assets.filter(a => a.type === type);
     const color = TYPE_COLORS[type] || '#888';
-    return `
-      <div class="sidebar-item" data-type="${esc(type)}" onclick="filterByType('${esc(type)}', this)">
-        <div class="sidebar-item-left">
-          <span class="sidebar-icon" style="color:${color}">◈</span>
-          <span class="rs-nav-label">${esc(type)}</span>
-        </div>
-        <span class="sidebar-count">${count}</span>
+    const isOpen = openGroups.has(type);
+    const accountItems = typeAssets.map(a => {
+      const log = getLatestLog(a.id);
+      const val = log ? fmtUSD(parseFloat(log.value)) : '—';
+      const isActive = currentAsset?.id === a.id;
+      return `<div class="type-account-item${isActive ? ' active' : ''}" onclick="openAccount('${a.id}')">
+        <span class="type-account-name">${esc(a.name)}</span>
+        <span class="type-account-val">${val}</span>
+      </div>`;
+    }).join('');
+    return `<div class="type-group" id="tg-${CSS.escape(type)}">
+      <div class="type-group-header" onclick="toggleTypeGroup('${esc(type)}')">
+        <span class="type-group-arrow">${isOpen ? '▾' : '▸'}</span>
+        <span class="type-group-dot" style="background:${color}"></span>
+        <span class="type-group-name">${esc(type)}</span>
+        <span class="type-group-count">${typeAssets.length}</span>
       </div>
-    `;
+      <div class="type-group-accounts" style="display:${isOpen ? '' : 'none'}">${accountItems}</div>
+    </div>`;
   }).join('');
 }
 
+function toggleTypeGroup(type) {
+  let openGroups;
+  try { openGroups = new Set(JSON.parse(localStorage.getItem('vg-fin-open-groups') || '[]')); }
+  catch { openGroups = new Set(); }
+  if (openGroups.has(type)) openGroups.delete(type); else openGroups.add(type);
+  localStorage.setItem('vg-fin-open-groups', JSON.stringify([...openGroups]));
+  updateTypeSidebarNav();
+}
+
 function updateAssetCount() {
-  document.getElementById('count-assets').textContent = assets.length;
+  const el = document.getElementById('count-assets');
+  if (el) el.textContent = assets.length;
+}
+
+// ── ACCOUNT VIEW ──────────────────────────────────────────────────────────────
+
+function openAccount(assetId) {
+  currentAsset = assets.find(a => a.id === assetId);
+  if (!currentAsset) return;
+  currentHoldings = [];
+  currentTransactions = [];
+  holdingPrices = {};
+
+  // Switch main view to account
+  stopMarketsRefresh();
+  document.getElementById('view-overview').style.display = 'none';
+  document.getElementById('view-assets') && (document.getElementById('view-assets').style.display = 'none');
+  document.getElementById('view-markets').style.display = 'none';
+  document.getElementById('view-news').style.display = 'none';
+  document.getElementById('view-account').style.display = '';
+  currentView = 'account';
+
+  // Deactivate sidebar nav items
+  document.querySelectorAll('.sidebar-item[id^="nav-"]').forEach(i => i.classList.remove('active'));
+  // Mark active account in type nav
+  updateTypeSidebarNav();
+
+  // Update topbar
+  const assetBtn = document.querySelector('.topbar-right .btn-primary');
+  if (assetBtn) assetBtn.style.display = 'none';
+
+  renderAccountView();
+  closeMobileMenus();
+
+  // Load data
+  if (INVESTMENT_TYPES.has(currentAsset.type)) {
+    loadHoldings().then(() => {
+      if (currentAccountTab === 'holdings') renderAccountHoldings();
+    });
+    loadTransactions().then(() => {
+      if (currentAccountTab === 'transactions') renderAccountTransactions();
+    });
+  }
+}
+
+function renderAccountView() {
+  const asset = currentAsset;
+  const log = getLatestLog(asset.id);
+  const isInvestment = INVESTMENT_TYPES.has(asset.type);
+
+  // Breadcrumb
+  document.getElementById('ac-breadcrumb').innerHTML =
+    `<span class="ac-bc-link" onclick="setView('overview', document.getElementById('nav-overview'))">Finance</span>
+     <span class="ac-bc-sep">›</span>
+     <span class="ac-bc-type">${esc(asset.type)}</span>
+     <span class="ac-bc-sep">›</span>
+     <span class="ac-bc-current">${esc(asset.name)}</span>`;
+
+  // Hero
+  document.getElementById('view-title').textContent = asset.name;
+  document.getElementById('ac-name').textContent = asset.name;
+  if (log) {
+    document.getElementById('ac-value').textContent = fmtUSD(parseFloat(log.value));
+    document.getElementById('ac-sub').textContent = `Last updated ${formatDate(log.logged_at)}`;
+  } else {
+    document.getElementById('ac-value').textContent = '—';
+    document.getElementById('ac-sub').textContent = 'No value logged yet';
+  }
+
+  // Tab bar
+  document.getElementById('ac-tab-bar').style.display = isInvestment ? 'flex' : 'none';
+  document.getElementById('act-btn-overview-only').style.display = isInvestment ? 'none' : 'flex';
+
+  // Default tab
+  const defaultTab = isInvestment ? 'holdings' : 'overview';
+  setAccountTab(defaultTab);
+}
+
+function setAccountTab(tab) {
+  currentAccountTab = tab;
+  ['holdings','transactions','overview'].forEach(t => {
+    const pane = document.getElementById(`act-pane-${t}`);
+    if (pane) pane.style.display = t === tab ? '' : 'none';
+    const btn = document.getElementById(`act-btn-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'holdings') renderAccountHoldings();
+  else if (tab === 'transactions') renderAccountTransactions();
+  else if (tab === 'overview') renderAccountOverview();
+}
+
+// Column definitions for holdings table
+const HOLDING_COL_DEFS = [
+  { id: 'symbol',    label: 'Symbol',       def: true },
+  { id: 'name',      label: 'Name',         def: true },
+  { id: 'shares',    label: 'Shares',       def: true },
+  { id: 'avgCost',   label: 'Avg Cost',     def: true },
+  { id: 'price',     label: 'Price',        def: true },
+  { id: 'value',     label: 'Mkt Value',    def: true },
+  { id: 'gain',      label: 'Gain/Loss',    def: true },
+  { id: 'gainPct',   label: 'Gain %',       def: true },
+  { id: 'dayChg',    label: 'Day Chg',      def: false },
+  { id: 'purchDate', label: 'Purchased',    def: false },
+];
+
+function getVisibleCols() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('vg-fin-holding-cols') || 'null');
+    if (saved) return new Set(saved);
+  } catch {}
+  return new Set(HOLDING_COL_DEFS.filter(c => c.def).map(c => c.id));
+}
+
+function saveVisibleCols(set) {
+  localStorage.setItem('vg-fin-holding-cols', JSON.stringify([...set]));
+}
+
+function toggleColPicker(e) {
+  e && e.stopPropagation();
+  const drop = document.getElementById('col-picker-dropdown');
+  if (!drop) return;
+  const isOpen = drop.classList.toggle('open');
+  if (isOpen) renderColPicker();
+}
+
+function renderColPicker() {
+  const drop = document.getElementById('col-picker-dropdown');
+  if (!drop) return;
+  const vis = getVisibleCols();
+  drop.innerHTML = HOLDING_COL_DEFS.map(c => `
+    <label class="col-picker-item">
+      <input type="checkbox" ${vis.has(c.id) ? 'checked' : ''} onchange="toggleCol('${c.id}', this.checked)">
+      ${c.label}
+    </label>`).join('');
+}
+
+function toggleCol(id, checked) {
+  const vis = getVisibleCols();
+  if (checked) vis.add(id); else { if (vis.size > 1) vis.delete(id); }
+  saveVisibleCols(vis);
+  renderAccountHoldings();
+}
+
+document.addEventListener('click', e => {
+  const drop = document.getElementById('col-picker-dropdown');
+  if (drop && drop.classList.contains('open')) {
+    if (!e.target.closest('.col-picker-wrap')) drop.classList.remove('open');
+  }
+});
+
+function renderAccountHoldings() {
+  const el = document.getElementById('ac-holdings-table');
+  if (!el) return;
+  if (!currentHoldings.length) {
+    el.innerHTML = '<div class="detail-empty-logs">No holdings yet. Add your first position.</div>';
+    return;
+  }
+  const vis = getVisibleCols();
+  const cols = HOLDING_COL_DEFS.filter(c => vis.has(c.id));
+
+  let totalValue = 0, totalCost = 0, totalGain = 0;
+  const rowData = currentHoldings.map(h => {
+    const sym = h.symbol.toUpperCase();
+    const q = holdingPrices[sym] || null;  // full quote object
+    const price = q?.c || null;
+    const qty = parseFloat(h.quantity) || 0;
+    const cost = parseFloat(h.cost_basis) || 0;
+    const avgCost = qty > 0 ? cost / qty : 0;
+    const value = price !== null ? price * qty : null;
+    const gain = value !== null ? value - cost : null;
+    const gainPct = cost > 0 && gain !== null ? (gain / cost) * 100 : null;
+    const dayChg = q?.dp || null;
+    if (value !== null) totalValue += value;
+    totalCost += cost;
+    if (gain !== null) totalGain += gain;
+    return { h, sym, price, qty, cost, avgCost, value, gain, gainPct, dayChg };
+  });
+
+  const totalGainPct = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
+
+  const headerCells = cols.map(c => `<th class="ht-th">${c.label}</th>`).join('');
+  const rows = rowData.map(({ h, sym, price, qty, cost, avgCost, value, gain, gainPct, dayChg }) => {
+    const cells = cols.map(c => {
+      switch (c.id) {
+        case 'symbol':    return `<td class="ht-td ht-sym"><span class="holding-sym">${esc(sym)}</span></td>`;
+        case 'name':      return `<td class="ht-td ht-name">${h.name ? esc(h.name) : '<span class="dim">—</span>'}</td>`;
+        case 'shares':    return `<td class="ht-td ht-num">${qty.toLocaleString(undefined, {maximumFractionDigits:4})}</td>`;
+        case 'avgCost':   return `<td class="ht-td ht-num">${fmtUSD(avgCost)}</td>`;
+        case 'price':     return `<td class="ht-td ht-num">${price !== null ? fmtUSD(price) : '<span class="holding-price-pending">…</span>'}</td>`;
+        case 'value':     return `<td class="ht-td ht-num">${value !== null ? fmtUSD(value) : '—'}</td>`;
+        case 'gain':      return `<td class="ht-td ht-num">${gain !== null ? `<span class="${gain >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${gain >= 0 ? '+' : ''}${fmtUSD(gain)}</span>` : '—'}</td>`;
+        case 'gainPct':   return `<td class="ht-td ht-num">${gainPct !== null ? `<span class="${gainPct >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(2)}%</span>` : '—'}</td>`;
+        case 'dayChg':    return `<td class="ht-td ht-num">${dayChg !== null ? `<span class="${dayChg >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${dayChg >= 0 ? '+' : ''}${dayChg.toFixed(2)}%</span>` : '—'}</td>`;
+        case 'purchDate': return `<td class="ht-td">${h.purchased_at || '<span class="dim">—</span>'}</td>`;
+        default: return '<td class="ht-td">—</td>';
+      }
+    }).join('');
+    return `<tr class="ht-row" onclick="openAddHoldingModal('${h.id}')">${cells}</tr>`;
+  }).join('');
+
+  // Total row
+  const totalCells = cols.map(c => {
+    switch (c.id) {
+      case 'symbol':  return `<td class="ht-td ht-total-label">TOTAL</td>`;
+      case 'value':   return `<td class="ht-td ht-num">${totalValue > 0 ? fmtUSD(totalValue) : '—'}</td>`;
+      case 'gain':    return `<td class="ht-td ht-num"><span class="${totalGain >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${totalGain >= 0 ? '+' : ''}${fmtUSD(totalGain)}</span></td>`;
+      case 'gainPct': return `<td class="ht-td ht-num"><span class="${totalGainPct >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${totalGainPct >= 0 ? '+' : ''}${totalGainPct.toFixed(2)}%</span></td>`;
+      default:        return '<td class="ht-td"></td>';
+    }
+  }).join('');
+
+  el.innerHTML = `<div class="ht-wrap"><table class="ht-table">
+    <thead><tr>${headerCells}</tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr class="ht-total-row">${totalCells}</tr></tfoot>
+  </table></div>`;
+}
+
+function refreshHoldingPrices() {
+  holdingPrices = {};
+  loadHoldings();
+}
+
+function renderAccountTransactions() {
+  const el = document.getElementById('ac-transactions-table');
+  if (!el) return;
+  if (!currentTransactions.length) {
+    el.innerHTML = '<div class="detail-empty-logs">No transactions yet.</div>';
+    return;
+  }
+  const rows = currentTransactions.map(t => {
+    const typeLabel = t.type.charAt(0).toUpperCase() + t.type.slice(1);
+    const amtClass = ['buy','withdrawal'].includes(t.type) ? 'holding-gain-neg' : 'holding-gain-pos';
+    return `<tr class="ht-row" onclick="openEditTransaction('${t.id}')">
+      <td class="ht-td">${t.date || '—'}</td>
+      <td class="ht-td"><span class="txn-type-badge txn-${t.type}">${typeLabel}</span></td>
+      <td class="ht-td ht-sym">${t.symbol ? esc(t.symbol) : '—'}</td>
+      <td class="ht-td ht-num">${t.quantity ? t.quantity.toLocaleString(undefined, {maximumFractionDigits:4}) : '—'}</td>
+      <td class="ht-td ht-num">${t.price ? fmtUSD(t.price) : '—'}</td>
+      <td class="ht-td ht-num"><span class="${amtClass}">${t.amount ? fmtUSD(Math.abs(t.amount)) : '—'}</span></td>
+      <td class="ht-td dim">${t.notes ? esc(t.notes) : ''}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<div class="ht-wrap"><table class="ht-table">
+    <thead><tr>
+      <th class="ht-th">Date</th>
+      <th class="ht-th">Type</th>
+      <th class="ht-th">Symbol</th>
+      <th class="ht-th">Shares</th>
+      <th class="ht-th">Price</th>
+      <th class="ht-th">Amount</th>
+      <th class="ht-th">Notes</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function renderAccountOverview() {
+  // Reuse existing chart + log rendering, but target new elements
+  const svg = document.getElementById('ac-chart');
+  if (svg && currentAsset) {
+    const assetLogs = logs.filter(l => l.asset_id === currentAsset.id);
+    renderChartInto(svg, assetLogs, 800, 160);
+  }
+  renderAccountLogList();
+}
+
+function renderChartInto(svg, assetLogs, W, H) {
+  svg.innerHTML = '';
+  if (assetLogs.length < 2) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', W/2); t.setAttribute('y', H/2);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','12');
+    t.setAttribute('fill','#666'); t.setAttribute('font-family','Share Tech Mono, monospace');
+    t.textContent = assetLogs.length === 1 ? 'Add another entry to see a chart' : 'No log entries yet';
+    svg.appendChild(t); return;
+  }
+  const padL = 0, padR = 0, padT = 16, padB = 32;
+  const vals = assetLogs.map(l => parseFloat(l.value));
+  const minV = Math.min(...vals), maxV = Math.max(...vals), range = maxV - minV || 1;
+  const xPos = i => padL + (i / (assetLogs.length - 1)) * (W - padL - padR);
+  const yPos = v => padT + (1 - (v - minV) / range) * (H - padT - padB);
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--retro-c1').trim() || '#00FF41';
+  const gradId = 'ac-grad';
+  svg.innerHTML = `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${color}" stop-opacity="0.15"/>
+    <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+  </linearGradient></defs>`;
+  const polyPts = assetLogs.map((l,i) => `${xPos(i)},${yPos(parseFloat(l.value))}`).join(' ');
+  const closedPts = `${xPos(0)},${H-padB} ${polyPts} ${xPos(assetLogs.length-1)},${H-padB}`;
+  const area = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  area.setAttribute('points', closedPts); area.setAttribute('fill', `url(#${gradId})`);
+  svg.appendChild(area);
+  const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  line.setAttribute('points', polyPts); line.setAttribute('fill','none');
+  line.setAttribute('stroke', color); line.setAttribute('stroke-width','1.5');
+  svg.appendChild(line);
+  const n = assetLogs.length;
+  const step = n <= 6 ? 1 : n <= 12 ? 2 : n <= 24 ? 3 : 6;
+  assetLogs.forEach((l,i) => {
+    if (i % step !== 0 && i !== n-1) return;
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', xPos(i)); t.setAttribute('y', H-6);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','10');
+    t.setAttribute('fill','#666'); t.setAttribute('font-family','Share Tech Mono, monospace');
+    t.textContent = l.logged_at?.slice(5,10) || '';
+    svg.appendChild(t);
+  });
+}
+
+function renderAccountLogList() {
+  const el = document.getElementById('ac-log-list');
+  if (!el || !currentAsset) return;
+  const assetLogs = logs.filter(l => l.asset_id === currentAsset.id).slice().reverse();
+  if (!assetLogs.length) { el.innerHTML = '<div class="detail-empty-logs">No entries yet.</div>'; return; }
+  el.innerHTML = assetLogs.map(l => `
+    <div class="detail-log-item">
+      <span class="detail-log-date">${formatDate(l.logged_at)}</span>
+      <span class="detail-log-value">${fmtUSD(parseFloat(l.value))}</span>
+      ${l.notes ? `<span class="detail-log-notes">${esc(l.notes)}</span>` : ''}
+    </div>`).join('');
+}
+
+function openEditTransaction(id) {
+  const t = currentTransactions.find(x => x.id === id);
+  if (!t) return;
+  openAddTransactionModal();
+  document.getElementById('editing-transaction-id').value = t.id;
+  document.getElementById('txn-date-input').value = t.date || '';
+  document.getElementById('txn-type-input').value = t.type;
+  document.getElementById('txn-symbol-input').value = t.symbol || '';
+  document.getElementById('txn-qty-input').value = t.quantity || '';
+  document.getElementById('txn-price-input').value = t.price || '';
+  document.getElementById('txn-amount-input').value = t.amount || '';
+  document.getElementById('txn-notes-input').value = t.notes || '';
+  txnTypeChanged();
 }
 
 // ── DETAIL PANEL ──────────────────────────────────────────────────────────────
 
 function openDetail(assetId) {
-  currentAsset = assets.find(a => a.id === assetId);
-  if (!currentAsset) return;
-  currentDetailTab = 'overview';
-  currentHoldings = [];
-  currentTransactions = [];
-  holdingPrices = {};
-  renderDetailPanel();
-  document.getElementById('detail-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  if (INVESTMENT_TYPES.has(currentAsset.type)) {
-    loadHoldings();
-    loadTransactions();
-  }
+  openAccount(assetId);
 }
 
 function closeDetail() {
   document.getElementById('detail-overlay').classList.remove('open');
   document.body.style.overflow = '';
-  currentAsset = null;
+  setView('overview', document.getElementById('nav-overview'));
 }
 
 function renderDetailPanel() {
@@ -1158,7 +1551,8 @@ async function saveAsset() {
   }
 
   closeModal('add-asset-modal');
-  if (currentAsset) renderDetailPanel();
+  if (currentView === 'account') renderAccountView();
+  else if (currentAsset) renderDetailPanel();
   renderAll();
   updateTypeSidebarNav();
   updateAssetCount();
@@ -1200,8 +1594,10 @@ async function saveLog() {
   else logs.splice(insertIdx, 0, log);
 
   closeModal('log-value-modal');
-  renderDetailPanel();
+  if (currentView === 'account') renderAccountView();
+  else renderDetailPanel();
   renderAll();
+  updateTypeSidebarNav();
 }
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
@@ -1616,13 +2012,15 @@ async function loadHoldings() {
     .order('symbol');
   currentHoldings = data || [];
   if (currentDetailTab === 'holdings') renderHoldingsTab();
+  if (currentView === 'account') renderAccountHoldings();
   // Fetch live prices for all symbols
   const symbols = [...new Set(currentHoldings.map(h => h.symbol.toUpperCase()))];
   for (const sym of symbols) {
     fetchQuote(sym).then(q => {
       if (q?.c) {
-        holdingPrices[sym] = q.c;
+        holdingPrices[sym] = q; // store full quote object
         if (currentDetailTab === 'holdings') renderHoldingsTab();
+        if (currentView === 'account') renderAccountHoldings();
       }
     });
   }
@@ -1638,7 +2036,7 @@ function renderHoldingsTab() {
   let totalValue = 0, totalCost = 0;
   const rows = currentHoldings.map(h => {
     const sym = h.symbol.toUpperCase();
-    const price = holdingPrices[sym] || null;
+    const price = holdingPrices[sym]?.c || null;
     const qty = parseFloat(h.quantity) || 0;
     const cost = parseFloat(h.cost_basis) || 0;
     const costPerShare = qty > 0 ? cost / qty : 0;
@@ -1801,6 +2199,7 @@ async function deleteHolding(id) {
   await DB.from('holdings').delete().eq('id', id).eq('user_id', currentUser.id);
   currentHoldings = currentHoldings.filter(h => h.id !== id);
   renderHoldingsTab();
+  if (currentView === 'account') renderAccountHoldings();
 }
 
 // ── TRANSACTIONS ───────────────────────────────────────────────────────────────
@@ -1812,6 +2211,7 @@ async function loadTransactions() {
     .order('date', { ascending: false });
   currentTransactions = data || [];
   if (currentDetailTab === 'transactions') renderTransactionsTab();
+  if (currentView === 'account') renderAccountTransactions();
 }
 
 const TXN_LABELS = {
@@ -1900,6 +2300,7 @@ async function deleteTransaction(id) {
   await DB.from('transactions').delete().eq('id', id).eq('user_id', currentUser.id);
   currentTransactions = currentTransactions.filter(t => t.id !== id);
   renderTransactionsTab();
+  if (currentView === 'account') renderAccountTransactions();
 }
 
 // ── KICK OFF ──────────────────────────────────────────────────────────────────

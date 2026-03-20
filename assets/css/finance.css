@@ -824,3 +824,177 @@ input[type="number"]::-webkit-inner-spin-button {
 .input-prefix-wrap { display: flex; align-items: center; border: 1px solid var(--border2); }
 .input-prefix-wrap input { border: none; flex: 1; }
 .input-prefix { padding: 0 8px; font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+
+/* ── TYPE GROUP NAV (right sidebar) ── */
+.type-group { margin-bottom: 2px; }
+.type-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px 7px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+.type-group-header:hover { background: var(--surface2); }
+.type-group-arrow { font-size: 9px; color: var(--text-muted); width: 10px; flex-shrink: 0; }
+.type-group-dot { width: 7px; height: 7px; border-radius: 0; flex-shrink: 0; }
+.type-group-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.type-group-count { font-size: 10px; color: var(--text-muted); }
+.type-account-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px 6px 28px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  gap: 8px;
+}
+.type-account-item:hover { background: var(--surface2); color: var(--text); }
+.type-account-item.active { color: var(--retro-c1, #00FF41); background: rgba(0,255,65,0.05); }
+.type-account-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.type-account-val { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+/* ── ACCOUNT VIEW ── */
+.ac-breadcrumb {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ac-bc-link { cursor: pointer; }
+.ac-bc-link:hover { color: var(--text); }
+.ac-bc-sep { opacity: 0.4; }
+.ac-bc-current { color: var(--text-dim); }
+.ac-hero { margin-bottom: 20px; }
+.ac-hero-name { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 4px; }
+.ac-hero-value { font-size: 38px; color: var(--accent); letter-spacing: -0.02em; line-height: 1.1; }
+.ac-hero-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.ac-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.ac-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 16px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  margin-bottom: -1px;
+}
+.ac-tab:hover { color: var(--text); }
+.ac-tab.active { color: var(--retro-c1, #00FF41); border-bottom-color: var(--retro-c1, #00FF41); }
+.ac-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.ac-overview-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+#act-btn-overview-only {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+/* ── HOLDINGS TABLE ── */
+.ht-wrap { overflow-x: auto; }
+.ht-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ht-th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.ht-td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  vertical-align: middle;
+}
+.ht-row { cursor: pointer; }
+.ht-row:hover td { background: var(--surface2); }
+.ht-num { text-align: right; font-family: var(--font-sans); }
+.ht-sym { font-weight: bold; color: var(--text); }
+.ht-name { color: var(--text-muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ht-total-row td { border-top: 1px solid var(--border2); border-bottom: none; background: var(--surface2); }
+.ht-total-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.dim { color: var(--text-muted); }
+
+/* ── COLUMN PICKER ── */
+.col-picker-wrap { position: relative; }
+.col-picker-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  z-index: 200;
+  min-width: 150px;
+  padding: 8px 0;
+  display: none;
+}
+.col-picker-dropdown.open { display: block; }
+.col-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.col-picker-item:hover { background: var(--surface3); }
+.col-picker-item input { cursor: pointer; accent-color: var(--retro-c1, #00FF41); }
+
+/* ── TRANSACTION TYPE BADGES ── */
+.txn-type-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.txn-buy { color: var(--holding-gain-pos, #4ADE80); border: 1px solid currentColor; }
+.txn-sell { color: var(--p-high, #FF5555); border: 1px solid currentColor; }
+.txn-dividend, .txn-interest { color: var(--retro-c1, #00FF41); border: 1px solid currentColor; }
+.txn-deposit { color: #7BC87B; border: 1px solid currentColor; }
+.txn-withdrawal { color: #C87B7B; border: 1px solid currentColor; }
+.txn-split, .txn-transfer { color: var(--text-muted); border: 1px solid currentColor; }
+
+/* ── ACCOUNT LOG LIST ── */
+.detail-log-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.detail-log-item:last-child { border-bottom: none; }
+.detail-log-value {
+  font-size: 14px;
+  color: var(--text);
+}
