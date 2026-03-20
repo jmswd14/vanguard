@@ -42,7 +42,7 @@ serve(async (req) => {
     const today = new Date().toISOString().split('T')[0]
 
     // Fetch user context in parallel
-    const [tasksRes, habitsRes, habitLogsRes, journalRes] = await Promise.all([
+    const [tasksRes, habitsRes, habitLogsRes, journalRes, assetsRes, holdingsRes] = await Promise.all([
       sb.from('tasks').select('name, due, priority, done, lists(name)')
         .eq('user_id', userId).eq('done', false).order('due', { ascending: true }).limit(25),
       sb.from('habits').select('id, name, description, icon, frequency')
@@ -51,6 +51,10 @@ serve(async (req) => {
         .eq('user_id', userId).gte('date', new Date(Date.now() - 7 * 864e5).toISOString().split('T')[0]),
       sb.from('journal_entries').select('title, content, gratitude_1, gratitude_2, gratitude_3, created_at')
         .eq('user_id', userId).order('created_at', { ascending: false }).limit(5),
+      sb.from('assets').select('id, name, type, currency')
+        .eq('user_id', userId).order('created_at', { ascending: true }),
+      sb.from('holdings').select('asset_id, symbol, name, quantity, cost_basis, purchased_at')
+        .eq('user_id', userId),
     ])
 
     // Build tasks context
@@ -90,6 +94,57 @@ serve(async (req) => {
       return `  [${date}] ${body.slice(0, 200)}`
     }).join('\n') || '  No recent journal entries.'
 
+    // Build finance context
+    const assets = assetsRes.data || []
+    const holdings = holdingsRes.data || []
+
+    // Get latest value for each asset from asset_logs
+    let financeContext = '  No financial accounts tracked.'
+    if (assets.length > 0) {
+      // Fetch latest log per asset
+      const assetIds = assets.map(a => a.id)
+      const { data: latestLogs } = await sb.from('asset_logs')
+        .select('asset_id, value, logged_at')
+        .in('asset_id', assetIds)
+        .order('logged_at', { ascending: false })
+
+      // Build a map: asset_id → latest value
+      const latestValueMap: Record<string, number> = {}
+      for (const log of (latestLogs || [])) {
+        if (!(log.asset_id in latestValueMap)) {
+          latestValueMap[log.asset_id] = log.value
+        }
+      }
+
+      // Build holdings map: asset_id → holdings[]
+      const holdingsMap: Record<string, any[]> = {}
+      for (const h of holdings) {
+        if (!holdingsMap[h.asset_id]) holdingsMap[h.asset_id] = []
+        holdingsMap[h.asset_id].push(h)
+      }
+
+      const fmtUSD = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+
+      let totalNetWorth = 0
+      const lines: string[] = []
+
+      for (const asset of assets) {
+        const value = latestValueMap[asset.id]
+        if (value !== undefined) totalNetWorth += value
+        const assetHoldings = holdingsMap[asset.id] || []
+        let line = `  - ${asset.name} (${asset.type})${value !== undefined ? `: ${fmtUSD(value)}` : ': no value logged'}`
+        if (assetHoldings.length > 0) {
+          const holdingStrs = assetHoldings.map(h =>
+            `${h.symbol}${h.name ? ` (${h.name})` : ''} — ${h.quantity} shares, cost basis ${fmtUSD(h.cost_basis)}${h.purchased_at ? `, purchased ${h.purchased_at}` : ''}`
+          )
+          line += `\n    Holdings: ${holdingStrs.join('; ')}`
+        }
+        lines.push(line)
+      }
+
+      financeContext = `  Net worth (sum of logged values): ${fmtUSD(totalNetWorth)}\n${lines.join('\n')}`
+    }
+
     // Optionally include past conversation summaries
     let historyContext = ''
     if (include_history) {
@@ -99,7 +154,6 @@ serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(40)
       if (pastMsgs && pastMsgs.length > 0) {
-        // Summarize past messages (just show them, Claude will use them)
         historyContext = `\nPAST CONVERSATION CONTEXT (most recent first):\n${
           pastMsgs.reverse().map(m => `  [${m.role.toUpperCase()}]: ${m.content.slice(0, 150)}`).join('\n')
         }\n`
@@ -117,8 +171,11 @@ ${habitsContext}
 
 RECENT JOURNAL:
 ${journalContext}
+
+FINANCES:
+${financeContext}
 ${historyContext}
-Be direct, concise, and genuinely helpful. Reference the user's actual data naturally when relevant. You know this person — their tasks, habits, and thoughts. Speak like a trusted assistant, not a generic AI.`
+Be direct, concise, and genuinely helpful. Reference the user's actual data naturally when relevant. You know this person — their tasks, habits, thoughts, and finances. Speak like a trusted assistant, not a generic AI.`
 
     // Call Anthropic with streaming
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
