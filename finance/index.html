@@ -489,6 +489,19 @@
     </div>
 
     <div class="setup-section">
+      <div class="setup-section-label">Cash Equivalents / Money Market Funds</div>
+      <div class="setup-ceq-head">
+        <span>Ticker</span>
+        <span>Fund Name</span>
+        <span>Value ($)</span>
+        <span></span>
+      </div>
+      <div id="setup-ceq-container"></div>
+      <button class="btn" style="margin-top:10px;font-size:11px;padding:5px 12px;" onclick="addCeqRow()">+ Add</button>
+      <div class="form-hint" style="margin-top:8px;">MMFs, stable-value funds, T-bills. Priced at $1.00/share — tracked as holdings.</div>
+    </div>
+
+    <div class="setup-section">
       <div class="setup-section-label">Holdings</div>
       <div class="setup-holdings-head">
         <span>Ticker</span>
@@ -1212,10 +1225,13 @@ function renderAccountHoldings() {
       fetchQuote(p.symbol, FINNHUB_KEY).then(q => {
         if (q?.c) {
           holdingPrices[p.symbol] = q;
-          if (currentView === 'account' && currentAccountTab === 'holdings') {
-            renderAccountHoldings();
-            updateAccountHero();
-          }
+        } else {
+          // Finnhub has no price (e.g. MMF) — fall back to avg cost as price
+          holdingPrices[p.symbol] = { c: p.avgCost, d: 0, dp: 0, pc: p.avgCost, fallback: true };
+        }
+        if (currentView === 'account' && currentAccountTab === 'holdings') {
+          renderAccountHoldings();
+          updateAccountHero();
         }
       });
     }
@@ -1252,7 +1268,7 @@ function renderAccountHoldings() {
         case 'name':      return `<td class="ht-td ht-name"><span class="dim">—</span></td>`;
         case 'shares':    return `<td class="ht-td ht-num">${qty.toLocaleString(undefined, {maximumFractionDigits:4})}</td>`;
         case 'avgCost':   return `<td class="ht-td ht-num">${fmtUSD(avgCost)}</td>`;
-        case 'price':     return `<td class="ht-td ht-num">${price !== null ? fmtUSD(price) : '<span class="holding-price-pending">…</span>'}</td>`;
+        case 'price':     return `<td class="ht-td ht-num">${price !== null ? (holdingPrices[sym]?.fallback ? `<span class="dim" title="No live price — showing cost basis">${fmtUSD(price)}*</span>` : fmtUSD(price)) : '<span class="holding-price-pending">…</span>'}</td>`;
         case 'value':     return `<td class="ht-td ht-num">${value !== null ? fmtUSD(value) : '—'}</td>`;
         case 'gain':      return `<td class="ht-td ht-num">${gain !== null ? `<span class="${gain >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${gain >= 0 ? '+' : ''}${fmtUSD(gain)}</span>` : '—'}</td>`;
         case 'gainPct':   return `<td class="ht-td ht-num">${gainPct !== null ? `<span class="${gainPct >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(2)}%</span>` : '—'}</td>`;
@@ -2436,14 +2452,42 @@ async function deleteTransaction(id) {
 
 let setupRowIdx = 0;
 
+let ceqRowIdx = 0;
+
 function openAccountSetupModal(asset) {
   setupRowIdx = 0;
+  ceqRowIdx = 0;
   document.getElementById('setup-asset-id').value = asset.id;
   document.getElementById('setup-account-name').textContent = asset.name;
   document.getElementById('setup-cash-input').value = '';
   document.getElementById('setup-rows-container').innerHTML = '';
-  addSetupRow(); // start with one empty row
+  document.getElementById('setup-ceq-container').innerHTML = '';
+  addSetupRow(); // start with one empty holdings row
   document.getElementById('account-setup-modal').classList.add('show');
+}
+
+function addCeqRow() {
+  const n = ceqRowIdx++;
+  const container = document.getElementById('setup-ceq-container');
+  const row = document.createElement('div');
+  row.className = 'setup-ceq-row';
+  row.id = `setup-ceq-row-${n}`;
+  row.innerHTML = `
+    <input type="text" id="setup-ceq-sym-${n}" placeholder="SWVXX"
+           style="text-transform:uppercase;font-size:12px;" autocomplete="off">
+    <input type="text" id="setup-ceq-name-${n}" placeholder="Fund name (optional)"
+           style="font-size:12px;">
+    <div class="input-prefix-wrap">
+      <span class="input-prefix">$</span>
+      <input type="number" id="setup-ceq-val-${n}" placeholder="0.00" step="0.01" min="0" style="font-size:12px;">
+    </div>
+    <button class="setup-row-del" onclick="removeCeqRow(${n})" title="Remove">×</button>`;
+  container.appendChild(row);
+}
+
+function removeCeqRow(n) {
+  const row = document.getElementById(`setup-ceq-row-${n}`);
+  if (row) row.remove();
 }
 
 function addSetupRow(sym, name, date, qty, cost) {
@@ -2549,6 +2593,22 @@ async function saveAccountSetup() {
       type: 'transfer_in', symbol: sym, quantity: qty,
       price: qty > 0 ? cost / qty : null,
       amount: cost, date, notes: 'Opening position',
+    });
+  }
+
+  // Cash equivalents — stored as transfer_in at $1.00/share
+  const ceqRows = document.querySelectorAll('#setup-ceq-container .setup-ceq-row');
+  for (const row of ceqRows) {
+    const n   = row.id.replace('setup-ceq-row-', '');
+    const sym = document.getElementById(`setup-ceq-sym-${n}`)?.value.trim().toUpperCase();
+    const val = parseFloat(document.getElementById(`setup-ceq-val-${n}`)?.value);
+    if (!sym && !val) continue;
+    if (!sym) { alert('Ticker is required for each cash equivalent.'); return; }
+    if (isNaN(val) || val <= 0) { alert(`Value is required for ${sym}.`); return; }
+    transactions.push({
+      id: crypto.randomUUID(), user_id: currentUser.id, asset_id: assetId,
+      type: 'transfer_in', symbol: sym, quantity: val, price: 1.00,
+      amount: val, date: today, notes: 'Cash equivalent',
     });
   }
 

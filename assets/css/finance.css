@@ -398,6 +398,33 @@
   font-size: 12px;
   padding: 6px 8px;
 }
+/* ── CASH EQUIVALENTS ROWS ── */
+.setup-ceq-head,
+.setup-ceq-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 160px 28px;
+  gap: 8px;
+  align-items: center;
+}
+.setup-ceq-head {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.setup-ceq-row {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setup-ceq-row:last-child { border-bottom: none; }
+.setup-ceq-row input {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
 @media (max-width: 680px) {
   .setup-holdings-head { display: none; }
   .setup-row {
@@ -406,6 +433,8 @@
   }
   .sh-col-name { grid-column: 1 / -1; }
   .sh-col-del  { grid-column: 2; justify-self: end; }
+  .setup-ceq-head { display: none; }
+  .setup-ceq-row { grid-template-columns: 1fr 1fr; }
 }
 .form-row-3 {
   display: grid;
