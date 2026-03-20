@@ -318,7 +318,10 @@
     <div class="form-row" id="txn-symbol-row">
       <div class="form-group">
         <label>Symbol</label>
-        <input type="text" id="txn-symbol-input" placeholder="e.g. AAPL" style="text-transform:uppercase">
+        <div class="symbol-search-wrap">
+          <input type="text" id="txn-symbol-input" placeholder="e.g. AAPL" style="text-transform:uppercase" autocomplete="off">
+          <div class="symbol-dropdown" id="txn-symbol-dropdown"></div>
+        </div>
       </div>
       <div class="form-group">
         <label>Quantity</label>
@@ -1672,17 +1675,19 @@ function renderHoldingsTab() {
 }
 
 // ── SYMBOL SEARCH AUTOCOMPLETE ──
-let symbolSearchTimer = null;
-document.addEventListener('DOMContentLoaded', () => {
-  const inp = document.getElementById('holding-symbol-input');
-  const drop = document.getElementById('symbol-dropdown');
+const SYMBOL_TYPES = new Set(['Common Stock', 'ETP', 'Crypto', 'Fund', 'Mutual Fund', 'ETF']);
+
+function initSymbolAutocomplete(inputId, dropdownId, onSelect) {
+  const inp = document.getElementById(inputId);
+  const drop = document.getElementById(dropdownId);
   if (!inp || !drop) return;
+  let timer = null;
 
   inp.addEventListener('input', () => {
-    clearTimeout(symbolSearchTimer);
+    clearTimeout(timer);
     const q = inp.value.trim();
     if (q.length < 1) { drop.classList.remove('open'); drop.innerHTML = ''; return; }
-    symbolSearchTimer = setTimeout(() => fetchSymbolSearch(q), 300);
+    timer = setTimeout(() => fetchSymbolSearch(q, drop, onSelect), 300);
   });
 
   inp.addEventListener('keydown', e => {
@@ -1690,23 +1695,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('click', e => {
-    if (!inp.contains(e.target) && !drop.contains(e.target)) {
+    if (!inp.closest('.symbol-search-wrap').contains(e.target)) {
       drop.classList.remove('open'); drop.innerHTML = '';
     }
   });
-});
+}
 
-async function fetchSymbolSearch(q) {
-  const drop = document.getElementById('symbol-dropdown');
-  const key = FINNHUB_KEY;
-  if (!key) return;
+async function fetchSymbolSearch(q, drop, onSelect) {
+  if (!FINNHUB_KEY) return;
   try {
-    const res = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${key}`);
+    const res = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${FINNHUB_KEY}`);
     if (!res.ok) return;
     const data = await res.json();
-    // Exclude foreign exchange listings (symbols with a dot like AAPL.MX)
     const results = (data.result || [])
-      .filter(r => !r.displaySymbol.includes('.') && (r.type === 'Common Stock' || r.type === 'ETP' || r.type === 'Crypto' || !r.type))
+      .filter(r => !r.displaySymbol.includes(':') && !r.displaySymbol.includes('.') &&
+        (SYMBOL_TYPES.has(r.type) || !r.type))
       .slice(0, 8);
     if (!results.length) { drop.classList.remove('open'); return; }
     drop.innerHTML = '';
@@ -1722,8 +1725,9 @@ async function fetchSymbolSearch(q) {
       div.appendChild(symSpan);
       div.appendChild(nameSpan);
       div.addEventListener('mousedown', e => {
-        e.preventDefault(); // prevent input blur before click fires
-        selectSymbol(r.displaySymbol, r.description);
+        e.preventDefault();
+        drop.classList.remove('open'); drop.innerHTML = '';
+        onSelect(r.displaySymbol, r.description);
       });
       drop.appendChild(div);
     });
@@ -1731,15 +1735,18 @@ async function fetchSymbolSearch(q) {
   } catch {}
 }
 
-function selectSymbol(sym, name) {
-  const inp = document.getElementById('holding-symbol-input');
-  const nameInp = document.getElementById('holding-name-input');
-  inp.value = sym;
-  nameInp.value = name; // always populate name
-  const drop = document.getElementById('symbol-dropdown');
-  drop.classList.remove('open'); drop.innerHTML = '';
-  nameInp.focus();
-}
+document.addEventListener('DOMContentLoaded', () => {
+  initSymbolAutocomplete('holding-symbol-input', 'symbol-dropdown', (sym, name) => {
+    document.getElementById('holding-symbol-input').value = sym;
+    document.getElementById('holding-name-input').value = name;
+    document.getElementById('holding-qty-input').focus();
+  });
+
+  initSymbolAutocomplete('txn-symbol-input', 'txn-symbol-dropdown', (sym, name) => {
+    document.getElementById('txn-symbol-input').value = sym;
+    document.getElementById('txn-qty-input').focus();
+  });
+});
 
 function openAddHoldingModal(id) {
   const modal = document.getElementById('add-holding-modal');
