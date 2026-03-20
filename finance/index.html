@@ -2166,7 +2166,6 @@ function renderHoldingsTab() {
 }
 
 // ── SYMBOL SEARCH AUTOCOMPLETE ──
-const SYMBOL_TYPES = new Set(['Common Stock', 'ETP', 'Crypto', 'Fund', 'Mutual Fund', 'ETF']);
 
 function initSymbolAutocomplete(inputId, dropdownId, onSelect) {
   const inp = document.getElementById(inputId);
@@ -2199,8 +2198,7 @@ async function fetchSymbolSearch(q, drop, onSelect) {
     if (!res.ok) return;
     const data = await res.json();
     const results = (data.result || [])
-      .filter(r => !r.displaySymbol.includes(':') && !r.displaySymbol.includes('.') &&
-        (SYMBOL_TYPES.has(r.type) || !r.type))
+      .filter(r => !r.displaySymbol.includes(':') && !r.displaySymbol.includes('.'))
       .slice(0, 8);
     if (!results.length) { drop.classList.remove('open'); return; }
     drop.innerHTML = '';
