@@ -120,31 +120,34 @@ ${journalContext}
 ${historyContext}
 Be direct, concise, and genuinely helpful. Reference the user's actual data naturally when relevant. You know this person — their tasks, habits, and thoughts. Speak like a trusted assistant, not a generic AI.`
 
-    // Call Anthropic with streaming
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY')!,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages,
-        stream: true,
-      }),
-    })
+    // Convert messages to Gemini format (role: user|model, parts: [{text}])
+    const geminiContents = messages.map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }))
 
-    if (!anthropicRes.ok) {
-      const err = await anthropicRes.text()
+    // Call Gemini with streaming
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${Deno.env.get('GEMINI_API_KEY')}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: geminiContents,
+          generationConfig: { maxOutputTokens: 1024 },
+        }),
+      }
+    )
+
+    if (!geminiRes.ok) {
+      const err = await geminiRes.text()
       return new Response(JSON.stringify({ error: err }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    return new Response(anthropicRes.body, {
+    return new Response(geminiRes.body, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/event-stream',

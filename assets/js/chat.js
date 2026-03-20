@@ -681,8 +681,10 @@
           if (data === '[DONE]') continue;
           try {
             const evt = JSON.parse(data);
-            if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
-              fullText += evt.delta.text;
+            // Gemini format
+            const text = evt.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              fullText += text;
               bubble.innerHTML = mbMarkdown(fullText);
               msgEl.scrollTop = msgEl.scrollHeight;
             }
