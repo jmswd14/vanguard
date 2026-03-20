@@ -1185,7 +1185,6 @@ function getVisibleCols() {
   try {
     const saved = JSON.parse(localStorage.getItem('vg-fin-holding-cols') || 'null');
     if (saved) {
-      // Merge: keep saved prefs but always include new default columns
       const merged = new Set(saved);
       defaults.forEach(id => merged.add(id));
       return merged;
@@ -1196,6 +1195,22 @@ function getVisibleCols() {
 
 function saveVisibleCols(set) {
   localStorage.setItem('vg-fin-holding-cols', JSON.stringify([...set]));
+}
+
+function getColOrder() {
+  const allIds = HOLDING_COL_DEFS.map(c => c.id);
+  try {
+    const saved = JSON.parse(localStorage.getItem('vg-fin-holding-order') || 'null');
+    if (Array.isArray(saved)) {
+      const known = new Set(saved);
+      return [...saved.filter(id => allIds.includes(id)), ...allIds.filter(id => !known.has(id))];
+    }
+  } catch {}
+  return [...allIds];
+}
+
+function saveColOrder(arr) {
+  localStorage.setItem('vg-fin-holding-order', JSON.stringify(arr));
 }
 
 function toggleColPicker(e) {
@@ -1210,11 +1225,55 @@ function renderColPicker() {
   const drop = document.getElementById('col-picker-dropdown');
   if (!drop) return;
   const vis = getVisibleCols();
-  drop.innerHTML = HOLDING_COL_DEFS.map(c => `
-    <label class="col-picker-item">
-      <input type="checkbox" ${vis.has(c.id) ? 'checked' : ''} onchange="toggleCol('${c.id}', this.checked)">
-      ${c.label}
-    </label>`).join('');
+  const order = getColOrder();
+  drop.innerHTML = order.map(id => {
+    const c = HOLDING_COL_DEFS.find(x => x.id === id);
+    if (!c) return '';
+    return `<div class="col-picker-item" draggable="true" data-col-id="${id}"
+      ondragstart="colDragStart(event,'${id}')"
+      ondragover="colDragOver(event)"
+      ondragleave="colDragLeave(event)"
+      ondrop="colDrop(event,'${id}')"
+      ondragend="colDragEnd()">
+      <span class="col-drag-handle">⠿</span>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;margin:0">
+        <input type="checkbox" ${vis.has(id) ? 'checked' : ''} onchange="toggleCol('${id}', this.checked)">
+        ${c.label}
+      </label>
+    </div>`;
+  }).join('');
+}
+
+let _colDragSrc = null;
+function colDragStart(e, id) {
+  _colDragSrc = id;
+  e.dataTransfer.effectAllowed = 'move';
+}
+function colDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('col-drag-over');
+}
+function colDragLeave(e) {
+  e.currentTarget.classList.remove('col-drag-over');
+}
+function colDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('col-drag-over');
+  if (!_colDragSrc || _colDragSrc === targetId) return;
+  const order = getColOrder();
+  const from = order.indexOf(_colDragSrc);
+  const to   = order.indexOf(targetId);
+  if (from < 0 || to < 0) return;
+  order.splice(from, 1);
+  order.splice(to, 0, _colDragSrc);
+  saveColOrder(order);
+  renderColPicker();
+  renderAccountHoldings();
+}
+function colDragEnd() {
+  _colDragSrc = null;
+  document.querySelectorAll('.col-picker-item.col-drag-over').forEach(el => el.classList.remove('col-drag-over'));
 }
 
 function toggleCol(id, checked) {
@@ -1270,7 +1329,7 @@ function renderAccountHoldings() {
   });
 
   const vis = getVisibleCols();
-  const cols = HOLDING_COL_DEFS.filter(c => vis.has(c.id));
+  const cols = getColOrder().map(id => HOLDING_COL_DEFS.find(c => c.id === id)).filter(c => c && vis.has(c.id));
 
   let totalValue = 0, totalCost = 0, totalGain = 0;
   const rowData = positions.map(p => {

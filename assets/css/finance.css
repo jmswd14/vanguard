@@ -975,9 +975,13 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 /* ── HOLDINGS TABLE ── */
-.ht-wrap { overflow-x: auto; }
+.ht-wrap { overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+.ht-wrap::-webkit-scrollbar { height: 6px; }
+.ht-wrap::-webkit-scrollbar-track { background: transparent; }
+.ht-wrap::-webkit-scrollbar-thumb { background: var(--border2); }
 .ht-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -1040,10 +1044,22 @@ input[type="number"]::-webkit-inner-spin-button {
   padding: 6px 14px;
   font-size: 12px;
   color: var(--text-dim);
-  cursor: pointer;
+  cursor: default;
+  user-select: none;
 }
 .col-picker-item:hover { background: var(--surface3); }
 .col-picker-item input { cursor: pointer; accent-color: var(--retro-c1, #00FF41); }
+.col-drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.col-drag-handle:active { cursor: grabbing; }
+.col-picker-item.col-drag-over {
+  border-top: 2px solid var(--retro-c1, #00FF41);
+}
 
 /* ── TRANSACTION TYPE BADGES ── */
 .txn-type-badge {
