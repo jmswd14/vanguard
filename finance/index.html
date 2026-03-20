@@ -203,6 +203,11 @@
         <div class="ac-hero-name" id="ac-name"></div>
         <div class="ac-hero-value" id="ac-value"></div>
         <div class="ac-hero-sub" id="ac-sub"></div>
+        <div class="ac-hero-cash" id="ac-cash-row" style="display:none">
+          <span class="ac-cash-item"><span class="ac-cash-label">Holdings</span> <span class="ac-cash-val" id="ac-holdings-val">—</span></span>
+          <span class="ac-cash-sep">+</span>
+          <span class="ac-cash-item"><span class="ac-cash-label">Cash</span> <span class="ac-cash-val" id="ac-cash-val">—</span></span>
+        </div>
       </div>
       <div class="ac-tab-bar" id="ac-tab-bar" style="display:none">
         <button class="ac-tab active" id="act-btn-holdings" onclick="setAccountTab('holdings')">Holdings</button>
@@ -215,7 +220,6 @@
       <!-- Holdings pane -->
       <div id="act-pane-holdings" style="display:none">
         <div class="ac-toolbar">
-          <button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="openAddHoldingModal()">+ Add Holding</button>
           <button class="btn" style="font-size:11px;padding:5px 12px;" onclick="refreshHoldingPrices()">↺ Prices</button>
           <div class="col-picker-wrap" style="margin-left:auto">
             <button class="btn" style="font-size:11px;padding:5px 12px;" onclick="toggleColPicker(event)">⊞ Columns</button>
@@ -353,12 +357,13 @@
         <select id="txn-type-input" onchange="txnTypeChanged()">
           <option value="buy">Buy</option>
           <option value="sell">Sell</option>
-          <option value="dividend">Dividend</option>
+          <option value="transfer_in">Transfer In</option>
+          <option value="dividend">Dividend (Cash)</option>
+          <option value="dividend_reinvested">Dividend (Reinvested)</option>
           <option value="deposit">Deposit</option>
           <option value="withdrawal">Withdrawal</option>
           <option value="interest">Interest</option>
-          <option value="split">Split</option>
-          <option value="transfer">Transfer</option>
+          <option value="fee">Fee</option>
         </select>
       </div>
     </div>
@@ -372,13 +377,13 @@
       </div>
       <div class="form-group">
         <label>Quantity</label>
-        <input type="number" id="txn-qty-input" placeholder="0.00" step="0.0001" min="0">
+        <input type="number" id="txn-qty-input" placeholder="0.00" step="0.0001" min="0" oninput="autoCalcTxnAmount()">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group" id="txn-price-group">
         <label>Price / Share</label>
-        <div class="input-prefix-wrap"><span class="input-prefix">$</span><input type="number" id="txn-price-input" placeholder="0.00" step="0.01" min="0"></div>
+        <div class="input-prefix-wrap"><span class="input-prefix">$</span><input type="number" id="txn-price-input" placeholder="0.00" step="0.01" min="0" oninput="autoCalcTxnAmount()"></div>
       </div>
       <div class="form-group">
         <label>Total Amount <span style="color:var(--p-high);">*</span></label>
@@ -989,15 +994,8 @@ function openAccount(assetId) {
   renderAccountView();
   closeMobileMenus();
 
-  // Load data
-  if (INVESTMENT_TYPES.has(currentAsset.type)) {
-    loadHoldings().then(() => {
-      if (currentAccountTab === 'holdings') renderAccountHoldings();
-    });
-    loadTransactions().then(() => {
-      if (currentAccountTab === 'transactions') renderAccountTransactions();
-    });
-  }
+  // Transactions are source of truth — holdings computed from them
+  loadTransactions();
 }
 
 function renderAccountView() {
@@ -1108,39 +1106,59 @@ document.addEventListener('click', e => {
 function renderAccountHoldings() {
   const el = document.getElementById('ac-holdings-table');
   if (!el) return;
-  if (!currentHoldings.length) {
-    el.innerHTML = '<div class="detail-empty-logs">No holdings yet. Add your first position.</div>';
+
+  // Compute positions from transactions (source of truth)
+  const positions = computePositions(currentTransactions);
+
+  if (!positions.length) {
+    el.innerHTML = '<div class="detail-empty-logs">No positions yet. Add a Buy or Transfer In transaction.</div>';
     return;
   }
+
+  // Kick off price fetches for any symbol not yet loaded
+  positions.forEach(p => {
+    if (!holdingPrices[p.symbol]) {
+      fetchQuote(p.symbol, FINNHUB_KEY).then(q => {
+        if (q?.c) {
+          holdingPrices[p.symbol] = q;
+          if (currentView === 'account' && currentAccountTab === 'holdings') {
+            renderAccountHoldings();
+            updateAccountHero();
+          }
+        }
+      });
+    }
+  });
+
   const vis = getVisibleCols();
   const cols = HOLDING_COL_DEFS.filter(c => vis.has(c.id));
 
   let totalValue = 0, totalCost = 0, totalGain = 0;
-  const rowData = currentHoldings.map(h => {
-    const sym = h.symbol.toUpperCase();
-    const q = holdingPrices[sym] || null;  // full quote object
+  const rowData = positions.map(p => {
+    const sym = p.symbol;
+    const q = holdingPrices[sym] || null;
     const price = q?.c || null;
-    const qty = parseFloat(h.quantity) || 0;
-    const cost = parseFloat(h.cost_basis) || 0;
-    const avgCost = qty > 0 ? cost / qty : 0;
+    const qty = p.quantity;
+    const cost = p.totalCost;
+    const avgCost = p.avgCost;
     const value = price !== null ? price * qty : null;
     const gain = value !== null ? value - cost : null;
     const gainPct = cost > 0 && gain !== null ? (gain / cost) * 100 : null;
-    const dayChg = q?.dp || null;
+    const dayChg = q?.dp ?? null;
     if (value !== null) totalValue += value;
     totalCost += cost;
     if (gain !== null) totalGain += gain;
-    return { h, sym, price, qty, cost, avgCost, value, gain, gainPct, dayChg };
+    return { sym, price, qty, cost, avgCost, value, gain, gainPct, dayChg };
   });
 
   const totalGainPct = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
 
   const headerCells = cols.map(c => `<th class="ht-th">${c.label}</th>`).join('');
-  const rows = rowData.map(({ h, sym, price, qty, cost, avgCost, value, gain, gainPct, dayChg }) => {
+  const rows = rowData.map(({ sym, price, qty, cost, avgCost, value, gain, gainPct, dayChg }) => {
     const cells = cols.map(c => {
       switch (c.id) {
-        case 'symbol':    return `<td class="ht-td ht-sym"><span class="holding-sym">${esc(sym)}</span></td>`;
-        case 'name':      return `<td class="ht-td ht-name">${h.name ? esc(h.name) : '<span class="dim">—</span>'}</td>`;
+        case 'symbol':    return `<td class="ht-td ht-sym">${esc(sym)}</td>`;
+        case 'name':      return `<td class="ht-td ht-name"><span class="dim">—</span></td>`;
         case 'shares':    return `<td class="ht-td ht-num">${qty.toLocaleString(undefined, {maximumFractionDigits:4})}</td>`;
         case 'avgCost':   return `<td class="ht-td ht-num">${fmtUSD(avgCost)}</td>`;
         case 'price':     return `<td class="ht-td ht-num">${price !== null ? fmtUSD(price) : '<span class="holding-price-pending">…</span>'}</td>`;
@@ -1148,11 +1166,11 @@ function renderAccountHoldings() {
         case 'gain':      return `<td class="ht-td ht-num">${gain !== null ? `<span class="${gain >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${gain >= 0 ? '+' : ''}${fmtUSD(gain)}</span>` : '—'}</td>`;
         case 'gainPct':   return `<td class="ht-td ht-num">${gainPct !== null ? `<span class="${gainPct >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${gainPct >= 0 ? '+' : ''}${gainPct.toFixed(2)}%</span>` : '—'}</td>`;
         case 'dayChg':    return `<td class="ht-td ht-num">${dayChg !== null ? `<span class="${dayChg >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${dayChg >= 0 ? '+' : ''}${dayChg.toFixed(2)}%</span>` : '—'}</td>`;
-        case 'purchDate': return `<td class="ht-td">${h.purchased_at || '<span class="dim">—</span>'}</td>`;
+        case 'purchDate': return `<td class="ht-td dim">—</td>`;
         default: return '<td class="ht-td">—</td>';
       }
     }).join('');
-    return `<tr class="ht-row" onclick="openAddHoldingModal('${h.id}')">${cells}</tr>`;
+    return `<tr class="ht-row">${cells}</tr>`;
   }).join('');
 
   // Total row
@@ -2005,6 +2023,68 @@ async function loadNews() {
   }
 }
 
+// ── POSITION & CASH COMPUTATION (transactions as source of truth) ─────────────
+
+function computePositions(transactions) {
+  const pos = {};
+  const sorted = [...transactions].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  for (const t of sorted) {
+    const sym = t.symbol?.toUpperCase();
+    if (!sym) continue;
+    if (!pos[sym]) pos[sym] = { symbol: sym, quantity: 0, totalCost: 0, avgCost: 0 };
+    const p = pos[sym];
+    const qty = parseFloat(t.quantity) || 0;
+    const amt = parseFloat(t.amount) || 0;
+    if (t.type === 'buy' || t.type === 'transfer_in' || t.type === 'dividend_reinvested') {
+      p.quantity += qty;
+      p.totalCost += amt;
+      p.avgCost = p.quantity > 0 ? p.totalCost / p.quantity : 0;
+    } else if (t.type === 'sell') {
+      const costReduced = p.avgCost * qty;
+      p.quantity = Math.max(0, p.quantity - qty);
+      p.totalCost = Math.max(0, p.totalCost - costReduced);
+      p.avgCost = p.quantity > 0 ? p.totalCost / p.quantity : 0;
+    }
+  }
+  return Object.values(pos).filter(p => p.quantity > 0.000001);
+}
+
+function computeCash(transactions) {
+  let cash = 0;
+  for (const t of transactions) {
+    const amt = parseFloat(t.amount) || 0;
+    if (TXN_CASH_POSITIVE.has(t.type)) cash += amt;
+    else if (TXN_CASH_NEGATIVE.has(t.type)) cash -= amt;
+  }
+  return cash;
+}
+
+function updateAccountHero() {
+  if (!currentAsset || !INVESTMENT_TYPES.has(currentAsset.type)) return;
+  const cashRow = document.getElementById('ac-cash-row');
+  if (!cashRow) return;
+  const positions = computePositions(currentTransactions);
+  const cash = computeCash(currentTransactions);
+  const holdingsMV = positions.reduce((sum, p) => {
+    const q = holdingPrices[p.symbol];
+    return q?.c ? sum + q.c * p.quantity : sum;
+  }, 0);
+  const allPricesLoaded = positions.length > 0 && positions.every(p => holdingPrices[p.symbol]?.c);
+  if (positions.length > 0) {
+    cashRow.style.display = 'flex';
+    document.getElementById('ac-holdings-val').textContent = allPricesLoaded ? fmtUSD(holdingsMV) : '…';
+    document.getElementById('ac-cash-val').textContent = fmtUSD(cash);
+    if (allPricesLoaded) {
+      document.getElementById('ac-value').textContent = fmtUSD(holdingsMV + cash);
+      document.getElementById('ac-sub').textContent = 'Live — Holdings + Cash';
+    }
+  } else if (cash !== 0) {
+    cashRow.style.display = 'none';
+    document.getElementById('ac-value').textContent = fmtUSD(cash);
+    document.getElementById('ac-sub').textContent = 'Cash balance';
+  }
+}
+
 // ── HOLDINGS ──────────────────────────────────────────────────────────────────
 
 async function loadHoldings() {
@@ -2020,9 +2100,9 @@ async function loadHoldings() {
   for (const sym of symbols) {
     fetchQuote(sym, FINNHUB_KEY).then(q => {
       if (q?.c) {
-        holdingPrices[sym] = q; // store full quote object
+        holdingPrices[sym] = q;
         if (currentDetailTab === 'holdings') renderHoldingsTab();
-        if (currentView === 'account') renderAccountHoldings();
+        if (currentView === 'account') { renderAccountHoldings(); updateAccountHero(); }
       }
     });
   }
@@ -2213,18 +2293,31 @@ async function loadTransactions() {
     .order('date', { ascending: false });
   currentTransactions = data || [];
   if (currentDetailTab === 'transactions') renderTransactionsTab();
-  if (currentView === 'account') renderAccountTransactions();
+  if (currentView === 'account') {
+    renderAccountTransactions();
+    renderAccountHoldings();
+    updateAccountHero();
+  }
 }
 
 const TXN_LABELS = {
-  buy: 'BUY', sell: 'SELL', dividend: 'DIV', deposit: 'DEP',
-  withdrawal: 'WITH', interest: 'INT', split: 'SPLIT', transfer: 'XFER',
+  buy: 'BUY', sell: 'SELL', transfer_in: 'XFER IN',
+  dividend: 'DIV', dividend_reinvested: 'DRIP',
+  deposit: 'DEP', withdrawal: 'WITH', interest: 'INT', fee: 'FEE',
 };
 const TXN_COLORS = {
-  buy: 'var(--retro-c1,#00FF41)', sell: '#E03030', dividend: '#EEC900',
+  buy: 'var(--retro-c1,#00FF41)', sell: '#E03030',
+  transfer_in: 'var(--text-muted)',
+  dividend: '#EEC900', dividend_reinvested: '#EEC900',
   deposit: 'var(--retro-c1,#00FF41)', withdrawal: '#E03030',
-  interest: '#EEC900', split: 'var(--text-muted)', transfer: 'var(--text-muted)',
+  interest: '#EEC900', fee: '#E03030',
 };
+// Which transaction types affect each bucket (for rendering sign)
+const TXN_CASH_NEGATIVE = new Set(['buy','withdrawal','fee']);
+const TXN_CASH_POSITIVE = new Set(['sell','deposit','dividend','interest']);
+const TXN_HAS_SYMBOL    = new Set(['buy','sell','transfer_in','dividend_reinvested']);
+const TXN_HAS_QTY       = new Set(['buy','sell','transfer_in','dividend_reinvested']);
+const TXN_HAS_PRICE     = new Set(['buy','sell','transfer_in']);
 
 function renderTransactionsTab() {
   const el = document.getElementById('dp-transactions-list');
@@ -2275,10 +2368,20 @@ function closeTransactionModal() {
 
 function txnTypeChanged() {
   const type = document.getElementById('txn-type-input').value;
-  const showSymbol = ['buy','sell','dividend','split'].includes(type);
-  const showPrice = ['buy','sell'].includes(type);
-  document.getElementById('txn-symbol-row').style.display = showSymbol ? '' : 'none';
-  document.getElementById('txn-price-group').style.display = showPrice ? '' : 'none';
+  document.getElementById('txn-symbol-row').style.display = TXN_HAS_SYMBOL.has(type) ? '' : 'none';
+  document.getElementById('txn-price-group').style.display = TXN_HAS_PRICE.has(type) ? '' : 'none';
+  // Auto-calculate amount from qty × price for security transactions
+  autoCalcTxnAmount();
+}
+
+function autoCalcTxnAmount() {
+  const type = document.getElementById('txn-type-input').value;
+  if (!TXN_HAS_PRICE.has(type)) return;
+  const qty = parseFloat(document.getElementById('txn-qty-input').value) || 0;
+  const price = parseFloat(document.getElementById('txn-price-input').value) || 0;
+  if (qty > 0 && price > 0) {
+    document.getElementById('txn-amount-input').value = (qty * price).toFixed(2);
+  }
 }
 
 async function saveTransaction() {
@@ -2290,10 +2393,15 @@ async function saveTransaction() {
   const amount = parseFloat(document.getElementById('txn-amount-input').value);
   const notes = document.getElementById('txn-notes-input').value.trim() || null;
   if (!date || isNaN(amount)) return;
-  await DB.from('transactions').insert({
-    id: crypto.randomUUID(), user_id: currentUser.id, asset_id: currentAsset.id,
-    type, symbol, quantity, price, amount, date, notes,
-  });
+  const editId = document.getElementById('editing-transaction-id').value;
+  const payload = { type, symbol, quantity, price, amount, date, notes };
+  if (editId) {
+    await DB.from('transactions').update(payload).eq('id', editId).eq('user_id', currentUser.id);
+  } else {
+    await DB.from('transactions').insert({
+      id: crypto.randomUUID(), user_id: currentUser.id, asset_id: currentAsset.id, ...payload,
+    });
+  }
   closeTransactionModal();
   await loadTransactions();
 }
