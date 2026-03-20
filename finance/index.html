@@ -1704,23 +1704,41 @@ async function fetchSymbolSearch(q) {
     const res = await fetch(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${key}`);
     if (!res.ok) return;
     const data = await res.json();
-    const results = (data.result || []).filter(r => r.type === 'Common Stock' || r.type === 'ETP' || r.type === 'Crypto' || !r.type).slice(0, 8);
+    // Exclude foreign exchange listings (symbols with a dot like AAPL.MX)
+    const results = (data.result || [])
+      .filter(r => !r.displaySymbol.includes('.') && (r.type === 'Common Stock' || r.type === 'ETP' || r.type === 'Crypto' || !r.type))
+      .slice(0, 8);
     if (!results.length) { drop.classList.remove('open'); return; }
-    drop.innerHTML = results.map(r => `
-      <div class="symbol-option" onclick="selectSymbol(${JSON.stringify(r.displaySymbol)}, ${JSON.stringify(r.description)})">
-        <span class="symbol-option-sym">${r.displaySymbol}</span>
-        <span class="symbol-option-name">${r.description}</span>
-      </div>`).join('');
+    drop.innerHTML = '';
+    results.forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'symbol-option';
+      const symSpan = document.createElement('span');
+      symSpan.className = 'symbol-option-sym';
+      symSpan.textContent = r.displaySymbol;
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'symbol-option-name';
+      nameSpan.textContent = r.description;
+      div.appendChild(symSpan);
+      div.appendChild(nameSpan);
+      div.addEventListener('mousedown', e => {
+        e.preventDefault(); // prevent input blur before click fires
+        selectSymbol(r.displaySymbol, r.description);
+      });
+      drop.appendChild(div);
+    });
     drop.classList.add('open');
   } catch {}
 }
 
 function selectSymbol(sym, name) {
-  document.getElementById('holding-symbol-input').value = sym;
+  const inp = document.getElementById('holding-symbol-input');
   const nameInp = document.getElementById('holding-name-input');
-  if (nameInp && !nameInp.value) nameInp.value = name;
+  inp.value = sym;
+  nameInp.value = name; // always populate name
   const drop = document.getElementById('symbol-dropdown');
   drop.classList.remove('open'); drop.innerHTML = '';
+  nameInp.focus();
 }
 
 function openAddHoldingModal(id) {
