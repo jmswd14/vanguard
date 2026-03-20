@@ -19,13 +19,14 @@ serve(async (req) => {
       })
     }
 
-    const userClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { authorization: authHeader } } }
-    )
-    const { data: { user } } = await userClient.auth.getUser()
-    if (!user) {
+    // Decode JWT to extract user ID without a network round-trip
+    let userId: string
+    try {
+      const token = authHeader.replace('Bearer ', '')
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      userId = payload.sub
+      if (!userId) throw new Error('No sub')
+    } catch {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -43,13 +44,13 @@ serve(async (req) => {
     // Fetch user context in parallel
     const [tasksRes, habitsRes, habitLogsRes, journalRes] = await Promise.all([
       sb.from('tasks').select('name, due, priority, done, lists(name)')
-        .eq('user_id', user.id).eq('done', false).order('due', { ascending: true }).limit(25),
+        .eq('user_id', userId).eq('done', false).order('due', { ascending: true }).limit(25),
       sb.from('habits').select('id, name, description, icon, frequency')
-        .eq('user_id', user.id).limit(20),
+        .eq('user_id', userId).limit(20),
       sb.from('habit_logs').select('habit_id, completed, date')
-        .eq('user_id', user.id).gte('date', new Date(Date.now() - 7 * 864e5).toISOString().split('T')[0]),
+        .eq('user_id', userId).gte('date', new Date(Date.now() - 7 * 864e5).toISOString().split('T')[0]),
       sb.from('journal_entries').select('title, content, gratitude_1, gratitude_2, gratitude_3, created_at')
-        .eq('user_id', user.id).order('created_at', { ascending: false }).limit(5),
+        .eq('user_id', userId).order('created_at', { ascending: false }).limit(5),
     ])
 
     // Build tasks context
@@ -94,7 +95,7 @@ serve(async (req) => {
     if (include_history) {
       const { data: pastMsgs } = await sb.from('chat_messages')
         .select('role, content, created_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(40)
       if (pastMsgs && pastMsgs.length > 0) {
