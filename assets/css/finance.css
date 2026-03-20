@@ -1100,11 +1100,12 @@ input[type="number"]::-webkit-inner-spin-button {
 .fin-widget-customizer {
   background: var(--surface2);
   border: 1px solid var(--border);
-  padding: 10px 14px;
+  padding: 8px 0;
   margin-bottom: 14px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-direction: column;
+  gap: 0;
+  max-width: 320px;
 }
 .fin-widget-grid {
   display: grid;
