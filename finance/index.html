@@ -121,7 +121,7 @@
 
       <div class="sidebar-add-list" onclick="openModal('add-asset-modal')">
         <span style="font-size:16px;line-height:1;">+</span>
-        <span class="rs-add-label">New Asset</span>
+        <span class="rs-add-label">New Account</span>
       </div>
     </div>
   </nav>
@@ -134,7 +134,7 @@
         <h2 id="view-title">Overview</h2>
       </div>
       <div class="topbar-right">
-        <button class="btn btn-primary" onclick="openModal('add-asset-modal')">+ New Asset</button>
+        <button class="btn btn-primary" onclick="openModal('add-asset-modal')">+ New Account</button>
       </div>
     </div>
 
@@ -407,15 +407,34 @@
 <!-- ADD / EDIT ASSET -->
 <div class="modal-backdrop" id="add-asset-modal">
   <div class="modal finance-modal">
-    <div class="modal-title" id="asset-modal-title">New Asset</div>
+    <div class="modal-title" id="asset-modal-title">New Account</div>
     <input type="hidden" id="editing-asset-id">
+    <input type="hidden" id="asset-mode-input" value="balance">
+
+    <!-- Mode picker (hidden when editing) -->
+    <div id="asset-mode-picker">
+      <div class="mode-picker-label">How do you want to track this account?</div>
+      <div class="mode-picker">
+        <div class="mode-card" id="mode-card-balance" onclick="setAccountMode('balance')">
+          <div class="mode-card-icon">◎</div>
+          <div class="mode-card-title">Track Balance</div>
+          <div class="mode-card-desc">Log the total value manually over time. Best for checking, savings, real estate, or any account where you just want to watch the number.</div>
+        </div>
+        <div class="mode-card" id="mode-card-positions" onclick="setAccountMode('positions')">
+          <div class="mode-card-icon">↗</div>
+          <div class="mode-card-title">Track Positions</div>
+          <div class="mode-card-desc">Enter transactions — buys, sells, deposits — and the system computes your holdings, cash balance, and P&L in real time.</div>
+        </div>
+      </div>
+    </div>
+
     <div class="form-group">
-      <label>Asset Name <span style="color:var(--p-high);">*</span></label>
-      <input type="text" id="asset-name-input" placeholder="e.g. Chase Checking, My IRA...">
+      <label>Account Name <span style="color:var(--p-high);">*</span></label>
+      <input type="text" id="asset-name-input" placeholder="e.g. Fidelity Brokerage, Chase Checking...">
     </div>
     <div class="form-group">
-      <label>Type <span style="color:var(--p-high);">*</span></label>
-      <select id="asset-type-input">
+      <label>Account Type <span style="color:var(--p-high);">*</span></label>
+      <select id="asset-type-input" onchange="assetTypeChanged()">
         <option value="Brokerage/Investments">Brokerage/Investments</option>
         <option value="Business Equity">Business Equity</option>
         <option value="Cash">Cash</option>
@@ -428,28 +447,30 @@
       </select>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Update reminder day</label>
+      <div class="form-group" id="initial-value-group">
+        <label id="initial-value-label">Initial Balance</label>
+        <div class="initial-value-row">
+          <span class="initial-value-prefix">$</span>
+          <input type="number" id="asset-initial-input" placeholder="0.00" step="0.01">
+        </div>
+        <div class="form-hint" id="initial-value-hint">Optional starting value</div>
+      </div>
+      <div class="form-group" id="cycle-group">
+        <label>Update Reminder</label>
         <select id="asset-cycle-input" onchange="updateCycleHelperText()">
           <option value="">No reminder</option>
         </select>
         <div class="form-hint" id="cycle-helper-text"></div>
       </div>
-      <div class="form-group" id="initial-value-group">
-        <label>Initial Value</label>
-        <div class="initial-value-row">
-          <span class="initial-value-prefix">$</span>
-          <input type="number" id="asset-initial-input" placeholder="0.00" step="0.01">
-        </div>
-      </div>
     </div>
     <div class="form-group">
       <label>Notes</label>
-      <textarea id="asset-notes-input" placeholder="Any extra details..."></textarea>
+      <textarea id="asset-notes-input" placeholder="Optional notes..."></textarea>
     </div>
     <div class="modal-actions">
+      <button class="btn btn-danger" id="asset-delete-btn" onclick="confirmDeleteAsset()" style="display:none;margin-right:auto;">Delete</button>
       <button class="btn" onclick="closeModal('add-asset-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveAsset()">Save Asset</button>
+      <button class="btn btn-primary" id="asset-save-btn" onclick="saveAsset()">Save Account</button>
     </div>
   </div>
 </div>
@@ -516,6 +537,13 @@ const TYPE_COLORS = {
   'Real Estate':                 '#C8A67B',
   'Retirement':                  '#E8D5B0',
 };
+
+// Returns true if this account uses transaction/positions tracking
+function isPositionsAccount(asset) {
+  if (!asset) return false;
+  if (asset.tracking_mode) return asset.tracking_mode === 'positions';
+  return INVESTMENT_TYPES.has(asset.type); // fallback for legacy records
+}
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 
@@ -995,14 +1023,16 @@ function openAccount(assetId) {
   renderAccountView();
   closeMobileMenus();
 
-  // Transactions are source of truth — holdings computed from them
-  loadTransactions();
+  // Load data based on tracking mode
+  if (isPositionsAccount(currentAsset)) {
+    loadTransactions();
+  }
 }
 
 function renderAccountView() {
   const asset = currentAsset;
   const log = getLatestLog(asset.id);
-  const isInvestment = INVESTMENT_TYPES.has(asset.type);
+  const isInvestment = isPositionsAccount(asset);
 
   // Breadcrumb
   document.getElementById('ac-breadcrumb').innerHTML =
@@ -1353,7 +1383,7 @@ function renderDetailPanel() {
     document.getElementById('dp-value-sub').textContent = 'No logs yet';
   }
 
-  const isInvestment = INVESTMENT_TYPES.has(asset.type);
+  const isInvestment = isPositionsAccount(asset);
   document.getElementById('dp-tabs').style.display = isInvestment ? 'flex' : 'none';
 
   setDetailTab(currentDetailTab, true);
@@ -1505,8 +1535,39 @@ function resetAssetModal() {
   document.getElementById('cycle-helper-text').textContent = '';
   document.getElementById('asset-initial-input').value = '';
   document.getElementById('asset-notes-input').value = '';
-  document.getElementById('asset-modal-title').textContent = 'New Asset';
+  document.getElementById('asset-modal-title').textContent = 'New Account';
   document.getElementById('initial-value-group').style.display = '';
+  document.getElementById('cycle-group').style.display = '';
+  document.getElementById('asset-mode-picker').style.display = '';
+  document.getElementById('asset-delete-btn').style.display = 'none';
+  document.getElementById('asset-save-btn').textContent = 'Save Account';
+  setAccountMode('positions'); // default for Brokerage/Investments
+}
+
+function setAccountMode(mode) {
+  document.getElementById('asset-mode-input').value = mode;
+  document.getElementById('mode-card-balance').classList.toggle('active', mode === 'balance');
+  document.getElementById('mode-card-positions').classList.toggle('active', mode === 'positions');
+  // Show/hide initial value field based on mode
+  const ivGroup = document.getElementById('initial-value-group');
+  const ivLabel = document.getElementById('initial-value-label');
+  const ivHint  = document.getElementById('initial-value-hint');
+  if (mode === 'positions') {
+    ivLabel.textContent = 'Opening Cash Balance';
+    ivHint.textContent = 'Uninvested cash already in this account (optional)';
+  } else {
+    ivLabel.textContent = 'Initial Balance';
+    ivHint.textContent = 'Optional starting value';
+  }
+}
+
+function assetTypeChanged() {
+  const type = document.getElementById('asset-type-input').value;
+  const isPositions = INVESTMENT_TYPES.has(type);
+  // Only auto-switch mode if we're creating (not editing)
+  if (!document.getElementById('editing-asset-id').value) {
+    setAccountMode(isPositions ? 'positions' : 'balance');
+  }
 }
 
 function resetLogModal() {
@@ -1521,12 +1582,15 @@ function openEditAsset() {
   if (!currentAsset) return;
   const a = currentAsset;
   document.getElementById('editing-asset-id').value = a.id;
-  document.getElementById('asset-modal-title').textContent = 'Edit Asset';
+  document.getElementById('asset-modal-title').textContent = 'Edit Account';
   document.getElementById('asset-name-input').value = a.name;
   document.getElementById('asset-type-input').value = a.type;
   document.getElementById('asset-cycle-input').value = a.update_cycle_day || '';
   document.getElementById('asset-notes-input').value = a.notes || '';
-  document.getElementById('initial-value-group').style.display = 'none'; // no initial value on edit
+  document.getElementById('initial-value-group').style.display = 'none';
+  document.getElementById('asset-mode-picker').style.display = 'none'; // mode locked after creation
+  document.getElementById('asset-delete-btn').style.display = '';
+  document.getElementById('asset-save-btn').textContent = 'Save Changes';
   updateCycleHelperText();
   openModal('add-asset-modal');
 }
@@ -1539,10 +1603,11 @@ async function saveAsset() {
   const initialVal = parseFloat(document.getElementById('asset-initial-input').value);
   const editingId = document.getElementById('editing-asset-id').value;
 
-  if (!name) { alert('Asset name is required.'); return; }
+  if (!name) { alert('Account name is required.'); return; }
+
+  const trackingMode = document.getElementById('asset-mode-input').value || 'balance';
 
   if (editingId) {
-    // Update
     const { error } = await DB.from('assets').update({ name, type, update_cycle_day: cycleDay, notes })
       .eq('id', editingId).eq('user_id', currentUser.id);
     if (error) { console.error(error); return; }
@@ -1550,7 +1615,6 @@ async function saveAsset() {
     if (idx !== -1) assets[idx] = { ...assets[idx], name, type, update_cycle_day: cycleDay, notes };
     if (currentAsset && currentAsset.id === editingId) currentAsset = assets[idx];
   } else {
-    // Insert
     const asset = {
       id: crypto.randomUUID(),
       user_id: currentUser.id,
@@ -1558,6 +1622,7 @@ async function saveAsset() {
       type,
       currency: 'USD',
       update_cycle_day: cycleDay,
+      tracking_mode: trackingMode,
       notes,
       created_at: new Date().toISOString(),
     };
@@ -1565,19 +1630,25 @@ async function saveAsset() {
     if (error) { console.error(error); return; }
     assets.push(asset);
 
-    // Log initial value if provided
-    if (!isNaN(initialVal) && initialVal !== '') {
-      const log = {
-        id: crypto.randomUUID(),
-        asset_id: asset.id,
-        user_id: currentUser.id,
-        value: initialVal,
-        logged_at: todayISO(),
-        notes: 'Initial value',
-        created_at: new Date().toISOString(),
-      };
-      const { error: le } = await DB.from('asset_logs').insert(log);
-      if (!le) logs.push(log);
+    if (!isNaN(initialVal) && initialVal > 0) {
+      if (trackingMode === 'positions') {
+        // Opening cash → deposit transaction
+        const txn = {
+          id: crypto.randomUUID(), user_id: currentUser.id, asset_id: asset.id,
+          type: 'deposit', symbol: null, quantity: null, price: null,
+          amount: initialVal, date: todayISO(), notes: 'Opening cash balance',
+        };
+        await DB.from('transactions').insert(txn);
+      } else {
+        // Balance mode → log entry
+        const log = {
+          id: crypto.randomUUID(), asset_id: asset.id, user_id: currentUser.id,
+          value: initialVal, logged_at: todayISO(), notes: 'Initial value',
+          created_at: new Date().toISOString(),
+        };
+        const { error: le } = await DB.from('asset_logs').insert(log);
+        if (!le) logs.push(log);
+      }
     }
   }
 
@@ -2078,7 +2149,7 @@ function computeCash(transactions) {
 }
 
 function updateAccountHero() {
-  if (!currentAsset || !INVESTMENT_TYPES.has(currentAsset.type)) return;
+  if (!currentAsset || !isPositionsAccount(currentAsset)) return;
   const cashRow = document.getElementById('ac-cash-row');
   if (!cashRow) return;
   const positions = computePositions(currentTransactions);
