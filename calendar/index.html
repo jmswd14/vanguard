@@ -1292,7 +1292,7 @@ async function refreshGcalToken() {
       // Edge Function returned an application-level error in the response body
       const appErr = (data.error || '').toLowerCase();
       console.warn('[GCal] Edge Function app error:', data.error);
-      if (appErr.includes('invalid_grant') || appErr.includes('invalid_token')) {
+      if (appErr.includes('invalid_grant') || appErr.includes('invalid_token') || appErr.includes('expired') || appErr.includes('revoked')) {
         console.log('[GCal] Refresh token revoked (app error) — disconnecting');
         googleConnected = false;
         renderGcalSidebar();

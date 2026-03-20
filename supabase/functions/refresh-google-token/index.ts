@@ -71,7 +71,7 @@ serve(async (req) => {
     const data = await resp.json()
     if (!resp.ok) {
       return new Response(
-        JSON.stringify({ error: data.error_description || 'Refresh failed' }),
+        JSON.stringify({ error: data.error || 'Refresh failed', error_description: data.error_description }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
