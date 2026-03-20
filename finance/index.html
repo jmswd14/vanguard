@@ -209,14 +209,13 @@
           <span class="ac-cash-sep">+</span>
           <span class="ac-cash-item"><span class="ac-cash-label">Cash</span> <span class="ac-cash-val" id="ac-cash-val">—</span></span>
         </div>
+        <div class="ac-hero-day" id="ac-day-change" style="display:none"></div>
       </div>
-      <div class="ac-tab-bar" id="ac-tab-bar" style="display:none">
+      <div class="ac-tab-bar" id="ac-tab-bar">
         <button class="ac-tab active" id="act-btn-holdings" onclick="setAccountTab('holdings')">Holdings</button>
         <button class="ac-tab" id="act-btn-transactions" onclick="setAccountTab('transactions')">Transactions</button>
         <button class="ac-tab" id="act-btn-overview" onclick="setAccountTab('overview')">Overview</button>
-      </div>
-      <div id="act-btn-overview-only" style="display:none">
-        <button class="ac-tab active">Overview</button>
+        <button class="ac-tab" id="act-btn-preferences" onclick="setAccountTab('preferences')">Preferences</button>
       </div>
       <!-- Holdings pane -->
       <div id="act-pane-holdings" style="display:none">
@@ -236,12 +235,10 @@
         </div>
         <div id="ac-transactions-table"></div>
       </div>
-      <!-- Overview pane -->
+      <!-- Overview pane (balance accounts) -->
       <div id="act-pane-overview" style="display:none">
         <div class="ac-overview-actions">
           <button class="btn btn-primary" onclick="openLogModal()">+ Log Value</button>
-          <button class="btn" onclick="openEditAsset()">Edit</button>
-          <button class="btn btn-danger" onclick="confirmDeleteAsset()" style="margin-left:auto">Delete</button>
         </div>
         <div class="detail-chart-wrap">
           <div class="detail-section-label">Value History</div>
@@ -250,61 +247,57 @@
         <div class="detail-section-label">Log Entries</div>
         <div class="detail-log-list" id="ac-log-list"></div>
       </div>
+      <!-- Overview pane (live / positions accounts) -->
+      <div id="act-pane-overview-live" style="display:none">
+        <div class="ac-overview-customize">
+          <button class="btn" style="font-size:11px;padding:5px 12px;" onclick="toggleOverviewCustomize()">Customize</button>
+        </div>
+        <div class="fin-widget-customizer" id="fin-widget-customizer" style="display:none"></div>
+        <div class="fin-widget-grid" id="fin-widget-grid"></div>
+      </div>
+      <!-- Preferences pane -->
+      <div id="act-pane-preferences" style="display:none">
+        <div class="pref-section">
+          <div class="pref-section-label">Display</div>
+          <div class="form-group">
+            <label>Nickname</label>
+            <input type="text" id="pref-nickname-input" placeholder="Display name override…">
+            <div class="form-hint">Shown instead of the account name. Leave blank to use the account name.</div>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea id="pref-notes-input" rows="3" placeholder="Private notes about this account…"></textarea>
+          </div>
+        </div>
+        <div class="pref-section" id="pref-benchmark-section" style="display:none">
+          <div class="pref-section-label">Benchmark</div>
+          <div class="form-group">
+            <label>Compare against</label>
+            <select id="pref-benchmark-select">
+              <option value="">None</option>
+              <option value="SPY">SPY — S&amp;P 500</option>
+              <option value="QQQ">QQQ — NASDAQ 100</option>
+              <option value="DIA">DIA — Dow Jones</option>
+              <option value="IWM">IWM — Russell 2000</option>
+            </select>
+          </div>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-label">Actions</div>
+          <div class="pref-actions">
+            <button class="btn" onclick="openEditAsset()">Edit Account</button>
+            <button class="btn btn-danger" onclick="confirmDeleteAsset()">Delete Account</button>
+          </div>
+        </div>
+        <div class="pref-save-row">
+          <button class="btn btn-primary" onclick="savePreferences()">Save</button>
+        </div>
+      </div>
     </div>
   </main>
 
 </div><!-- /.app -->
 
-<!-- ── ASSET DETAIL OVERLAY ── -->
-<div class="detail-overlay" id="detail-overlay">
-  <div class="detail-scrim" onclick="closeDetail()"></div>
-  <div class="detail-panel" id="detail-panel">
-    <div class="detail-panel-header">
-      <button class="detail-panel-close" onclick="closeDetail()">×</button>
-      <div class="detail-type-badge" id="dp-type"></div>
-      <div class="detail-name" id="dp-name"></div>
-      <div class="detail-value" id="dp-value"></div>
-      <div class="detail-value-sub" id="dp-value-sub"></div>
-      <div class="dp-tabs" id="dp-tabs" style="display:none">
-        <button class="dp-tab active" id="dp-tab-btn-overview" onclick="setDetailTab('overview')">Overview</button>
-        <button class="dp-tab" id="dp-tab-btn-holdings" onclick="setDetailTab('holdings')">Holdings</button>
-        <button class="dp-tab" id="dp-tab-btn-transactions" onclick="setDetailTab('transactions')">Transactions</button>
-      </div>
-    </div>
-    <div class="detail-panel-body">
-      <!-- Overview tab -->
-      <div id="dp-tab-overview">
-        <div class="detail-chart-wrap">
-          <div class="detail-section-label">Value History</div>
-          <svg class="detail-chart-svg" id="dp-chart" height="120" viewBox="0 0 400 120" preserveAspectRatio="none"></svg>
-        </div>
-        <div class="detail-section-label">Log Entries</div>
-        <div class="detail-log-list" id="dp-log-list"></div>
-      </div>
-      <!-- Holdings tab -->
-      <div id="dp-tab-holdings" style="display:none">
-        <div class="dp-tab-toolbar">
-          <span class="detail-section-label" style="margin:0">Holdings</span>
-          <button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="openAddHoldingModal()">+ Add</button>
-        </div>
-        <div id="dp-holdings-list"></div>
-      </div>
-      <!-- Transactions tab -->
-      <div id="dp-tab-transactions" style="display:none">
-        <div class="dp-tab-toolbar">
-          <span class="detail-section-label" style="margin:0">Transactions</span>
-          <button class="btn btn-primary" style="font-size:11px;padding:5px 12px;" onclick="openAddTransactionModal()">+ Add</button>
-        </div>
-        <div id="dp-transactions-list"></div>
-      </div>
-    </div>
-    <div class="detail-panel-footer" id="dp-footer">
-      <button class="btn btn-primary" onclick="openLogModal()">+ Log Value</button>
-      <button class="btn" onclick="openEditAsset()">Edit</button>
-      <button class="btn btn-danger" onclick="confirmDeleteAsset()" style="margin-left:auto;">Delete</button>
-    </div>
-  </div>
-</div>
 
 <!-- ADD HOLDING MODAL -->
 <div class="modal-backdrop" id="add-holding-modal">
@@ -553,7 +546,6 @@ let assets         = [];   // array of asset rows
 let logs           = [];   // array of all log rows
 let currentView    = 'overview';
 let currentAsset   = null; // asset open in detail panel
-let currentDetailTab = 'overview';
 let currentAccountTab = 'holdings';
 let currentHoldings = [];
 let currentTransactions = [];
@@ -876,7 +868,7 @@ function renderAssetsView() {
     const lastDate = log ? formatDate(log.logged_at) : 'No data yet';
 
     return `
-      <div class="asset-card${overdue ? ' overdue' : ''}" onclick="openDetail('${asset.id}')">
+      <div class="asset-card${overdue ? ' overdue' : ''}" onclick="openAccount('${asset.id}')">
         <div class="asset-card-type">
           <span class="asset-card-type-dot" style="background:${color}"></span>
           ${esc(asset.type)}
@@ -1059,9 +1051,14 @@ function renderAccountView() {
     ? `Created ${formatDate(asset.created_at.split('T')[0])}`
     : '';
 
-  // Tab bar
-  document.getElementById('ac-tab-bar').style.display = isInvestment ? 'flex' : 'none';
-  document.getElementById('act-btn-overview-only').style.display = isInvestment ? 'none' : 'flex';
+  // Hero display name: use nickname if set
+  document.getElementById('ac-name').textContent = currentAsset.nickname || currentAsset.name;
+
+  // Tab bar: always shown; hide Holdings+Transactions for balance accounts
+  ['act-btn-holdings','act-btn-transactions'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.style.display = isInvestment ? '' : 'none';
+  });
 
   // Default tab
   const defaultTab = isInvestment ? 'holdings' : 'overview';
@@ -1070,15 +1067,31 @@ function renderAccountView() {
 
 function setAccountTab(tab) {
   currentAccountTab = tab;
-  ['holdings','transactions','overview'].forEach(t => {
+  const isLive = isPositionsAccount(currentAsset);
+
+  // Hide all panes
+  ['holdings','transactions','overview','overview-live','preferences'].forEach(t => {
     const pane = document.getElementById(`act-pane-${t}`);
-    if (pane) pane.style.display = t === tab ? '' : 'none';
+    if (pane) pane.style.display = 'none';
+  });
+
+  // Show the right overview pane for live vs balance
+  const activePane = (tab === 'overview' && isLive) ? 'overview-live' : tab;
+  const pane = document.getElementById(`act-pane-${activePane}`);
+  if (pane) pane.style.display = '';
+
+  // Update tab button active states
+  ['holdings','transactions','overview','preferences'].forEach(t => {
     const btn = document.getElementById(`act-btn-${t}`);
     if (btn) btn.classList.toggle('active', t === tab);
   });
+
+  // Render content
   if (tab === 'holdings') renderAccountHoldings();
   else if (tab === 'transactions') renderAccountTransactions();
+  else if (tab === 'overview' && isLive) renderLiveOverviewWidgets();
   else if (tab === 'overview') renderAccountOverview();
+  else if (tab === 'preferences') renderPreferencesPane();
 }
 
 // Column definitions for holdings table
@@ -1361,158 +1374,6 @@ function deleteTxnFromModal() {
   showFinConfirm(`Delete ${label}? This cannot be undone.`, () => deleteTransaction(id));
 }
 
-// ── DETAIL PANEL ──────────────────────────────────────────────────────────────
-
-function openDetail(assetId) {
-  openAccount(assetId);
-}
-
-function closeDetail() {
-  document.getElementById('detail-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-  setView('overview', document.getElementById('nav-overview'));
-}
-
-function renderDetailPanel() {
-  if (!currentAsset) return;
-  const asset = currentAsset;
-  const log = getLatestLog(asset.id);
-
-  document.getElementById('dp-type').textContent = asset.type;
-  document.getElementById('dp-name').textContent = asset.name;
-
-  if (log) {
-    document.getElementById('dp-value').textContent = fmtUSD(parseFloat(log.value));
-    document.getElementById('dp-value-sub').textContent = `Updated ${formatDate(log.logged_at)}`;
-  } else {
-    document.getElementById('dp-value').textContent = '—';
-    document.getElementById('dp-value-sub').textContent = 'No logs yet';
-  }
-
-  const isInvestment = isPositionsAccount(asset);
-  document.getElementById('dp-tabs').style.display = isInvestment ? 'flex' : 'none';
-
-  setDetailTab(currentDetailTab, true);
-}
-
-function setDetailTab(tab, skipRerender) {
-  currentDetailTab = tab;
-  ['overview','holdings','transactions'].forEach(t => {
-    document.getElementById(`dp-tab-overview`) && (document.getElementById(`dp-tab-${t}`).style.display = t === tab ? '' : 'none');
-    const btn = document.getElementById(`dp-tab-btn-${t}`);
-    if (btn) btn.classList.toggle('active', t === tab);
-  });
-
-  const footer = document.getElementById('dp-footer');
-  if (tab === 'overview') {
-    footer.innerHTML = `
-      <button class="btn btn-primary" onclick="openLogModal()">+ Log Value</button>
-      <button class="btn" onclick="openEditAsset()">Edit</button>
-      <button class="btn btn-danger" onclick="confirmDeleteAsset()" style="margin-left:auto;">Delete</button>`;
-  } else if (tab === 'holdings') {
-    footer.innerHTML = `
-      <button class="btn" onclick="openEditAsset()">Edit</button>
-      <button class="btn btn-danger" onclick="confirmDeleteAsset()" style="margin-left:auto;">Delete</button>`;
-  } else {
-    footer.innerHTML = `
-      <button class="btn" onclick="openEditAsset()">Edit</button>
-      <button class="btn btn-danger" onclick="confirmDeleteAsset()" style="margin-left:auto;">Delete</button>`;
-  }
-
-  if (!skipRerender) {
-    if (tab === 'overview') { renderDetailChart(); renderDetailLogs(); }
-    else if (tab === 'holdings') renderHoldingsTab();
-    else if (tab === 'transactions') renderTransactionsTab();
-  } else {
-    renderDetailChart();
-    renderDetailLogs();
-  }
-}
-
-function renderDetailChart() {
-  const svg = document.getElementById('dp-chart');
-  const assetLogs = logs.filter(l => l.asset_id === currentAsset.id);
-  svg.innerHTML = '';
-
-  if (assetLogs.length < 2) {
-    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
-    t.setAttribute('x', '200');
-    t.setAttribute('y', '60');
-    t.setAttribute('text-anchor', 'middle');
-    t.setAttribute('font-size', '12');
-    t.setAttribute('fill', '#666');
-    t.setAttribute('font-family', 'Geist, sans-serif');
-    t.textContent = assetLogs.length === 1 ? 'Add another entry to see a chart' : 'No log entries yet';
-    svg.appendChild(t);
-    return;
-  }
-
-  const W = 400, H = 120, padL = 0, padR = 0, padT = 12, padB = 24;
-  const vals = assetLogs.map(l => parseFloat(l.value));
-  const minV = Math.min(...vals);
-  const maxV = Math.max(...vals);
-  const range = maxV - minV || 1;
-  const color = TYPE_COLORS[currentAsset.type] || '#E8D5B0';
-
-  function xPos(i) { return padL + (i / (assetLogs.length - 1)) * (W - padL - padR); }
-  function yPos(v) { return padT + (1 - (v - minV) / range) * (H - padT - padB); }
-
-  const gradId = 'dp-grad';
-  svg.innerHTML = `
-    <defs>
-      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
-        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-      </linearGradient>
-    </defs>`;
-
-  const polyPts = assetLogs.map((l, i) => `${xPos(i)},${yPos(parseFloat(l.value))}`).join(' ');
-  const closedPts = `${xPos(0)},${H - padB} ${polyPts} ${xPos(assetLogs.length-1)},${H - padB}`;
-
-  const area = document.createElementNS('http://www.w3.org/2000/svg','polygon');
-  area.setAttribute('points', closedPts);
-  area.setAttribute('fill', `url(#${gradId})`);
-  svg.appendChild(area);
-
-  const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-  line.setAttribute('points', polyPts);
-  line.setAttribute('fill', 'none');
-  line.setAttribute('stroke', color);
-  line.setAttribute('stroke-width', '1.5');
-  svg.appendChild(line);
-
-  // Label first and last date
-  [{i: 0}, {i: assetLogs.length - 1}].forEach(({i}) => {
-    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
-    t.setAttribute('x', xPos(i));
-    t.setAttribute('y', H - 4);
-    t.setAttribute('text-anchor', i === 0 ? 'start' : 'end');
-    t.setAttribute('font-size', '9');
-    t.setAttribute('fill', '#666');
-    t.setAttribute('font-family', 'Geist, sans-serif');
-    t.textContent = formatDateShort(assetLogs[i].logged_at);
-    svg.appendChild(t);
-  });
-}
-
-function renderDetailLogs() {
-  const list = document.getElementById('dp-log-list');
-  const assetLogs = logs.filter(l => l.asset_id === currentAsset.id).slice().reverse();
-
-  if (!assetLogs.length) {
-    list.innerHTML = '<div class="detail-empty-logs">No log entries yet. Log a value to get started.</div>';
-    return;
-  }
-
-  list.innerHTML = assetLogs.map(log => `
-    <div class="detail-log-row">
-      <span class="detail-log-date">${esc(formatDate(log.logged_at))}</span>
-      <span class="detail-log-val">${fmtUSD(parseFloat(log.value))}</span>
-      ${log.notes ? `<span class="detail-log-notes" title="${esc(log.notes)}">${esc(log.notes)}</span>` : '<span></span>'}
-      <button class="detail-log-delete" onclick="confirmDeleteLog('${log.id}')" title="Delete entry">×</button>
-    </div>
-  `).join('');
-}
 
 // ── SAVE ASSET ────────────────────────────────────────────────────────────────
 
@@ -1661,7 +1522,6 @@ async function saveAsset() {
 
   closeModal('add-asset-modal');
   if (currentView === 'account') renderAccountView();
-  else if (currentAsset) renderDetailPanel();
   renderAll();
   updateTypeSidebarNav();
   updateAssetCount();
@@ -1704,7 +1564,6 @@ async function saveLog() {
 
   closeModal('log-value-modal');
   if (currentView === 'account') renderAccountView();
-  else renderDetailPanel();
   renderAll();
   updateTypeSidebarNav();
 }
@@ -1729,7 +1588,8 @@ function confirmDeleteAsset() {
     await DB.from('assets').delete().eq('id', currentAsset.id).eq('user_id', currentUser.id);
     logs = logs.filter(l => l.asset_id !== currentAsset.id);
     assets = assets.filter(a => a.id !== currentAsset.id);
-    closeDetail();
+    currentAsset = null;
+    setView('overview', document.getElementById('nav-overview'));
     renderAll();
     updateTypeSidebarNav();
     updateAssetCount();
@@ -1748,7 +1608,7 @@ function confirmDeleteLog(logId) {
     const { error } = await DB.from('asset_logs').delete().eq('id', logId).eq('user_id', currentUser.id);
     if (!error) {
       logs = logs.filter(l => l.id !== logId);
-      renderDetailPanel();
+      if (currentView === 'account') renderAccountOverview();
       renderAll();
     }
   };
@@ -1873,8 +1733,6 @@ document.addEventListener('keydown', e => {
         // Don't close confirm if another modal is waiting
         m.classList.remove('show');
       });
-    } else if (document.getElementById('detail-overlay').classList.contains('open')) {
-      closeDetail();
     }
   }
 });
@@ -2179,6 +2037,25 @@ function updateAccountHero() {
     document.getElementById('ac-value').textContent = fmtUSD(cash);
     document.getElementById('ac-sub').textContent = 'Cash balance';
   }
+
+  // Day change line
+  const dayEl = document.getElementById('ac-day-change');
+  if (dayEl && allPricesLoaded && positions.length > 0) {
+    let totalDayChg = 0;
+    for (const p of positions) {
+      const q = holdingPrices[p.symbol];
+      if (q?.d != null) totalDayChg += q.d * p.quantity;
+    }
+    const totalMV = holdingsMV + cash;
+    const prevMV = totalMV - totalDayChg;
+    const pct = prevMV > 0 ? (totalDayChg / prevMV) * 100 : 0;
+    const sign = totalDayChg >= 0 ? '+' : '';
+    dayEl.textContent = `${sign}${fmtUSD(totalDayChg)} today (${sign}${pct.toFixed(2)}%)`;
+    dayEl.className = `ac-hero-day ${totalDayChg >= 0 ? 'day-pos' : 'day-neg'}`;
+    dayEl.style.display = '';
+  } else if (dayEl) {
+    dayEl.style.display = 'none';
+  }
 }
 
 // ── HOLDINGS ──────────────────────────────────────────────────────────────────
@@ -2189,7 +2066,6 @@ async function loadHoldings() {
     .eq('asset_id', currentAsset.id).eq('user_id', currentUser.id)
     .order('symbol');
   currentHoldings = data || [];
-  if (currentDetailTab === 'holdings') renderHoldingsTab();
   if (currentView === 'account') renderAccountHoldings();
   // Fetch live prices for all symbols
   const symbols = [...new Set(currentHoldings.map(h => h.symbol.toUpperCase()))];
@@ -2197,7 +2073,6 @@ async function loadHoldings() {
     fetchQuote(sym, FINNHUB_KEY).then(q => {
       if (q?.c) {
         holdingPrices[sym] = q;
-        if (currentDetailTab === 'holdings') renderHoldingsTab();
         if (currentView === 'account') { renderAccountHoldings(); updateAccountHero(); }
       }
     });
@@ -2376,7 +2251,6 @@ async function saveHolding() {
 async function deleteHolding(id) {
   await DB.from('holdings').delete().eq('id', id).eq('user_id', currentUser.id);
   currentHoldings = currentHoldings.filter(h => h.id !== id);
-  renderHoldingsTab();
   if (currentView === 'account') renderAccountHoldings();
 }
 
@@ -2388,7 +2262,6 @@ async function loadTransactions() {
     .eq('asset_id', currentAsset.id).eq('user_id', currentUser.id)
     .order('date', { ascending: false });
   currentTransactions = data || [];
-  if (currentDetailTab === 'transactions') renderTransactionsTab();
   if (currentView === 'account') {
     renderAccountTransactions();
     renderAccountHoldings();
@@ -2513,12 +2386,198 @@ function confirmDeleteTransaction(id, typeLabel, date) {
 async function deleteTransaction(id) {
   await DB.from('transactions').delete().eq('id', id).eq('user_id', currentUser.id);
   currentTransactions = currentTransactions.filter(t => t.id !== id);
-  renderTransactionsTab();
   if (currentView === 'account') {
     renderAccountTransactions();
     renderAccountHoldings();
     updateAccountHero();
   }
+}
+
+// ── LIVE ACCOUNT OVERVIEW WIDGETS ────────────────────────────────────────────
+
+const FIN_WIDGET_DEFS = [
+  { id: 'allocation', label: 'Allocation' },
+  { id: 'movers',     label: 'Top Movers' },
+  { id: 'costbasis',  label: 'Cost Basis vs Market Value' },
+];
+
+function getWidgetVisibility() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('vg-fin-overview-widgets') || 'null');
+    if (Array.isArray(saved)) return new Set(saved);
+  } catch {}
+  return new Set(FIN_WIDGET_DEFS.map(w => w.id));
+}
+
+function toggleOverviewCustomize() {
+  const customizer = document.getElementById('fin-widget-customizer');
+  if (!customizer) return;
+  const isVisible = customizer.style.display !== 'none';
+  if (isVisible) { customizer.style.display = 'none'; return; }
+  const vis = getWidgetVisibility();
+  customizer.innerHTML = FIN_WIDGET_DEFS.map(w =>
+    `<label class="col-picker-item">
+      <input type="checkbox" ${vis.has(w.id) ? 'checked' : ''}
+             onchange="toggleOverviewWidget('${w.id}', this.checked)">
+      ${w.label}
+    </label>`
+  ).join('');
+  customizer.style.display = 'flex';
+}
+
+function toggleOverviewWidget(id, checked) {
+  const vis = getWidgetVisibility();
+  if (checked) vis.add(id); else vis.delete(id);
+  localStorage.setItem('vg-fin-overview-widgets', JSON.stringify([...vis]));
+  renderLiveOverviewWidgets();
+}
+
+function renderLiveOverviewWidgets() {
+  const grid = document.getElementById('fin-widget-grid');
+  if (!grid) return;
+  const vis = getWidgetVisibility();
+  const positions = computePositions(currentTransactions);
+  const cash = computeCash(currentTransactions);
+  const holdingsMV = positions.reduce((s, p) => {
+    const q = holdingPrices[p.symbol];
+    return q?.c ? s + q.c * p.quantity : s;
+  }, 0);
+  const totalPortfolio = holdingsMV + cash;
+
+  grid.innerHTML = FIN_WIDGET_DEFS.filter(w => vis.has(w.id)).map(w => {
+    let content = '';
+    if (w.id === 'allocation') content = renderAllocationWidget(positions, cash, totalPortfolio);
+    else if (w.id === 'movers') content = renderMoversWidget(positions);
+    else if (w.id === 'costbasis') content = renderCostBasisWidget(positions);
+    return `<div class="fin-widget" id="fin-widget-${w.id}">
+      <div class="fin-widget-label">${w.label}</div>
+      ${content}
+    </div>`;
+  }).join('');
+}
+
+const WIDGET_COLORS = [
+  '#A78BCA','#C87B7B','#C8C07B','#7BA3C8','#7BC8C0',
+  '#7BC87B','#B0C87B','#C8A67B','#E8D5B0','#8B9DC3','#C38B8B','#8BC3A0'
+];
+
+function renderAllocationWidget(positions, cash, totalPortfolio) {
+  if (!totalPortfolio) return '<div class="fin-widget-empty">No data.</div>';
+  const segments = positions.map((p, i) => {
+    const mv = holdingPrices[p.symbol]?.c ? holdingPrices[p.symbol].c * p.quantity : 0;
+    return { label: p.symbol, pct: totalPortfolio > 0 ? mv / totalPortfolio * 100 : 0, color: WIDGET_COLORS[i % WIDGET_COLORS.length] };
+  });
+  if (cash > 0) segments.push({ label: 'CASH', pct: cash / totalPortfolio * 100, color: '#444' });
+  const bar = segments.map(s =>
+    `<div class="alloc-seg" style="width:${s.pct.toFixed(2)}%;background:${s.color};" title="${esc(s.label)} ${s.pct.toFixed(1)}%"></div>`
+  ).join('');
+  const legend = segments.map(s =>
+    `<div class="alloc-legend-item">
+      <span class="alloc-dot" style="background:${s.color}"></span>
+      <span class="alloc-sym">${esc(s.label)}</span>
+      <span class="alloc-pct">${s.pct.toFixed(1)}%</span>
+    </div>`
+  ).join('');
+  return `<div class="alloc-bar">${bar}</div><div class="alloc-legend">${legend}</div>`;
+}
+
+function renderMoversWidget(positions) {
+  const withDay = positions.map(p => {
+    const q = holdingPrices[p.symbol];
+    return q?.d != null ? { symbol: p.symbol, dayDollar: q.d * p.quantity, dayPct: q.dp ?? 0 } : null;
+  }).filter(Boolean);
+  if (!withDay.length) return '<div class="fin-widget-empty">Price data loading…</div>';
+  withDay.sort((a, b) => b.dayDollar - a.dayDollar);
+  const seen = new Set();
+  const top = [], bottom = [];
+  for (const p of withDay) { if (!seen.has(p.symbol)) { top.push(p); seen.add(p.symbol); } if (top.length >= 3) break; }
+  for (const p of [...withDay].reverse()) { if (!seen.has(p.symbol)) { bottom.push(p); seen.add(p.symbol); } if (bottom.length >= 3) break; }
+  const rows = [...top, ...bottom].map(p => {
+    const cls = p.dayDollar >= 0 ? 'holding-gain-pos' : 'holding-gain-neg';
+    const sign = p.dayDollar >= 0 ? '+' : '';
+    return `<tr>
+      <td class="ht-td ht-sym">${esc(p.symbol)}</td>
+      <td class="ht-td ht-num"><span class="${cls}">${sign}${fmtUSD(p.dayDollar)}</span></td>
+      <td class="ht-td ht-num"><span class="${cls}">${sign}${p.dayPct.toFixed(2)}%</span></td>
+    </tr>`;
+  }).join('');
+  return `<table class="ht-table"><thead><tr>
+    <th class="ht-th">Symbol</th><th class="ht-th">Day $</th><th class="ht-th">Day %</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderCostBasisWidget(positions) {
+  if (!positions.length) return '<div class="fin-widget-empty">No positions.</div>';
+  const data = positions.map(p => {
+    const mv = holdingPrices[p.symbol]?.c ? holdingPrices[p.symbol].c * p.quantity : null;
+    return { symbol: p.symbol, cost: p.totalCost, mv };
+  }).filter(d => d.mv !== null);
+  if (!data.length) return '<div class="fin-widget-empty">Price data loading…</div>';
+  const W = 400, H = 120, padL = 40, padR = 10, padT = 10, padB = 24;
+  const barArea = W - padL - padR;
+  const maxVal = Math.max(...data.flatMap(d => [d.cost, d.mv])) * 1.1 || 1;
+  const groupW = barArea / data.length;
+  const barW = Math.min(groupW * 0.35, 20);
+  const yScale = v => padT + (1 - v / maxVal) * (H - padT - padB);
+  const c1 = getComputedStyle(document.documentElement).getPropertyValue('--retro-c1').trim() || '#00FF41';
+  const bars = data.map((d, i) => {
+    const cx = padL + (i + 0.5) * groupW;
+    const x1 = cx - barW - 1, x2 = cx + 1;
+    const y1 = yScale(d.cost), y2 = yScale(d.mv);
+    const bY = H - padB;
+    return `
+      <rect x="${x1.toFixed(1)}" y="${y1.toFixed(1)}" width="${barW.toFixed(1)}" height="${(bY-y1).toFixed(1)}" fill="#555" opacity="0.7"/>
+      <rect x="${x2.toFixed(1)}" y="${y2.toFixed(1)}" width="${barW.toFixed(1)}" height="${(bY-y2).toFixed(1)}" fill="${c1}" opacity="0.7"/>
+      <text x="${cx.toFixed(1)}" y="${(H-6).toFixed(1)}" text-anchor="middle" font-size="9" fill="#666" font-family="Share Tech Mono,monospace">${esc(d.symbol)}</text>`;
+  }).join('');
+  return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block">${bars}</svg>
+    <div class="costbasis-legend">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#555;opacity:0.7;margin-right:4px;vertical-align:middle"></span>Cost Basis</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:${c1};opacity:0.7;margin-right:4px;vertical-align:middle"></span>Market Value</span>
+    </div>`;
+}
+
+// ── PREFERENCES PANE ─────────────────────────────────────────────────────────
+
+function renderPreferencesPane() {
+  const a = currentAsset;
+  if (!a) return;
+  const nickInp = document.getElementById('pref-nickname-input');
+  const notesInp = document.getElementById('pref-notes-input');
+  const benchSection = document.getElementById('pref-benchmark-section');
+  const benchSel = document.getElementById('pref-benchmark-select');
+  if (nickInp) nickInp.value = a.nickname || '';
+  if (notesInp) notesInp.value = a.notes || '';
+  const isLive = isPositionsAccount(a);
+  if (benchSection) benchSection.style.display = isLive ? '' : 'none';
+  if (benchSel && isLive) benchSel.value = localStorage.getItem(`vg-fin-benchmark-${a.id}`) || '';
+}
+
+async function savePreferences() {
+  if (!currentAsset) return;
+  const nickname = document.getElementById('pref-nickname-input')?.value.trim() || null;
+  const notes = document.getElementById('pref-notes-input')?.value.trim() || null;
+  const { error } = await DB.from('assets')
+    .update({ nickname, notes })
+    .eq('id', currentAsset.id)
+    .eq('user_id', currentUser.id);
+  if (error) { console.error(error); return; }
+  const idx = assets.findIndex(a => a.id === currentAsset.id);
+  if (idx !== -1) { assets[idx] = { ...assets[idx], nickname, notes }; currentAsset = assets[idx]; }
+  // Save benchmark
+  const benchSel = document.getElementById('pref-benchmark-select');
+  if (benchSel && isPositionsAccount(currentAsset)) {
+    const bm = benchSel.value;
+    if (bm) localStorage.setItem(`vg-fin-benchmark-${currentAsset.id}`, bm);
+    else localStorage.removeItem(`vg-fin-benchmark-${currentAsset.id}`);
+  }
+  // Update hero display name
+  const displayName = nickname || currentAsset.name;
+  document.getElementById('ac-name').textContent = displayName;
+  document.getElementById('view-title').textContent = displayName;
+  // Flash feedback
+  const saveBtn = document.querySelector('#act-pane-preferences .btn-primary');
+  if (saveBtn) { const orig = saveBtn.textContent; saveBtn.textContent = 'Saved'; setTimeout(() => saveBtn.textContent = orig, 1500); }
 }
 
 // ── KICK OFF ──────────────────────────────────────────────────────────────────
