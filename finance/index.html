@@ -557,7 +557,9 @@ let currentAccountTab = 'holdings';
 let currentHoldings = [];
 let currentTransactions = [];
 let holdingPrices = {};
-const INVESTMENT_TYPES = new Set(['Brokerage/Investments','Retirement','Health Savings Account (HSA)','Crypto','Business Equity']);
+const INVESTMENT_TYPES = new Set(['Brokerage/Investments','Retirement','Health Savings Account (HSA)','Crypto']);
+// Types that can use Track Positions (have tradeable securities with live prices)
+const POSITIONS_ELIGIBLE_TYPES = new Set(['Brokerage/Investments','Retirement','Health Savings Account (HSA)','Crypto']);
 let typeFilter     = null; // string or null — filter assets view by type
 let chartTimeFilter = '1Y'; // active time filter for net worth chart
 let activeCatTypes  = null; // Set of active category types (null = all)
@@ -1538,10 +1540,10 @@ function resetAssetModal() {
   document.getElementById('asset-modal-title').textContent = 'New Account';
   document.getElementById('initial-value-group').style.display = '';
   document.getElementById('cycle-group').style.display = '';
-  document.getElementById('asset-mode-picker').style.display = '';
+  document.getElementById('asset-mode-picker').style.display = ''; // Brokerage is default type — eligible
   document.getElementById('asset-delete-btn').style.display = 'none';
   document.getElementById('asset-save-btn').textContent = 'Save Account';
-  setAccountMode('positions'); // default for Brokerage/Investments
+  setAccountMode('positions');
 }
 
 function setAccountMode(mode) {
@@ -1563,10 +1565,11 @@ function setAccountMode(mode) {
 
 function assetTypeChanged() {
   const type = document.getElementById('asset-type-input').value;
-  const isPositions = INVESTMENT_TYPES.has(type);
-  // Only auto-switch mode if we're creating (not editing)
+  const eligible = POSITIONS_ELIGIBLE_TYPES.has(type);
+  // Only auto-switch and show picker if we're creating (not editing)
   if (!document.getElementById('editing-asset-id').value) {
-    setAccountMode(isPositions ? 'positions' : 'balance');
+    document.getElementById('asset-mode-picker').style.display = eligible ? '' : 'none';
+    setAccountMode(eligible ? 'positions' : 'balance');
   }
 }
 

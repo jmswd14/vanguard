@@ -2,6 +2,6 @@
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS tracking_mode text NOT NULL DEFAULT 'balance'
   CHECK (tracking_mode IN ('positions', 'balance'));
 
--- Migrate existing investment-type accounts to 'positions'
+-- Migrate existing accounts with tradeable securities to 'positions'
 UPDATE assets SET tracking_mode = 'positions'
-WHERE type IN ('Brokerage/Investments','Retirement','Health Savings Account (HSA)','Crypto','Business Equity');
+WHERE type IN ('Brokerage/Investments','Retirement','Health Savings Account (HSA)','Crypto');
