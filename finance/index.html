@@ -470,6 +470,46 @@
   </div>
 </div>
 
+<!-- ACCOUNT SETUP WIZARD -->
+<div class="modal-backdrop" id="account-setup-modal">
+  <div class="modal account-setup-inner">
+    <div class="modal-title">Set Up Account</div>
+    <div class="setup-account-name" id="setup-account-name"></div>
+    <input type="hidden" id="setup-asset-id">
+
+    <div class="setup-section">
+      <div class="setup-section-label">Opening Cash Balance</div>
+      <div class="setup-cash-row">
+        <div class="input-prefix-wrap" style="max-width:180px;">
+          <span class="input-prefix">$</span>
+          <input type="number" id="setup-cash-input" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <span class="form-hint" style="margin:0;">Uninvested cash already in this account</span>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-label">Holdings</div>
+      <div class="setup-holdings-head">
+        <span>Ticker</span>
+        <span>Security Name</span>
+        <span>Date Acquired</span>
+        <span>Quantity</span>
+        <span>Total Cost Basis</span>
+        <span>Per Share</span>
+        <span></span>
+      </div>
+      <div id="setup-rows-container"></div>
+      <button class="btn" style="margin-top:10px;font-size:11px;padding:5px 12px;" onclick="addSetupRow()">+ Add Holding</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="startEmptyAccount()">Start Empty</button>
+      <button class="btn btn-primary" onclick="saveAccountSetup()">Set Up Account</button>
+    </div>
+  </div>
+</div>
+
 <!-- LOG VALUE -->
 <div class="modal-backdrop" id="log-value-modal">
   <div class="modal finance-modal">
@@ -1418,17 +1458,9 @@ function setAccountMode(mode) {
   document.getElementById('asset-mode-input').value = mode;
   document.getElementById('mode-card-balance').classList.toggle('active', mode === 'balance');
   document.getElementById('mode-card-positions').classList.toggle('active', mode === 'positions');
-  // Show/hide initial value field based on mode
-  const ivGroup = document.getElementById('initial-value-group');
-  const ivLabel = document.getElementById('initial-value-label');
-  const ivHint  = document.getElementById('initial-value-hint');
-  if (mode === 'positions') {
-    ivLabel.textContent = 'Opening Cash Balance';
-    ivHint.textContent = 'Uninvested cash already in this account (optional)';
-  } else {
-    ivLabel.textContent = 'Initial Balance';
-    ivHint.textContent = 'Optional starting value';
-  }
+  // Positions accounts use the setup wizard for cash+holdings — hide initial value here
+  document.getElementById('initial-value-group').style.display = mode === 'positions' ? 'none' : '';
+  document.getElementById('cycle-group').style.display = mode === 'positions' ? 'none' : '';
 }
 
 function assetTypeChanged() {
@@ -1459,6 +1491,7 @@ function openEditAsset() {
   document.getElementById('asset-cycle-input').value = a.update_cycle_day || '';
   document.getElementById('asset-notes-input').value = a.notes || '';
   document.getElementById('initial-value-group').style.display = 'none';
+  document.getElementById('cycle-group').style.display = '';
   document.getElementById('asset-mode-picker').style.display = 'none'; // mode locked after creation
   document.getElementById('asset-delete-btn').style.display = '';
   document.getElementById('asset-save-btn').textContent = 'Save Changes';
@@ -1501,17 +1534,17 @@ async function saveAsset() {
     if (error) { console.error(error); return; }
     assets.push(asset);
 
-    if (!isNaN(initialVal) && initialVal > 0) {
-      if (trackingMode === 'positions') {
-        // Opening cash → deposit transaction
-        const txn = {
-          id: crypto.randomUUID(), user_id: currentUser.id, asset_id: asset.id,
-          type: 'deposit', symbol: null, quantity: null, price: null,
-          amount: initialVal, date: todayISO(), notes: 'Opening cash balance',
-        };
-        await DB.from('transactions').insert(txn);
-      } else {
-        // Balance mode → log entry
+    if (trackingMode === 'positions') {
+      // Close account modal and open the setup wizard
+      closeModal('add-asset-modal');
+      renderAll();
+      updateTypeSidebarNav();
+      updateAssetCount();
+      openAccountSetupModal(asset);
+      return;
+    } else {
+      // Balance mode → optional initial log entry
+      if (!isNaN(initialVal) && initialVal > 0) {
         const log = {
           id: crypto.randomUUID(), asset_id: asset.id, user_id: currentUser.id,
           value: initialVal, logged_at: todayISO(), notes: 'Initial value',
@@ -2399,6 +2432,145 @@ async function deleteTransaction(id) {
     renderAccountHoldings();
     updateAccountHero();
   }
+}
+
+// ── ACCOUNT SETUP WIZARD ─────────────────────────────────────────────────────
+
+let setupRowIdx = 0;
+
+function openAccountSetupModal(asset) {
+  setupRowIdx = 0;
+  document.getElementById('setup-asset-id').value = asset.id;
+  document.getElementById('setup-account-name').textContent = asset.name;
+  document.getElementById('setup-cash-input').value = '';
+  document.getElementById('setup-rows-container').innerHTML = '';
+  addSetupRow(); // start with one empty row
+  document.getElementById('account-setup-modal').classList.add('show');
+}
+
+function addSetupRow(sym, name, date, qty, cost) {
+  const n = setupRowIdx++;
+  const today = todayISO();
+  const container = document.getElementById('setup-rows-container');
+  const row = document.createElement('div');
+  row.className = 'setup-row';
+  row.id = `setup-row-${n}`;
+  row.innerHTML = `
+    <div class="sh-col-sym">
+      <div class="symbol-search-wrap">
+        <input type="text" id="setup-sym-${n}" placeholder="AAPL"
+               style="text-transform:uppercase;font-size:12px;" autocomplete="off">
+        <div class="symbol-dropdown" id="setup-drop-${n}"></div>
+      </div>
+    </div>
+    <div class="sh-col-name">
+      <span class="setup-name-display" id="setup-name-${n}"></span>
+    </div>
+    <div class="sh-col-date">
+      <input type="date" id="setup-date-${n}" value="${date || today}">
+    </div>
+    <div class="sh-col-qty">
+      <input type="number" id="setup-qty-${n}" placeholder="0" step="0.0001" min="0"
+             oninput="updateSetupPerShare(${n})">
+    </div>
+    <div class="sh-col-cost">
+      <div class="input-prefix-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="setup-cost-${n}" placeholder="0.00" step="0.01" min="0"
+               oninput="updateSetupPerShare(${n})">
+      </div>
+    </div>
+    <div class="sh-col-ps">
+      <span class="setup-pershare" id="setup-pershare-${n}">—</span>
+    </div>
+    <div class="sh-col-del">
+      <button class="setup-row-del" onclick="removeSetupRow(${n})" title="Remove">×</button>
+    </div>`;
+  container.appendChild(row);
+
+  // Pre-fill if values passed
+  if (sym) document.getElementById(`setup-sym-${n}`).value = sym;
+  if (name) document.getElementById(`setup-name-${n}`).textContent = name;
+  if (qty) { document.getElementById(`setup-qty-${n}`).value = qty; }
+  if (cost) { document.getElementById(`setup-cost-${n}`).value = cost; updateSetupPerShare(n); }
+
+  // Init autocomplete for this row
+  initSymbolAutocomplete(`setup-sym-${n}`, `setup-drop-${n}`, (s, nm) => {
+    document.getElementById(`setup-sym-${n}`).value = s;
+    document.getElementById(`setup-name-${n}`).textContent = nm || '';
+  });
+  // Clear name on manual type
+  document.getElementById(`setup-sym-${n}`).addEventListener('input', () => {
+    document.getElementById(`setup-name-${n}`).textContent = '';
+  });
+}
+
+function removeSetupRow(n) {
+  const row = document.getElementById(`setup-row-${n}`);
+  if (row) row.remove();
+}
+
+function updateSetupPerShare(n) {
+  const cost = parseFloat(document.getElementById(`setup-cost-${n}`)?.value) || 0;
+  const qty  = parseFloat(document.getElementById(`setup-qty-${n}`)?.value) || 0;
+  const el   = document.getElementById(`setup-pershare-${n}`);
+  if (el) el.textContent = (qty > 0 && cost > 0) ? fmtUSD(cost / qty) : '—';
+}
+
+function startEmptyAccount() {
+  const assetId = document.getElementById('setup-asset-id').value;
+  document.getElementById('account-setup-modal').classList.remove('show');
+  openAccount(assetId);
+}
+
+async function saveAccountSetup() {
+  const assetId = document.getElementById('setup-asset-id').value;
+  const cashVal = parseFloat(document.getElementById('setup-cash-input').value) || 0;
+  const rows = document.querySelectorAll('#setup-rows-container .setup-row');
+  const transactions = [];
+  const today = todayISO();
+
+  // Validate & collect holdings
+  for (const row of rows) {
+    const n = row.id.replace('setup-row-', '');
+    const sym  = document.getElementById(`setup-sym-${n}`)?.value.trim().toUpperCase();
+    const date = document.getElementById(`setup-date-${n}`)?.value;
+    const qty  = parseFloat(document.getElementById(`setup-qty-${n}`)?.value);
+    const cost = parseFloat(document.getElementById(`setup-cost-${n}`)?.value);
+
+    // Skip completely empty rows
+    if (!sym && !qty && !cost) continue;
+
+    if (!sym)  { alert('Ticker is required for each holding.'); return; }
+    if (!date) { alert(`Date is required for ${sym}.`); return; }
+    if (!qty || qty <= 0) { alert(`Quantity is required for ${sym}.`); return; }
+    if (isNaN(cost) || cost <= 0) { alert(`Cost basis is required for ${sym}.`); return; }
+
+    transactions.push({
+      id: crypto.randomUUID(), user_id: currentUser.id, asset_id: assetId,
+      type: 'transfer_in', symbol: sym, quantity: qty,
+      price: qty > 0 ? cost / qty : null,
+      amount: cost, date, notes: 'Opening position',
+    });
+  }
+
+  // Opening cash deposit
+  if (cashVal > 0) {
+    transactions.push({
+      id: crypto.randomUUID(), user_id: currentUser.id, asset_id: assetId,
+      type: 'deposit', symbol: null, quantity: null, price: null,
+      amount: cashVal, date: today, notes: 'Opening cash balance',
+    });
+  }
+
+  // Save all at once
+  if (transactions.length > 0) {
+    const { error } = await DB.from('transactions').insert(transactions);
+    if (error) { console.error(error); alert('Error saving setup. Please try again.'); return; }
+  }
+
+  document.getElementById('account-setup-modal').classList.remove('show');
+  openAccount(assetId);
 }
 
 async function fetchTxnSecurityName(symbol) {

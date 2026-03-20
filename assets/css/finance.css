@@ -316,6 +316,97 @@
 
 /* ── MODALS ── */
 .finance-modal { max-width: 420px; }
+
+/* ── ACCOUNT SETUP WIZARD ── */
+.account-setup-inner {
+  max-width: 760px;
+  width: 95vw;
+}
+.setup-account-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: -10px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.setup-section { margin-bottom: 24px; }
+.setup-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.setup-cash-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.setup-holdings-head,
+.setup-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 120px 80px 130px 72px 28px;
+  gap: 8px;
+  align-items: center;
+}
+.setup-holdings-head {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.setup-row {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setup-row:last-child { border-bottom: none; }
+.setup-name-display {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  min-height: 1em;
+}
+.setup-pershare {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.setup-row-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.5;
+}
+.setup-row-del:hover { color: var(--p-high); opacity: 1; }
+.setup-row input[type="text"],
+.setup-row input[type="date"],
+.setup-row input[type="number"] {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+@media (max-width: 680px) {
+  .setup-holdings-head { display: none; }
+  .setup-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .sh-col-name { grid-column: 1 / -1; }
+  .sh-col-del  { grid-column: 2; justify-self: end; }
+}
 .form-row-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -324,7 +415,8 @@
 
 /* ── MODAL Z-INDEX — must sit above detail-overlay (2000) ── */
 #add-asset-modal, #log-value-modal,
-#add-holding-modal, #add-transaction-modal { z-index: 3000; }
+#add-holding-modal, #add-transaction-modal,
+#account-setup-modal { z-index: 3000; }
 
 /* ── SYMBOL SEARCH AUTOCOMPLETE ── */
 .symbol-search-wrap { position: relative; }
