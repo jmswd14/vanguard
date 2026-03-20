@@ -128,7 +128,7 @@ Be direct, concise, and genuinely helpful. Reference the user's actual data natu
 
     // Call Gemini with streaming
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${Deno.env.get('GEMINI_API_KEY')}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${Deno.env.get('GEMINI_API_KEY')}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
