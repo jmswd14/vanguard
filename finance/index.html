@@ -2866,20 +2866,102 @@ function getWidgetVisibility() {
   return new Set(FIN_WIDGET_DEFS.map(w => w.id));
 }
 
+function getWidgetOrder() {
+  const allIds = FIN_WIDGET_DEFS.map(w => w.id);
+  try {
+    const saved = JSON.parse(localStorage.getItem('vg-fin-widget-order') || 'null');
+    if (Array.isArray(saved)) {
+      const known = new Set(saved);
+      return [...saved.filter(id => allIds.includes(id)), ...allIds.filter(id => !known.has(id))];
+    }
+  } catch {}
+  return [...allIds];
+}
+
+function saveWidgetOrder(arr) {
+  localStorage.setItem('vg-fin-widget-order', JSON.stringify(arr));
+}
+
 function toggleOverviewCustomize() {
   const customizer = document.getElementById('fin-widget-customizer');
   if (!customizer) return;
-  const isVisible = customizer.style.display !== 'none';
-  if (isVisible) { customizer.style.display = 'none'; return; }
-  const vis = getWidgetVisibility();
-  customizer.innerHTML = FIN_WIDGET_DEFS.map(w =>
-    `<label class="col-picker-item">
-      <input type="checkbox" ${vis.has(w.id) ? 'checked' : ''}
-             onchange="toggleOverviewWidget('${w.id}', this.checked)">
-      ${w.label}
-    </label>`
-  ).join('');
+  if (customizer.style.display !== 'none') { customizer.style.display = 'none'; return; }
+  renderOverviewCustomizer();
   customizer.style.display = 'flex';
+}
+
+function renderOverviewCustomizer() {
+  const customizer = document.getElementById('fin-widget-customizer');
+  if (!customizer) return;
+  const vis = getWidgetVisibility();
+  const order = getWidgetOrder();
+  customizer.innerHTML = order.map(id => {
+    const w = FIN_WIDGET_DEFS.find(x => x.id === id);
+    if (!w) return '';
+    return `<div class="col-picker-item" draggable="true"
+      ondragstart="widgetPickerDragStart(event,'${id}')"
+      ondragover="widgetPickerDragOver(event)"
+      ondragleave="colDragLeave(event)"
+      ondrop="widgetPickerDrop(event,'${id}')"
+      ondragend="colDragEnd()">
+      <span class="col-drag-handle">⠿</span>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex:1;margin:0">
+        <input type="checkbox" ${vis.has(id) ? 'checked' : ''} onchange="toggleOverviewWidget('${id}', this.checked)">
+        ${w.label}
+      </label>
+    </div>`;
+  }).join('');
+}
+
+let _widgetPickerDragSrc = null;
+function widgetPickerDragStart(e, id) { _widgetPickerDragSrc = id; e.dataTransfer.effectAllowed = 'move'; }
+function widgetPickerDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('col-drag-over'); }
+function widgetPickerDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('col-drag-over');
+  if (!_widgetPickerDragSrc || _widgetPickerDragSrc === targetId) return;
+  const order = getWidgetOrder();
+  const from = order.indexOf(_widgetPickerDragSrc);
+  const to   = order.indexOf(targetId);
+  if (from < 0 || to < 0) return;
+  order.splice(from, 1);
+  order.splice(to, 0, _widgetPickerDragSrc);
+  saveWidgetOrder(order);
+  renderOverviewCustomizer();
+  renderLiveOverviewWidgets();
+}
+
+// Drag on the grid cards themselves
+let _gridWidgetDragSrc = null;
+function gridWidgetDragStart(e, id) {
+  _gridWidgetDragSrc = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('fin-widget-dragging');
+}
+function gridWidgetDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('fin-widget-drag-over'); }
+function gridWidgetDragLeave(e) { e.currentTarget.classList.remove('fin-widget-drag-over'); }
+function gridWidgetDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('fin-widget-drag-over');
+  if (!_gridWidgetDragSrc || _gridWidgetDragSrc === targetId) return;
+  const vis = getWidgetVisibility();
+  const order = getWidgetOrder();
+  const visOrder = order.filter(id => vis.has(id));
+  const from = visOrder.indexOf(_gridWidgetDragSrc);
+  const to   = visOrder.indexOf(targetId);
+  if (from < 0 || to < 0) return;
+  visOrder.splice(from, 1);
+  visOrder.splice(to, 0, _gridWidgetDragSrc);
+  // Reinsert visible slots in new order, keep hidden slots in place
+  let vi = 0;
+  const newOrder = order.map(id => vis.has(id) ? visOrder[vi++] : id);
+  saveWidgetOrder(newOrder);
+  renderLiveOverviewWidgets();
+  renderOverviewCustomizer();
+}
+function gridWidgetDragEnd(e) {
+  _gridWidgetDragSrc = null;
+  document.querySelectorAll('.fin-widget').forEach(el => el.classList.remove('fin-widget-dragging', 'fin-widget-drag-over'));
 }
 
 function toggleOverviewWidget(id, checked) {
@@ -2893,6 +2975,7 @@ function renderLiveOverviewWidgets() {
   const grid = document.getElementById('fin-widget-grid');
   if (!grid) return;
   const vis = getWidgetVisibility();
+  const order = getWidgetOrder();
   const positions = computePositions(currentTransactions);
   const cash = computeCash(currentTransactions);
   const holdingsMV = positions.reduce((s, p) => {
@@ -2901,13 +2984,23 @@ function renderLiveOverviewWidgets() {
   }, 0);
   const totalPortfolio = holdingsMV + cash;
 
-  grid.innerHTML = FIN_WIDGET_DEFS.filter(w => vis.has(w.id)).map(w => {
+  grid.innerHTML = order.filter(id => vis.has(id)).map(id => {
+    const w = FIN_WIDGET_DEFS.find(x => x.id === id);
+    if (!w) return '';
     let content = '';
     if (w.id === 'allocation') content = renderAllocationWidget(positions, cash, totalPortfolio);
     else if (w.id === 'movers') content = renderMoversWidget(positions);
     else if (w.id === 'costbasis') content = renderCostBasisWidget(positions);
-    return `<div class="fin-widget" id="fin-widget-${w.id}">
-      <div class="fin-widget-label">${w.label}</div>
+    return `<div class="fin-widget" id="fin-widget-${w.id}" draggable="true"
+      ondragstart="gridWidgetDragStart(event,'${w.id}')"
+      ondragover="gridWidgetDragOver(event)"
+      ondragleave="gridWidgetDragLeave(event)"
+      ondrop="gridWidgetDrop(event,'${w.id}')"
+      ondragend="gridWidgetDragEnd(event)">
+      <div class="fin-widget-header">
+        <span class="fin-widget-drag-handle" title="Drag to reorder">⠿</span>
+        <span class="fin-widget-label">${w.label}</span>
+      </div>
       ${content}
     </div>`;
   }).join('');
@@ -2941,17 +3034,15 @@ function renderAllocationWidget(positions, cash, totalPortfolio) {
 function renderMoversWidget(positions) {
   const withDay = positions.map(p => {
     const q = holdingPrices[p.symbol];
-    return q?.d != null ? { symbol: p.symbol, dayDollar: q.d * p.quantity, dayPct: q.dp ?? 0 } : null;
+    return q?.dp != null ? { symbol: p.symbol, dayDollar: q.d * p.quantity, dayPct: q.dp } : null;
   }).filter(Boolean);
   if (!withDay.length) return '<div class="fin-widget-empty">Price data loading…</div>';
-  withDay.sort((a, b) => b.dayDollar - a.dayDollar);
-  const seen = new Set();
-  const top = [], bottom = [];
-  for (const p of withDay) { if (!seen.has(p.symbol)) { top.push(p); seen.add(p.symbol); } if (top.length >= 3) break; }
-  for (const p of [...withDay].reverse()) { if (!seen.has(p.symbol)) { bottom.push(p); seen.add(p.symbol); } if (bottom.length >= 3) break; }
-  const rows = [...top, ...bottom].map(p => {
-    const cls = p.dayDollar >= 0 ? 'holding-gain-pos' : 'holding-gain-neg';
-    const sign = p.dayDollar >= 0 ? '+' : '';
+  // Sort by largest absolute % move (most volatile first)
+  withDay.sort((a, b) => Math.abs(b.dayPct) - Math.abs(a.dayPct));
+  const top = [...new Map(withDay.map(p => [p.symbol, p])).values()].slice(0, 5);
+  const rows = top.map(p => {
+    const cls  = p.dayPct >= 0 ? 'holding-gain-pos' : 'holding-gain-neg';
+    const sign = p.dayPct >= 0 ? '+' : '';
     return `<tr>
       <td class="ht-td ht-sym">${esc(p.symbol)}</td>
       <td class="ht-td ht-num"><span class="${cls}">${sign}${fmtUSD(p.dayDollar)}</span></td>
