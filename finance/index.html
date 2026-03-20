@@ -1175,6 +1175,8 @@ function renderAccountHoldings() {
 
 function refreshHoldingPrices() {
   holdingPrices = {};
+  // Clear any cached quotes so they re-fetch fresh
+  Object.keys(localStorage).filter(k => k.startsWith('vg-mkt-q-')).forEach(k => localStorage.removeItem(k));
   loadHoldings();
 }
 
@@ -2016,7 +2018,7 @@ async function loadHoldings() {
   // Fetch live prices for all symbols
   const symbols = [...new Set(currentHoldings.map(h => h.symbol.toUpperCase()))];
   for (const sym of symbols) {
-    fetchQuote(sym).then(q => {
+    fetchQuote(sym, FINNHUB_KEY).then(q => {
       if (q?.c) {
         holdingPrices[sym] = q; // store full quote object
         if (currentDetailTab === 'holdings') renderHoldingsTab();
