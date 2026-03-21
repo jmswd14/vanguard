@@ -105,6 +105,13 @@
           <span class="rs-nav-label">Progress</span>
         </div>
       </div>
+
+      <div class="sidebar-item" id="nav-quit" onclick="setView('quit', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></span>
+          <span class="rs-nav-label">Quit</span>
+        </div>
+      </div>
     </div>
   </nav>
 
@@ -153,6 +160,19 @@
       </div>
 
       <div id="progress-body"></div>
+    </div>
+
+    <!-- ── QUIT VIEW ── -->
+    <div id="view-quit" style="display:none;">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2>Quit</h2>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-primary" onclick="openNewQuitTracker()">+ New</button>
+        </div>
+      </div>
+      <div id="quit-grid" class="quit-grid"></div>
     </div>
 
   </main>
@@ -229,6 +249,84 @@
         <button class="btn btn-primary" onclick="saveHabit()">Save Habit</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- NEW QUIT TRACKER -->
+<div class="modal-backdrop" id="quit-new-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title">New Quit Tracker</div>
+    <div class="form-group">
+      <label>What are you quitting? <span style="color:var(--p-high);">*</span></label>
+      <input type="text" id="quit-name-input" placeholder="e.g. Smoking, Fast food, Alcohol…">
+    </div>
+    <div class="form-group">
+      <label>Quit since</label>
+      <div class="quit-since-toggle" id="quit-since-toggle">
+        <button class="quit-since-btn active" id="quit-since-now-btn" onclick="setQuitSinceMode('now')">Right now</button>
+        <button class="quit-since-btn" id="quit-since-custom-btn" onclick="setQuitSinceMode('custom')">Custom date</button>
+      </div>
+      <input type="datetime-local" id="quit-since-input" style="display:none;margin-top:8px;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('quit-new-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveQuitTracker()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOG A SLIP -->
+<div class="modal-backdrop" id="quit-slip-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-title" id="quit-slip-title">Log a Slip</div>
+    <input type="hidden" id="quit-slip-tracker-id">
+    <div class="form-group">
+      <label>When did you slip?</label>
+      <div class="quit-since-toggle">
+        <button class="quit-since-btn active" id="quit-slip-now-btn" onclick="setSlipTimeMode('now')">Right now</button>
+        <button class="quit-since-btn" id="quit-slip-custom-btn" onclick="setSlipTimeMode('custom')">Custom time</button>
+      </div>
+      <input type="datetime-local" id="quit-slip-time-input" style="display:none;margin-top:8px;">
+    </div>
+    <div class="form-group">
+      <label>Note <span class="dim" style="font-size:11px;">(optional)</span></label>
+      <input type="text" id="quit-slip-note-input" placeholder="e.g. At the party…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('quit-slip-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSlip()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUIT DETAIL -->
+<div class="modal-backdrop" id="quit-detail-modal">
+  <div class="modal" style="max-width:540px;width:95%;">
+    <div class="quit-detail-header">
+      <div class="modal-title" id="quit-detail-title"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn" id="quit-detail-slip-btn" onclick="openSlipFromDetail()">I Slipped</button>
+        <button class="btn" onclick="closeModal('quit-detail-modal')">Close</button>
+        <button class="btn" style="color:var(--p-high);border-color:var(--p-high);" onclick="confirmDeleteQuit()">Delete</button>
+      </div>
+    </div>
+    <div class="quit-detail-stats">
+      <div class="quit-stat-block">
+        <div class="quit-stat-label">CURRENT STREAK</div>
+        <div class="quit-stat-value" id="quit-detail-current"></div>
+        <div class="quit-stat-sub" id="quit-detail-since"></div>
+      </div>
+      <div class="quit-stat-block">
+        <div class="quit-stat-label">LONGEST STREAK</div>
+        <div class="quit-stat-value" id="quit-detail-longest"></div>
+        <div class="quit-stat-sub" id="quit-detail-longest-dates"></div>
+      </div>
+    </div>
+    <div class="quit-detail-log-header">
+      <span>SLIP LOG</span>
+      <span id="quit-detail-slip-count" class="dim"></span>
+    </div>
+    <div id="quit-detail-log" class="quit-detail-log"></div>
   </div>
 </div>
 
@@ -411,10 +509,12 @@ function setView(view, el) {
   currentView = view;
   document.getElementById('view-today').style.display    = view === 'today'    ? '' : 'none';
   document.getElementById('view-progress').style.display = view === 'progress' ? '' : 'none';
+  document.getElementById('view-quit').style.display     = view === 'quit'     ? '' : 'none';
   document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
   if (el) el.classList.add('active');
   if (view === 'today')    renderToday();
   if (view === 'progress') renderProgress();
+  if (view === 'quit')     renderQuitView();
   closeMobileMenus();
 }
 
@@ -1162,10 +1262,234 @@ async function init() {
   habits = hr.data  || [];
   logs   = lgr.data || [];
 
+  await loadQuitData();
   renderToday();
 }
 
 init();
+
+// ── QUIT TRACKER ──────────────────────────────────────────────────────────────
+
+let quitTrackers = [];
+let quitEvents   = {}; // tracker_id → events[] sorted desc
+let _quitDetailId = null;
+
+async function loadQuitData() {
+  const [tr, ev] = await Promise.all([
+    _sb.from('quit_trackers').select('*').eq('user_id', _uid).order('created_at'),
+    _sb.from('quit_events').select('*').eq('user_id', _uid).order('occurred_at', { ascending: false }),
+  ]);
+  quitTrackers = tr.data || [];
+  quitEvents   = {};
+  for (const t of quitTrackers) quitEvents[t.id] = [];
+  for (const e of (ev.data || [])) {
+    if (quitEvents[e.tracker_id]) quitEvents[e.tracker_id].push(e);
+  }
+}
+
+function fmtDuration(ms) {
+  if (ms < 0) ms = 0;
+  const totalHours = Math.floor(ms / 3600000);
+  const days  = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days > 0) return days + 'd ' + hours + 'h';
+  return hours + 'h';
+}
+
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function fmtDateShort(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function quitCurrentMs(tracker) {
+  const events = quitEvents[tracker.id] || [];
+  const since  = events.length ? new Date(events[0].occurred_at) : new Date(tracker.started_at);
+  return Date.now() - since.getTime();
+}
+
+function quitLongestMs(tracker) {
+  const events = (quitEvents[tracker.id] || [])
+    .slice()
+    .sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
+  let longest = 0;
+  let prev    = new Date(tracker.started_at).getTime();
+  for (const e of events) {
+    const dur = new Date(e.occurred_at).getTime() - prev;
+    if (dur > longest) longest = dur;
+    prev = new Date(e.occurred_at).getTime();
+  }
+  const current = Date.now() - prev;
+  if (current > longest) longest = current;
+  return longest;
+}
+
+function quitLongestPeriod(tracker) {
+  const events = (quitEvents[tracker.id] || [])
+    .slice()
+    .sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
+  let longest = 0, bestStart = new Date(tracker.started_at), bestEnd = new Date();
+  let prev = new Date(tracker.started_at);
+  const check = (start, end) => {
+    const dur = end - start;
+    if (dur > longest) { longest = dur; bestStart = start; bestEnd = end; }
+  };
+  for (const e of events) { check(prev, new Date(e.occurred_at)); prev = new Date(e.occurred_at); }
+  check(prev, new Date());
+  return { start: bestStart, end: bestEnd };
+}
+
+function renderQuitView() {
+  const el = document.getElementById('quit-grid');
+  if (!quitTrackers.length) {
+    el.innerHTML = '<div class="detail-empty-logs" style="margin-top:40px;">No quit trackers yet. Hit + New to start one.</div>';
+    return;
+  }
+  el.innerHTML = quitTrackers.map(t => {
+    const currentMs  = quitCurrentMs(t);
+    const longestMs  = quitLongestMs(t);
+    const events     = quitEvents[t.id] || [];
+    const sinceDate  = events.length ? events[0].occurred_at : t.started_at;
+    const slipCount  = events.length;
+    return `<div class="quit-card" onclick="openQuitDetail('${t.id}')">
+      <div class="quit-card-name">${esc(t.name)}</div>
+      <div class="quit-elapsed">${fmtDuration(currentMs)}</div>
+      <div class="quit-since">clean since ${fmtDateShort(sinceDate)}</div>
+      <div class="quit-meta">
+        <span>Longest: <strong>${fmtDuration(longestMs)}</strong></span>
+        <span>${slipCount} slip${slipCount !== 1 ? 's' : ''}</span>
+      </div>
+      <button class="quit-slip-btn" onclick="event.stopPropagation(); openSlipModal('${t.id}')">I Slipped</button>
+    </div>`;
+  }).join('');
+}
+
+function openQuitDetail(id) {
+  _quitDetailId = id;
+  const t      = quitTrackers.find(x => x.id === id);
+  const events = quitEvents[id] || [];
+  const { start, end } = quitLongestPeriod(t);
+  const sinceDate = events.length ? events[0].occurred_at : t.started_at;
+
+  document.getElementById('quit-detail-title').textContent   = t.name;
+  document.getElementById('quit-detail-current').textContent = fmtDuration(quitCurrentMs(t));
+  document.getElementById('quit-detail-since').textContent   = 'since ' + fmtDateShort(sinceDate);
+  document.getElementById('quit-detail-longest').textContent = fmtDuration(quitLongestMs(t));
+  document.getElementById('quit-detail-longest-dates').textContent =
+    fmtDateShort(start) + ' – ' + fmtDateShort(end);
+  document.getElementById('quit-detail-slip-count').textContent =
+    events.length ? events.length + ' total slip' + (events.length !== 1 ? 's' : '') : 'No slips yet';
+
+  const logEl = document.getElementById('quit-detail-log');
+  logEl.innerHTML = events.length
+    ? events.map(e => `<div class="quit-log-entry">
+        <span class="quit-log-date">${fmtDateTime(e.occurred_at)}</span>
+        <span class="quit-log-note dim">${e.note ? esc(e.note) : '—'}</span>
+      </div>`).join('')
+    : '<div class="dim" style="padding:16px 0;font-size:13px;">No slips logged yet.</div>';
+
+  document.getElementById('quit-detail-modal').classList.add('show');
+}
+
+function openSlipFromDetail() {
+  closeModal('quit-detail-modal');
+  openSlipModal(_quitDetailId);
+}
+
+function openSlipModal(id) {
+  const t = quitTrackers.find(x => x.id === id);
+  document.getElementById('quit-slip-tracker-id').value   = id;
+  document.getElementById('quit-slip-title').textContent  = 'Log a Slip — ' + t.name;
+  document.getElementById('quit-slip-note-input').value   = '';
+  document.getElementById('quit-slip-time-input').value   = '';
+  setSlipTimeMode('now');
+  document.getElementById('quit-slip-modal').classList.add('show');
+}
+
+async function saveSlip() {
+  const trackerId = document.getElementById('quit-slip-tracker-id').value;
+  const mode      = document.getElementById('quit-slip-now-btn').classList.contains('active') ? 'now' : 'custom';
+  let   occurred_at;
+  if (mode === 'now') {
+    occurred_at = new Date().toISOString();
+  } else {
+    const val = document.getElementById('quit-slip-time-input').value;
+    if (!val) { alert('Please enter a date and time.'); return; }
+    occurred_at = new Date(val).toISOString();
+  }
+  const note = document.getElementById('quit-slip-note-input').value.trim() || null;
+  const { error } = await _sb.from('quit_events').insert({
+    id: crypto.randomUUID(), tracker_id: trackerId, user_id: _uid, occurred_at, note,
+  });
+  if (error) { console.error(error); alert('Error saving slip.'); return; }
+  closeModal('quit-slip-modal');
+  await loadQuitData();
+  renderQuitView();
+}
+
+function openNewQuitTracker() {
+  document.getElementById('quit-name-input').value  = '';
+  document.getElementById('quit-since-input').value = '';
+  setQuitSinceMode('now');
+  document.getElementById('quit-new-modal').classList.add('show');
+}
+
+async function saveQuitTracker() {
+  const name = document.getElementById('quit-name-input').value.trim();
+  if (!name) { alert('Name is required.'); return; }
+  const mode = document.getElementById('quit-since-now-btn').classList.contains('active') ? 'now' : 'custom';
+  let started_at;
+  if (mode === 'now') {
+    started_at = new Date().toISOString();
+  } else {
+    const val = document.getElementById('quit-since-input').value;
+    if (!val) { alert('Please enter a start date.'); return; }
+    started_at = new Date(val).toISOString();
+  }
+  const { error } = await _sb.from('quit_trackers').insert({
+    id: crypto.randomUUID(), user_id: _uid, name, started_at,
+  });
+  if (error) { console.error(error); alert('Error saving tracker.'); return; }
+  closeModal('quit-new-modal');
+  await loadQuitData();
+  renderQuitView();
+}
+
+function confirmDeleteQuit() {
+  const t = quitTrackers.find(x => x.id === _quitDetailId);
+  if (!t) return;
+  document.getElementById('confirm-delete-msg').textContent =
+    'Delete "' + t.name + '" and all its slip history? This cannot be undone.';
+  document.getElementById('confirm-delete-btn').onclick = async () => {
+    await _sb.from('quit_trackers').delete().eq('id', _quitDetailId);
+    closeModal('confirm-delete-modal');
+    closeModal('quit-detail-modal');
+    await loadQuitData();
+    renderQuitView();
+  };
+  closeModal('quit-detail-modal');
+  document.getElementById('confirm-delete-modal').classList.add('show');
+}
+
+function setQuitSinceMode(mode) {
+  document.getElementById('quit-since-now-btn').classList.toggle('active', mode === 'now');
+  document.getElementById('quit-since-custom-btn').classList.toggle('active', mode === 'custom');
+  document.getElementById('quit-since-input').style.display = mode === 'custom' ? '' : 'none';
+}
+
+function setSlipTimeMode(mode) {
+  document.getElementById('quit-slip-now-btn').classList.toggle('active', mode === 'now');
+  document.getElementById('quit-slip-custom-btn').classList.toggle('active', mode === 'custom');
+  document.getElementById('quit-slip-time-input').style.display = mode === 'custom' ? '' : 'none';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 </script>
 
 <script>
