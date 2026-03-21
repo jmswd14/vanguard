@@ -262,9 +262,12 @@
     </div>
     <div class="form-group">
       <label>Quit since</label>
-      <div class="quit-since-toggle" id="quit-since-toggle">
-        <button class="quit-since-btn active" id="quit-since-now-btn" onclick="setQuitSinceMode('now')">Right now</button>
-        <button class="quit-since-btn" id="quit-since-custom-btn" onclick="setQuitSinceMode('custom')">Custom date</button>
+      <div class="sort-select-wrap">
+        <select id="quit-since-select" onchange="document.getElementById('quit-since-input').style.display=this.value==='custom'?'':'none'">
+          <option value="now">Right now</option>
+          <option value="custom">Custom date & time</option>
+        </select>
+        <span class="sort-select-arrow">▼</span>
       </div>
       <input type="datetime-local" id="quit-since-input" style="display:none;margin-top:8px;">
     </div>
@@ -282,9 +285,12 @@
     <input type="hidden" id="quit-slip-tracker-id">
     <div class="form-group">
       <label>When did you slip?</label>
-      <div class="quit-since-toggle">
-        <button class="quit-since-btn active" id="quit-slip-now-btn" onclick="setSlipTimeMode('now')">Right now</button>
-        <button class="quit-since-btn" id="quit-slip-custom-btn" onclick="setSlipTimeMode('custom')">Custom time</button>
+      <div class="sort-select-wrap">
+        <select id="quit-slip-select" onchange="document.getElementById('quit-slip-time-input').style.display=this.value==='custom'?'':'none'">
+          <option value="now">Right now</option>
+          <option value="custom">Custom date & time</option>
+        </select>
+        <span class="sort-select-arrow">▼</span>
       </div>
       <input type="datetime-local" id="quit-slip-time-input" style="display:none;margin-top:8px;">
     </div>
@@ -1404,16 +1410,18 @@ function openSlipModal(id) {
   const t = quitTrackers.find(x => x.id === id);
   document.getElementById('quit-slip-tracker-id').value   = id;
   document.getElementById('quit-slip-title').textContent  = 'Log a Slip — ' + t.name;
-  document.getElementById('quit-slip-note-input').value   = '';
+  document.getElementById('quit-slip-note-input').value    = '';
   document.getElementById('quit-slip-time-input').value   = '';
-  setSlipTimeMode('now');
+  document.getElementById('quit-slip-select').value       = 'now';
+  document.getElementById('quit-slip-time-input').style.display = 'none';
   document.getElementById('quit-slip-modal').classList.add('show');
 }
 
 async function saveSlip() {
   const trackerId = document.getElementById('quit-slip-tracker-id').value;
+  const mode = document.getElementById('quit-slip-select').value;
   let occurred_at;
-  if (_slipTimeMode === 'now') {
+  if (mode === 'now') {
     occurred_at = new Date().toISOString();
   } else {
     const val = document.getElementById('quit-slip-time-input').value;
@@ -1431,17 +1439,19 @@ async function saveSlip() {
 }
 
 function openNewQuitTracker() {
-  document.getElementById('quit-name-input').value  = '';
-  document.getElementById('quit-since-input').value = '';
-  setQuitSinceMode('now');
+  document.getElementById('quit-name-input').value    = '';
+  document.getElementById('quit-since-input').value  = '';
+  document.getElementById('quit-since-select').value = 'now';
+  document.getElementById('quit-since-input').style.display = 'none';
   document.getElementById('quit-new-modal').classList.add('show');
 }
 
 async function saveQuitTracker() {
   const name = document.getElementById('quit-name-input').value.trim();
   if (!name) { alert('Name is required.'); return; }
+  const mode = document.getElementById('quit-since-select').value;
   let started_at;
-  if (_quitSinceMode === 'now') {
+  if (mode === 'now') {
     started_at = new Date().toISOString();
   } else {
     const val = document.getElementById('quit-since-input').value;
@@ -1473,28 +1483,6 @@ function confirmDeleteQuit() {
   document.getElementById('confirm-delete-modal').classList.add('show');
 }
 
-let _quitSinceMode = 'now';
-let _slipTimeMode  = 'now';
-
-function _styleToggleBtn(btn, isActive) {
-  const green = getComputedStyle(document.documentElement).getPropertyValue('--retro-c1').trim() || '#00FF41';
-  btn.style.color      = isActive ? green : '';
-  btn.style.background = isActive ? 'var(--surface2)' : '';
-}
-
-function setQuitSinceMode(mode) {
-  _quitSinceMode = mode;
-  _styleToggleBtn(document.getElementById('quit-since-now-btn'),    mode === 'now');
-  _styleToggleBtn(document.getElementById('quit-since-custom-btn'), mode === 'custom');
-  document.getElementById('quit-since-input').style.display = mode === 'custom' ? '' : 'none';
-}
-
-function setSlipTimeMode(mode) {
-  _slipTimeMode = mode;
-  _styleToggleBtn(document.getElementById('quit-slip-now-btn'),    mode === 'now');
-  _styleToggleBtn(document.getElementById('quit-slip-custom-btn'), mode === 'custom');
-  document.getElementById('quit-slip-time-input').style.display = mode === 'custom' ? '' : 'none';
-}
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
