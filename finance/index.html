@@ -149,13 +149,6 @@
 
       <!-- Portfolio performance chart -->
       <div class="perf-chart-section" id="overview-perf-chart-section">
-        <div class="perf-period-bar">
-          <button class="perf-period-btn active" data-period="1W" onclick="loadOverviewPerfChart('1W')">1W</button>
-          <button class="perf-period-btn" data-period="1M" onclick="loadOverviewPerfChart('1M')">1M</button>
-          <button class="perf-period-btn" data-period="3M" onclick="loadOverviewPerfChart('3M')">3M</button>
-          <button class="perf-period-btn" data-period="1Y" onclick="loadOverviewPerfChart('1Y')">1Y</button>
-          <button class="perf-period-btn" data-period="ALL" onclick="loadOverviewPerfChart('ALL')">ALL</button>
-        </div>
         <div id="overview-perf-chart-container"></div>
       </div>
 
@@ -263,13 +256,6 @@
       <div id="act-pane-overview-live" style="display:none">
         <!-- Performance chart -->
         <div class="perf-chart-section" id="perf-chart-section-account">
-          <div class="perf-period-bar">
-            <button class="perf-period-btn active" data-period="1W" onclick="loadPerfChart('1W')">1W</button>
-            <button class="perf-period-btn" data-period="1M" onclick="loadPerfChart('1M')">1M</button>
-            <button class="perf-period-btn" data-period="3M" onclick="loadPerfChart('3M')">3M</button>
-            <button class="perf-period-btn" data-period="1Y" onclick="loadPerfChart('1Y')">1Y</button>
-            <button class="perf-period-btn" data-period="ALL" onclick="loadPerfChart('ALL')">ALL</button>
-          </div>
           <div id="perf-chart-container"></div>
         </div>
         <div class="fin-overview-topbar">
@@ -842,7 +828,7 @@ function renderOverview() {
   renderNWChart();
 
   // Portfolio performance chart (async)
-  loadOverviewPerfChart(_overviewPerfPeriod);
+  loadOverviewPerfChart();
 
   // Category breakdown
   renderCategoryGrid();
@@ -1217,7 +1203,7 @@ function setAccountTab(tab) {
   // Render content
   if (tab === 'holdings') renderAccountHoldings();
   else if (tab === 'transactions') renderAccountTransactions();
-  else if (tab === 'overview' && isLive) { renderLiveOverviewWidgets(); loadPerfChart(_currentPerfPeriod); }
+  else if (tab === 'overview' && isLive) { renderLiveOverviewWidgets(); loadPerfChart(); }
   else if (tab === 'overview') renderAccountOverview();
   else if (tab === 'preferences') renderPreferencesPane();
 }
@@ -2520,7 +2506,7 @@ async function loadTransactions() {
     renderAccountHoldings();
     updateAccountHero();
     if (currentAccountTab === 'overview' && isPositionsAccount(currentAsset)) {
-      loadPerfChart(_currentPerfPeriod);
+      loadPerfChart();
     }
   }
 }
@@ -3146,8 +3132,6 @@ async function savePreferences() {
 // ── PERFORMANCE CHART ─────────────────────────────────────────────────────────
 
 const _perfChartData = {};         // containerId → timeSeries
-let _currentPerfPeriod  = '1W';   // per-account active period
-let _overviewPerfPeriod = '1W';   // overview active period
 
 // Fetch daily candles for a symbol (full year, cached per calendar day)
 async function fetchDailyCandles(symbol) {
@@ -3169,27 +3153,11 @@ async function fetchDailyCandles(symbol) {
   } catch { return null; }
 }
 
-// Get fromDate / toDate for a period given a set of transactions
-function getPerfDateRange(period, transactions) {
+// Always start from the first transaction date
+function getPerfDateRange(transactions) {
   const today = todayISO();
-  const now = new Date();
-  let fromDate;
-  switch (period) {
-    case '1W': { const d = new Date(now); d.setDate(d.getDate() - 7);   fromDate = d.toISOString().slice(0,10); break; }
-    case '1M': { const d = new Date(now); d.setMonth(d.getMonth() - 1); fromDate = d.toISOString().slice(0,10); break; }
-    case '3M': { const d = new Date(now); d.setMonth(d.getMonth() - 3); fromDate = d.toISOString().slice(0,10); break; }
-    case '1Y': { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); fromDate = d.toISOString().slice(0,10); break; }
-    case 'ALL': {
-      const dates = transactions.map(t => t.date).filter(Boolean).sort();
-      fromDate = dates[0] || today;
-      break;
-    }
-    default: { const d = new Date(now); d.setDate(d.getDate() - 7); fromDate = d.toISOString().slice(0,10); }
-  }
-  // Always clamp to first transaction date — never show a flat $0 lead-in
-  const firstTxnDate = transactions.map(t => t.date).filter(Boolean).sort()[0];
-  if (firstTxnDate && fromDate < firstTxnDate) fromDate = firstTxnDate;
-  return { fromDate, toDate: today };
+  const firstTxnDate = transactions.map(t => t.date).filter(Boolean).sort()[0] || today;
+  return { fromDate: firstTxnDate, toDate: today };
 }
 
 // Build a daily { date, value } series from transactions + candle data
@@ -3342,19 +3310,14 @@ function renderPerfChart(containerId, timeSeries) {
 }
 
 // Per-account performance chart
-async function loadPerfChart(period) {
+async function loadPerfChart() {
   if (!currentAsset || !isPositionsAccount(currentAsset)) return;
-  _currentPerfPeriod = period;
-
-  document.querySelectorAll('#perf-chart-section-account .perf-period-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.period === period);
-  });
 
   const container = document.getElementById('perf-chart-container');
   if (!container) return;
   container.innerHTML = '<div class="perf-chart-loading">Loading…</div>';
 
-  const { fromDate, toDate } = getPerfDateRange(period, currentTransactions);
+  const { fromDate, toDate } = getPerfDateRange(currentTransactions);
   const symbols = [...new Set(currentTransactions.map(t => t.symbol?.toUpperCase()).filter(Boolean))];
 
   const symbolCandles = {};
@@ -3372,13 +3335,7 @@ async function loadPerfChart(period) {
 }
 
 // Main overview performance chart (all live accounts combined)
-async function loadOverviewPerfChart(period) {
-  _overviewPerfPeriod = period;
-
-  document.querySelectorAll('#overview-perf-chart-section .perf-period-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.period === period);
-  });
-
+async function loadOverviewPerfChart() {
   const container = document.getElementById('overview-perf-chart-container');
   if (!container) return;
   container.innerHTML = '<div class="perf-chart-loading">Loading…</div>';
@@ -3402,7 +3359,7 @@ async function loadOverviewPerfChart(period) {
     return;
   }
 
-  const { fromDate, toDate } = getPerfDateRange(period, allTxns);
+  const { fromDate, toDate } = getPerfDateRange(allTxns);
   const symbols = [...new Set(allTxns.map(t => t.symbol?.toUpperCase()).filter(Boolean))];
 
   const symbolCandles = {};
