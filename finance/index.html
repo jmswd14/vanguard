@@ -1613,6 +1613,13 @@ function openLotModal(sym) {
   const price = holdingPrices[sym]?.c || null;
 
   const LOT_TYPE_LABELS = { buy: 'BUY', transfer_in: 'TRANSFER IN', dividend_reinvested: 'DIV REINVESTED' };
+  const today = new Date(); today.setHours(0,0,0,0);
+  function lotTerm(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr + 'T00:00:00');
+    const msPerYear = 365.25 * 24 * 60 * 60 * 1000;
+    return (today - d) > msPerYear ? '<span class="lot-term-lt">LT</span>' : '<span class="lot-term-st">ST</span>';
+  }
 
   let lotTotalCost = 0, lotTotalValue = 0, lotTotalGL = 0, lotTotalQty = 0;
   const rowsHtml = lots.map(lot => {
@@ -1633,6 +1640,7 @@ function openLotModal(sym) {
       <td class="ht-td ht-num">${fmtUSD(cost)}</td>
       <td class="ht-td ht-num">${curValue !== null ? fmtUSD(curValue) : '—'}</td>
       <td class="ht-td ht-num">${gl !== null ? `<span class="${gl >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${gl >= 0 ? '+' : ''}${fmtUSD(gl)}</span>` : '—'}</td>
+      <td class="ht-td ht-lot-term">${lotTerm(lot.date)}</td>
     </tr>`;
   }).join('');
 
@@ -1643,6 +1651,7 @@ function openLotModal(sym) {
     <td class="ht-td ht-num">${fmtUSD(lotTotalCost)}</td>
     <td class="ht-td ht-num">${price !== null ? fmtUSD(lotTotalValue) : '—'}</td>
     <td class="ht-td ht-num">${price !== null ? `<span class="${lotTotalGL >= 0 ? 'holding-gain-pos' : 'holding-gain-neg'}">${lotTotalGL >= 0 ? '+' : ''}${fmtUSD(lotTotalGL)}</span>` : '—'}</td>
+    <td class="ht-td">—</td>
   </tr>`;
 
   document.getElementById('lot-modal-table').innerHTML = lots.length ? `<div class="ht-wrap"><table class="ht-table">
@@ -1650,7 +1659,7 @@ function openLotModal(sym) {
       <th class="ht-th">Date</th><th class="ht-th">Type</th>
       <th class="ht-th ht-num">Shares</th><th class="ht-th ht-num">Price/Share</th>
       <th class="ht-th ht-num">Total Cost</th><th class="ht-th ht-num">Cur Value</th>
-      <th class="ht-th ht-num">Unrealized G/L</th>
+      <th class="ht-th ht-num">Unrealized G/L</th><th class="ht-th">Term</th>
     </tr></thead>
     <tbody>${rowsHtml}</tbody>
     <tfoot>${totalHtml}</tfoot>

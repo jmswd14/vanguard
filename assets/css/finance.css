@@ -1083,6 +1083,9 @@ input[type="number"]::-webkit-inner-spin-button {
   min-width: 0;
 }
 .lot-modal-table-wrap { max-height: 360px; overflow-y: auto; margin-bottom: 4px; }
+.ht-lot-term { text-align: center; }
+.lot-term-lt { color: var(--retro-c1, #00FF41); font-size: 10px; font-weight: bold; letter-spacing: 0.06em; }
+.lot-term-st { color: var(--accent, #FF6600);   font-size: 10px; font-weight: bold; letter-spacing: 0.06em; }
 .dim { color: var(--text-muted); }
 
 /* ── COLUMN PICKER ── */
