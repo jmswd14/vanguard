@@ -272,7 +272,7 @@
           <div class="cust-sel-opt" data-value="custom" onclick="pickCustSel('quit-since-sel','custom','Custom date &amp; time')">Custom date &amp; time</div>
         </div>
       </div>
-      <input type="datetime-local" id="quit-since-input" style="display:none;margin-top:8px;">
+      <input type="text" id="quit-since-input" placeholder="YYYY-MM-DD HH:MM" style="display:none;margin-top:8px;">
     </div>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('quit-new-modal')">Cancel</button>
@@ -298,7 +298,7 @@
           <div class="cust-sel-opt" data-value="custom" onclick="pickCustSel('quit-slip-sel','custom','Custom date &amp; time')">Custom date &amp; time</div>
         </div>
       </div>
-      <input type="datetime-local" id="quit-slip-time-input" style="display:none;margin-top:8px;">
+      <input type="text" id="quit-slip-time-input" placeholder="YYYY-MM-DD HH:MM" style="display:none;margin-top:8px;">
     </div>
     <div class="form-group">
       <label>Note <span class="dim" style="font-size:11px;">(optional)</span></label>
@@ -1430,9 +1430,11 @@ async function saveSlip() {
   if (mode === 'now') {
     occurred_at = new Date().toISOString();
   } else {
-    const val = document.getElementById('quit-slip-time-input').value;
+    const val = document.getElementById('quit-slip-time-input').value.trim();
     if (!val) { alert('Please enter a date and time.'); return; }
-    occurred_at = new Date(val).toISOString();
+    const d = new Date(val);
+    if (isNaN(d)) { alert('Invalid format. Use YYYY-MM-DD HH:MM'); return; }
+    occurred_at = d.toISOString();
   }
   const note = document.getElementById('quit-slip-note-input').value.trim() || null;
   const { error } = await _sb.from('quit_events').insert({
@@ -1481,9 +1483,11 @@ async function saveQuitTracker() {
   if (mode === 'now') {
     started_at = new Date().toISOString();
   } else {
-    const val = document.getElementById('quit-since-input').value;
+    const val = document.getElementById('quit-since-input').value.trim();
     if (!val) { alert('Please enter a start date.'); return; }
-    started_at = new Date(val).toISOString();
+    const d = new Date(val);
+    if (isNaN(d)) { alert('Invalid format. Use YYYY-MM-DD HH:MM'); return; }
+    started_at = d.toISOString();
   }
   const { error } = await _sb.from('quit_trackers').insert({
     id: crypto.randomUUID(), user_id: _uid, name, started_at,
