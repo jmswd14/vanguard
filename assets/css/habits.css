@@ -860,3 +860,25 @@
 .quit-since-btn:last-child { border-right: none; }
 .quit-since-btn.active { background: var(--surface2); color: var(--retro-c1, #00FF41); }
 .quit-since-btn:hover:not(.active) { color: var(--text-dim); }
+
+/* ── QUIT TRACKER SELECTS ── */
+.quit-modal-select-wrap { position: relative; display: inline-flex; align-items: center; width: 100%; }
+.quit-modal-select-wrap select {
+  width: 100%;
+  padding: 8px 30px 8px 12px;
+  border: 1px solid var(--border2);
+  border-radius: 0;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.15s;
+}
+.quit-modal-select-wrap select:hover,
+.quit-modal-select-wrap select:focus { border-color: var(--retro-c1, #00FF41); }
+.quit-modal-select-wrap select option { background: var(--surface2); color: var(--text); }
+.quit-modal-select-arrow { position: absolute; right: 10px; font-size: 9px; color: var(--text-muted); pointer-events: none; }

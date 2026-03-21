@@ -262,12 +262,12 @@
     </div>
     <div class="form-group">
       <label>Quit since</label>
-      <div class="sort-select-wrap">
+      <div class="quit-modal-select-wrap">
         <select id="quit-since-select" onchange="document.getElementById('quit-since-input').style.display=this.value==='custom'?'':'none'">
           <option value="now">Right now</option>
           <option value="custom">Custom date & time</option>
         </select>
-        <span class="sort-select-arrow">▼</span>
+        <span class="quit-modal-select-arrow">▼</span>
       </div>
       <input type="datetime-local" id="quit-since-input" style="display:none;margin-top:8px;">
     </div>
@@ -285,12 +285,12 @@
     <input type="hidden" id="quit-slip-tracker-id">
     <div class="form-group">
       <label>When did you slip?</label>
-      <div class="sort-select-wrap">
+      <div class="quit-modal-select-wrap">
         <select id="quit-slip-select" onchange="document.getElementById('quit-slip-time-input').style.display=this.value==='custom'?'':'none'">
           <option value="now">Right now</option>
           <option value="custom">Custom date & time</option>
         </select>
-        <span class="sort-select-arrow">▼</span>
+        <span class="quit-modal-select-arrow">▼</span>
       </div>
       <input type="datetime-local" id="quit-slip-time-input" style="display:none;margin-top:8px;">
     </div>
