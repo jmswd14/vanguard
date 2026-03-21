@@ -3186,6 +3186,9 @@ function getPerfDateRange(period, transactions) {
     }
     default: { const d = new Date(now); d.setDate(d.getDate() - 7); fromDate = d.toISOString().slice(0,10); }
   }
+  // Always clamp to first transaction date — never show a flat $0 lead-in
+  const firstTxnDate = transactions.map(t => t.date).filter(Boolean).sort()[0];
+  if (firstTxnDate && fromDate < firstTxnDate) fromDate = firstTxnDate;
   return { fromDate, toDate: today };
 }
 
