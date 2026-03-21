@@ -734,7 +734,7 @@ async function signOut() {
 
 function fmtUSD(v) {
   if (Math.abs(v) >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
-  if (Math.abs(v) >= 1e3) return '$' + Math.round(v).toLocaleString();
+  if (Math.abs(v) >= 1e3) return '$' + v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
   return '$' + v.toFixed(2);
 }
 
