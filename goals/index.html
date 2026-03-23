@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var el=document.documentElement;el.style.setProperty('--retro-c1',localStorage.getItem('vg-retro-c1')||'#00FF41');el.style.setProperty('--retro-c2',localStorage.getItem('vg-retro-c2')||'#FF6600');['bg','surface','surface2','surface3','border','border2'].forEach(function(k){var v=localStorage.getItem('vg-'+k);if(v)el.style.setProperty('--'+k,v);});})()</script>
+<script src="../assets/js/theme.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Goals">
+<link rel="apple-touch-icon" href="/motherboard/apple-touch-icon.png">
+<link rel="manifest" href="/motherboard/manifest.json">
+<title>Goals — Motherboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/shared.css">
+<link rel="stylesheet" href="../assets/css/goals.css">
+</head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabase-client.js"></script>
+<body>
+
+<!-- Overlay (mobile) -->
+<div class="overlay" id="overlay" onclick="closeMobileMenus()"></div>
+
+<!-- Mobile toggles -->
+<button class="hamburger" onclick="openLeftMobile()" title="Menu">☰</button>
+<button class="rs-mobile-btn" onclick="openRightMobile()" title="Views">◎</button>
+
+<div class="app dual-sidebar" id="app">
+
+  <!-- ── LEFT SIDEBAR — global nav ── -->
+  <nav class="left-sidebar" id="left-sidebar">
+    <div class="left-sidebar-brand">
+      <button class="ls-collapse-btn" id="ls-collapse-btn" onclick="toggleLeftCollapse()" title="Collapse sidebar">‹</button>
+    </div>
+
+    <div class="left-nav">
+      <a class="left-nav-item" href="../index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+        <span class="left-nav-label">Dashboard</span>
+      </a>
+      <a class="left-nav-item" href="../tasks/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        <span class="left-nav-label">Tasks</span>
+      </a>
+      <a class="left-nav-item" href="../calendar/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        <span class="left-nav-label">Calendar</span>
+      </a>
+      <a class="left-nav-item" href="../habits/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+        <span class="left-nav-label">Habits</span>
+      </a>
+      <a class="left-nav-item" href="../journal/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+        <span class="left-nav-label">Journal</span>
+      </a>
+      <a class="left-nav-item active" href="index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+        <span class="left-nav-label">Goals</span>
+      </a>
+      <a class="left-nav-item" href="../finance/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+        <span class="left-nav-label">Finance</span>
+      </a>
+      <a class="left-nav-item" href="#" onclick="toggleNotifPanel(); return false;">
+        <span class="left-nav-icon notif-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-badge" id="notif-badge" style="display:none"></span></span>
+        <span class="left-nav-label">Notifications</span>
+      </a>
+      <a class="left-nav-item" href="../settings/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/><line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/><line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/><line x1="14" y1="2" x2="14" y2="6"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="16" y1="18" x2="16" y2="22"/></svg></span>
+        <span class="left-nav-label">Settings</span>
+      </a>
+    </div>
+
+    <div class="left-sidebar-footer">
+      <span class="ls-signout" onclick="signOut()">Sign out</span>
+    </div>
+  </nav>
+
+  <!-- ── RIGHT SIDEBAR — goals nav ── -->
+  <nav class="right-sidebar" id="right-sidebar">
+    <div class="right-sidebar-header">
+      <button class="rs-collapse-btn" id="rs-collapse-btn" onclick="toggleRightCollapse()" title="Collapse sidebar">›</button>
+      <div class="rs-header-text">
+        <h2>Goals</h2>
+      </div>
+      <span class="rs-header-icon">◎</span>
+    </div>
+
+    <div class="right-sidebar-body">
+      <div class="sidebar-section">Status</div>
+
+      <div class="sidebar-item active" id="nav-all" onclick="setStatusFilter('all', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">◈</span>
+          <span class="rs-nav-label">All</span>
+        </div>
+        <span class="sidebar-count" id="count-all">0</span>
+      </div>
+
+      <div class="sidebar-item" id="nav-active" onclick="setStatusFilter('active', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">◎</span>
+          <span class="rs-nav-label">Active</span>
+        </div>
+        <span class="sidebar-count" id="count-active">0</span>
+      </div>
+
+      <div class="sidebar-item" id="nav-completed" onclick="setStatusFilter('completed', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">✓</span>
+          <span class="rs-nav-label">Completed</span>
+        </div>
+        <span class="sidebar-count" id="count-completed">0</span>
+      </div>
+
+      <div class="sidebar-item" id="nav-abandoned" onclick="setStatusFilter('abandoned', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">✕</span>
+          <span class="rs-nav-label">Abandoned</span>
+        </div>
+        <span class="sidebar-count" id="count-abandoned">0</span>
+      </div>
+
+      <hr class="sidebar-divider">
+      <div class="sidebar-section">Category</div>
+
+      <div class="sidebar-item" id="nav-cat-all" onclick="setCategoryFilter('', this)">
+        <div class="sidebar-item-left">
+          <span class="sidebar-icon">☰</span>
+          <span class="rs-nav-label">All Categories</span>
+        </div>
+      </div>
+
+      <div id="category-nav-items"></div>
+
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="content">
+    <div class="retro-page-brand">MOTHERBOARD</div>
+
+    <div class="goals-topbar">
+      <div>
+        <h2 id="view-heading">All Goals</h2>
+        <p id="view-subheading"></p>
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">+ New Goal</button>
+    </div>
+
+    <div id="goals-list"></div>
+  </main>
+
+</div><!-- /app -->
+
+<!-- ── ADD / EDIT GOAL MODAL ── -->
+<div class="modal-backdrop" id="goal-modal-backdrop" onclick="closeGoalModal()"></div>
+<div class="modal" id="goal-modal" style="max-width:520px;">
+  <div class="modal-title" id="goal-modal-title">New Goal</div>
+
+  <div class="goal-modal-body">
+    <div class="form-group">
+      <label class="form-label">Title</label>
+      <input type="text" class="form-input" id="goal-title" placeholder="What do you want to achieve?" maxlength="120">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <!-- custom dropdown -->
+      <div class="cust-sel" id="goal-category-sel">
+        <button type="button" class="cust-sel-trigger" onclick="toggleCustSel('goal-category-sel')">
+          <span class="cust-sel-val">Health</span>
+          <span class="cust-sel-arrow">▾</span>
+        </button>
+        <div class="cust-sel-menu">
+          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Health')">Health</div>
+          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Finance')">Finance</div>
+          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Career')">Career</div>
+          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Personal')">Personal</div>
+          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Education')">Education</div>
+          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Other')">Other</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Target Date <span style="font-size:10px;color:var(--text-muted)">(optional)</span></label>
+      <div class="cust-cal-wrap" id="goal-date-cal">
+        <div class="cust-cal-field" onclick="toggleCal('goal-date-cal')">
+          <span class="cust-cal-display" id="goal-date-display">No date set</span>
+          <span style="font-size:10px;color:var(--text-muted);">▾</span>
+        </div>
+        <div class="cust-cal-panel" id="goal-date-cal-panel">
+          <div class="cust-cal-header">
+            <button type="button" onclick="calNav('goal-date-cal',-1)">‹</button>
+            <span id="goal-date-cal-label"></span>
+            <button type="button" onclick="calNav('goal-date-cal',1)">›</button>
+          </div>
+          <div class="cust-cal-dow">Su Mo Tu We Th Fr Sa</div>
+          <div class="cust-cal-grid" id="goal-date-cal-grid"></div>
+        </div>
+      </div>
+      <!-- hidden text field holds value -->
+      <input type="hidden" id="goal-date-val">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Description <span style="font-size:10px;color:var(--text-muted)">(optional)</span></label>
+      <textarea class="form-input" id="goal-desc" rows="3" placeholder="Why does this matter to you?" style="resize:vertical;"></textarea>
+    </div>
+
+    <div class="form-group" id="goal-status-group" style="display:none;">
+      <label class="form-label">Status</label>
+      <div class="goal-status-opts">
+        <button type="button" class="goal-status-btn active" data-status="active" onclick="pickStatus('active')">Active</button>
+        <button type="button" class="goal-status-btn" data-status="completed" onclick="pickStatus('completed')">Completed</button>
+        <button type="button" class="goal-status-btn" data-status="abandoned" onclick="pickStatus('abandoned')">Abandoned</button>
+      </div>
+    </div>
+
+    <!-- Milestones — only shown when editing existing goal -->
+    <div id="goal-milestones-section" style="display:none;">
+      <label class="form-label" style="display:block;margin-bottom:8px;">Milestones</label>
+      <div class="milestone-list" id="milestone-list"></div>
+      <div class="milestone-add-row">
+        <input type="text" class="milestone-add-input" id="milestone-new-input" placeholder="Add a milestone…" maxlength="120"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addMilestone();}">
+        <button class="btn" onclick="addMilestone()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-actions">
+    <button class="btn btn-danger" id="goal-delete-btn" onclick="confirmDeleteGoal()" style="display:none;">Delete</button>
+    <div style="flex:1;"></div>
+    <button class="btn" onclick="closeGoalModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveGoal()">Save</button>
+  </div>
+</div>
+
+<!-- ── CONFIRM DELETE MODAL ── -->
+<div class="modal-backdrop" id="confirm-modal-backdrop" onclick="closeConfirmModal()"></div>
+<div class="modal" id="confirm-modal" style="max-width:400px;">
+  <div class="modal-title" id="confirm-modal-title">Confirm Delete</div>
+  <p id="confirm-modal-msg" style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:4px;"></p>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeConfirmModal()">Cancel</button>
+    <button class="btn btn-danger" id="confirm-modal-ok">Delete</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────────
+const DB = window.supabaseClient;
+let _uid        = null;
+let goals       = [];
+let milestones  = [];
+let statusFilter   = 'all';
+let categoryFilter = '';
+let editingGoalId  = null;
+let _pendingDeleteId = null;
+
+const CATEGORIES = ['Health','Finance','Career','Personal','Education','Other'];
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await DB.auth.getSession();
+  if (!session) { window.location.href = '../login.html'; return; }
+  _uid = session.user.id;
+  VG_THEME.sync();
+
+  const [gr, mr] = await Promise.all([
+    DB.from('goals').select('*').eq('user_id', _uid).order('created_at', { ascending: false }),
+    DB.from('goal_milestones').select('*').eq('user_id', _uid).order('sort_order'),
+  ]);
+
+  goals      = gr.data || [];
+  milestones = mr.data || [];
+
+  buildCategoryNav();
+  updateCounts();
+  renderGoals();
+}
+
+init();
+
+// ── FILTERING ─────────────────────────────────────────────────────────────────
+function setStatusFilter(status, el) {
+  statusFilter = status;
+  document.querySelectorAll('.right-sidebar .sidebar-item[id^="nav-"]').forEach(function(i) {
+    i.classList.remove('active');
+  });
+  if (el) el.classList.add('active');
+  // reset category active to "All Categories" when switching status
+  document.getElementById('nav-cat-all').classList.add('active');
+  document.querySelectorAll('#category-nav-items .sidebar-item').forEach(function(i) {
+    i.classList.remove('active');
+  });
+  categoryFilter = '';
+  renderGoals();
+}
+
+function setCategoryFilter(cat, el) {
+  categoryFilter = cat;
+  document.querySelectorAll('#category-nav-items .sidebar-item, #nav-cat-all').forEach(function(i) {
+    i.classList.remove('active');
+  });
+  if (el) el.classList.add('active');
+  renderGoals();
+}
+
+function filteredGoals() {
+  return goals.filter(function(g) {
+    if (statusFilter !== 'all' && g.status !== statusFilter) return false;
+    if (categoryFilter && g.category !== categoryFilter) return false;
+    return true;
+  });
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderGoals() {
+  const list   = document.getElementById('goals-list');
+  const filtered = filteredGoals();
+
+  const labelMap = { all: 'All Goals', active: 'Active', completed: 'Completed', abandoned: 'Abandoned' };
+  document.getElementById('view-heading').textContent =
+    categoryFilter ? categoryFilter + (statusFilter !== 'all' ? ' — ' + labelMap[statusFilter] : '')
+                   : labelMap[statusFilter];
+  document.getElementById('view-subheading').textContent =
+    filtered.length + ' goal' + (filtered.length !== 1 ? 's' : '');
+
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="goals-empty">
+        <div class="goals-empty-icon">◎</div>
+        <div class="goals-empty-title">No goals here</div>
+        <div class="goals-empty-desc">Hit "New Goal" to get started.</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  filtered.forEach(function(g) {
+    frag.appendChild(buildCard(g));
+  });
+  list.appendChild(frag);
+}
+
+function buildCard(g) {
+  const gMilestones  = milestones.filter(function(m) { return m.goal_id === g.id; });
+  const total        = gMilestones.length;
+  const done         = gMilestones.filter(function(m) { return m.completed; }).length;
+  const pct          = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  const today     = new Date().toISOString().slice(0,10);
+  const isOverdue = g.target_date && g.target_date < today && g.status === 'active';
+
+  const card = document.createElement('div');
+  card.className = 'goal-card status-' + g.status;
+  card.dataset.id = g.id;
+
+  card.innerHTML = `
+    <div class="goal-card-header">
+      <div class="goal-card-title">${escHtml(g.title)}</div>
+      <div class="goal-menu-wrap">
+        <button class="goal-menu-btn" onclick="openGoalMenu(event,'menu-${g.id}')" title="Options">⋯</button>
+        <div class="goal-menu-dropdown" id="menu-${g.id}">
+          <button class="goal-menu-option" onclick="openEditModal('${g.id}'); closeAllMenus();">Edit / Milestones</button>
+          ${g.status !== 'completed' ? `<button class="goal-menu-option" onclick="markStatus('${g.id}','completed'); closeAllMenus();">Mark Complete</button>` : ''}
+          ${g.status !== 'active' ? `<button class="goal-menu-option" onclick="markStatus('${g.id}','active'); closeAllMenus();">Mark Active</button>` : ''}
+          <button class="goal-menu-option danger" onclick="confirmDeleteGoalById('${g.id}','${escHtml(g.title).replace(/'/g,"\\'")}'); closeAllMenus();">Delete</button>
+        </div>
+      </div>
+    </div>
+    <div class="goal-card-meta">
+      <span class="goal-category-badge">${escHtml(g.category || 'Other')}</span>
+      ${g.target_date ? `<span class="goal-date-label${isOverdue ? ' overdue' : ''}">${isOverdue ? 'Overdue · ' : ''}${formatDate(g.target_date)}</span>` : ''}
+    </div>
+    ${total > 0 ? `
+    <div class="goal-progress-row">
+      <div class="goal-progress-bar-wrap"><div class="goal-progress-bar" style="width:${pct}%"></div></div>
+      <span class="goal-progress-label">${done}/${total}</span>
+    </div>` : ''}
+  `;
+
+  // Click card body (not menu) → open edit modal
+  card.addEventListener('click', function(e) {
+    if (e.target.closest('.goal-menu-wrap')) return;
+    openEditModal(g.id);
+  });
+
+  return card;
+}
+
+function updateCounts() {
+  document.getElementById('count-all').textContent       = goals.length;
+  document.getElementById('count-active').textContent    = goals.filter(function(g){return g.status==='active';}).length;
+  document.getElementById('count-completed').textContent = goals.filter(function(g){return g.status==='completed';}).length;
+  document.getElementById('count-abandoned').textContent = goals.filter(function(g){return g.status==='abandoned';}).length;
+}
+
+function buildCategoryNav() {
+  const usedCats = [...new Set(goals.map(function(g){return g.category || 'Other';}))].sort();
+  const container = document.getElementById('category-nav-items');
+  container.innerHTML = '';
+  usedCats.forEach(function(cat) {
+    const div = document.createElement('div');
+    div.className = 'sidebar-item';
+    div.innerHTML = `<div class="sidebar-item-left"><span class="sidebar-icon">·</span><span class="rs-nav-label">${escHtml(cat)}</span></div>`;
+    div.onclick = function() { setCategoryFilter(cat, div); };
+    container.appendChild(div);
+  });
+}
+
+// ── CONTEXT MENU ──────────────────────────────────────────────────────────────
+function openGoalMenu(e, menuId) {
+  e.stopPropagation();
+  closeAllMenus();
+  document.getElementById(menuId).classList.add('open');
+  document.addEventListener('click', closeAllMenus, { once: true });
+}
+function closeAllMenus() {
+  document.querySelectorAll('.goal-menu-dropdown.open').forEach(function(m) { m.classList.remove('open'); });
+}
+
+// ── MARK STATUS ───────────────────────────────────────────────────────────────
+async function markStatus(goalId, status) {
+  await DB.from('goals').update({ status }).eq('id', goalId).eq('user_id', _uid);
+  const g = goals.find(function(g){return g.id===goalId;});
+  if (g) g.status = status;
+  updateCounts();
+  renderGoals();
+}
+
+// ── ADD MODAL ─────────────────────────────────────────────────────────────────
+function openAddModal() {
+  editingGoalId = null;
+  document.getElementById('goal-modal-title').textContent = 'New Goal';
+  document.getElementById('goal-title').value = '';
+  document.getElementById('goal-desc').value  = '';
+  document.getElementById('goal-date-val').value = '';
+  document.getElementById('goal-date-display').textContent = 'No date set';
+  document.getElementById('goal-status-group').style.display    = 'none';
+  document.getElementById('goal-milestones-section').style.display = 'none';
+  document.getElementById('goal-delete-btn').style.display = 'none';
+  resetCustSel('goal-category-sel', 'Health');
+  pickStatus('active');
+  openGoalModal();
+}
+
+// ── EDIT MODAL ────────────────────────────────────────────────────────────────
+function openEditModal(goalId) {
+  const g = goals.find(function(g){return g.id===goalId;});
+  if (!g) return;
+  editingGoalId = goalId;
+
+  document.getElementById('goal-modal-title').textContent = 'Edit Goal';
+  document.getElementById('goal-title').value = g.title;
+  document.getElementById('goal-desc').value  = g.description || '';
+  document.getElementById('goal-date-val').value = g.target_date || '';
+  document.getElementById('goal-date-display').textContent = g.target_date ? formatDate(g.target_date) : 'No date set';
+  document.getElementById('goal-status-group').style.display    = '';
+  document.getElementById('goal-milestones-section').style.display = '';
+  document.getElementById('goal-delete-btn').style.display = '';
+
+  resetCustSel('goal-category-sel', g.category || 'Health');
+  pickStatus(g.status || 'active');
+  renderMilestones(goalId);
+
+  // init calendar state
+  if (g.target_date) {
+    const [yr, mo, dy] = g.target_date.split('-').map(Number);
+    _calState['goal-date-cal'] = { year: yr, month: mo - 1, selected: g.target_date };
+  }
+
+  openGoalModal();
+}
+
+function openGoalModal() {
+  document.getElementById('goal-modal-backdrop').classList.add('show');
+  document.getElementById('goal-modal').classList.add('show');
+  setTimeout(function(){ document.getElementById('goal-title').focus(); }, 50);
+}
+
+function closeGoalModal() {
+  document.getElementById('goal-modal-backdrop').classList.remove('show');
+  document.getElementById('goal-modal').classList.remove('show');
+  editingGoalId = null;
+}
+
+// ── STATUS PICKER ─────────────────────────────────────────────────────────────
+function pickStatus(status) {
+  document.querySelectorAll('.goal-status-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.status === status);
+  });
+}
+
+function getPickedStatus() {
+  const btn = document.querySelector('.goal-status-btn.active');
+  return btn ? btn.dataset.status : 'active';
+}
+
+// ── SAVE GOAL ─────────────────────────────────────────────────────────────────
+async function saveGoal() {
+  const title    = document.getElementById('goal-title').value.trim();
+  const category = getCustSelVal('goal-category-sel') || 'Other';
+  const dateVal  = document.getElementById('goal-date-val').value;
+  const desc     = document.getElementById('goal-desc').value.trim();
+  const status   = getPickedStatus();
+
+  if (!title) { alert('Please enter a title.'); return; }
+
+  const payload = {
+    user_id:     _uid,
+    title,
+    category,
+    target_date: dateVal || null,
+    description: desc || null,
+    status,
+  };
+
+  if (editingGoalId) {
+    const { error } = await DB.from('goals').update(payload).eq('id', editingGoalId).eq('user_id', _uid);
+    if (error) { alert('Error saving: ' + error.message); return; }
+    const idx = goals.findIndex(function(g){return g.id===editingGoalId;});
+    if (idx !== -1) goals[idx] = { ...goals[idx], ...payload };
+  } else {
+    const id = crypto.randomUUID();
+    const { error } = await DB.from('goals').insert({ id, ...payload });
+    if (error) { alert('Error saving: ' + error.message); return; }
+    goals.unshift({ id, ...payload, created_at: new Date().toISOString() });
+  }
+
+  closeGoalModal();
+  buildCategoryNav();
+  updateCounts();
+  renderGoals();
+}
+
+// ── DELETE GOAL ───────────────────────────────────────────────────────────────
+function confirmDeleteGoal() {
+  if (!editingGoalId) return;
+  const g = goals.find(function(g){return g.id===editingGoalId;});
+  confirmDeleteGoalById(editingGoalId, g ? g.title : 'this goal');
+}
+
+function confirmDeleteGoalById(goalId, title) {
+  _pendingDeleteId = goalId;
+  document.getElementById('confirm-modal-msg').textContent =
+    'Delete "' + title + '"? This will also remove all its milestones. This cannot be undone.';
+  document.getElementById('confirm-modal-ok').onclick = executeDeleteGoal;
+  closeGoalModal();
+  document.getElementById('confirm-modal-backdrop').classList.add('show');
+  document.getElementById('confirm-modal').classList.add('show');
+}
+
+async function executeDeleteGoal() {
+  if (!_pendingDeleteId) return;
+  await DB.from('goal_milestones').delete().eq('goal_id', _pendingDeleteId).eq('user_id', _uid);
+  await DB.from('goals').delete().eq('id', _pendingDeleteId).eq('user_id', _uid);
+  goals      = goals.filter(function(g){return g.id!==_pendingDeleteId;});
+  milestones = milestones.filter(function(m){return m.goal_id!==_pendingDeleteId;});
+  _pendingDeleteId = null;
+  closeConfirmModal();
+  buildCategoryNav();
+  updateCounts();
+  renderGoals();
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirm-modal-backdrop').classList.remove('show');
+  document.getElementById('confirm-modal').classList.remove('show');
+  _pendingDeleteId = null;
+}
+
+// ── MILESTONES ────────────────────────────────────────────────────────────────
+function renderMilestones(goalId) {
+  const list = document.getElementById('milestone-list');
+  const gMs  = milestones.filter(function(m){return m.goal_id===goalId;});
+  list.innerHTML = '';
+
+  if (gMs.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:6px 0;">No milestones yet.</div>';
+    return;
+  }
+
+  gMs.forEach(function(m) {
+    const row = document.createElement('div');
+    row.className = 'milestone-row' + (m.completed ? ' completed' : '');
+    row.innerHTML = `
+      <div class="milestone-check${m.completed ? ' checked' : ''}" onclick="toggleMilestone('${m.id}')">
+        ${m.completed ? '✓' : ''}
+      </div>
+      <span class="milestone-title">${escHtml(m.title)}</span>
+      <button class="milestone-delete-btn" onclick="deleteMilestone('${m.id}')" title="Remove">✕</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+async function addMilestone() {
+  if (!editingGoalId) return;
+  const input = document.getElementById('milestone-new-input');
+  const title = input.value.trim();
+  if (!title) return;
+
+  const sortOrder = milestones.filter(function(m){return m.goal_id===editingGoalId;}).length;
+  const id = crypto.randomUUID();
+  const { error } = await DB.from('goal_milestones').insert({
+    id, goal_id: editingGoalId, user_id: _uid, title, completed: false, sort_order: sortOrder
+  });
+  if (error) { alert('Error: ' + error.message); return; }
+
+  milestones.push({ id, goal_id: editingGoalId, user_id: _uid, title, completed: false, sort_order: sortOrder });
+  input.value = '';
+  renderMilestones(editingGoalId);
+  // update card in background
+  const gIdx = goals.findIndex(function(g){return g.id===editingGoalId;});
+  if (gIdx !== -1) {
+    const card = document.querySelector('.goal-card[data-id="' + editingGoalId + '"]');
+    if (card) card.replaceWith(buildCard(goals[gIdx]));
+  }
+}
+
+async function toggleMilestone(milestoneId) {
+  const m = milestones.find(function(m){return m.id===milestoneId;});
+  if (!m) return;
+  const newVal = !m.completed;
+  await DB.from('goal_milestones').update({ completed: newVal }).eq('id', milestoneId).eq('user_id', _uid);
+  m.completed = newVal;
+  renderMilestones(editingGoalId);
+  // refresh card
+  const g = goals.find(function(g){return g.id===editingGoalId;});
+  if (g) {
+    const card = document.querySelector('.goal-card[data-id="' + editingGoalId + '"]');
+    if (card) card.replaceWith(buildCard(g));
+  }
+}
+
+async function deleteMilestone(milestoneId) {
+  await DB.from('goal_milestones').delete().eq('id', milestoneId).eq('user_id', _uid);
+  milestones = milestones.filter(function(m){return m.id!==milestoneId;});
+  renderMilestones(editingGoalId);
+  const g = goals.find(function(g){return g.id===editingGoalId;});
+  if (g) {
+    const card = document.querySelector('.goal-card[data-id="' + editingGoalId + '"]');
+    if (card) card.replaceWith(buildCard(g));
+  }
+}
+
+// ── CUSTOM DROPDOWN ───────────────────────────────────────────────────────────
+function toggleCustSel(id) {
+  const el = document.getElementById(id);
+  const open = el.classList.toggle('open');
+  if (open) {
+    document.addEventListener('click', function handler(e) {
+      if (!el.contains(e.target)) { el.classList.remove('open'); document.removeEventListener('click', handler); }
+    });
+  }
+}
+function pickCustSel(id, val) {
+  document.getElementById(id).querySelector('.cust-sel-val').textContent = val;
+  document.getElementById(id).classList.remove('open');
+}
+function getCustSelVal(id) {
+  return document.getElementById(id).querySelector('.cust-sel-val').textContent.trim();
+}
+function resetCustSel(id, val) {
+  document.getElementById(id).querySelector('.cust-sel-val').textContent = val || '';
+  document.getElementById(id).classList.remove('open');
+}
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+const _calState = {};
+
+function initCal(calId) {
+  if (!_calState[calId]) {
+    const now = new Date();
+    _calState[calId] = { year: now.getFullYear(), month: now.getMonth(), selected: null };
+  }
+}
+function toggleCal(calId) {
+  initCal(calId);
+  const panel = document.getElementById(calId + '-panel');
+  const open  = panel.classList.toggle('open');
+  if (open) {
+    renderCal(calId);
+    document.addEventListener('click', function handler(e) {
+      if (!document.getElementById(calId).contains(e.target)) {
+        panel.classList.remove('open');
+        document.removeEventListener('click', handler);
+      }
+    });
+  }
+}
+function calNav(calId, dir) {
+  initCal(calId);
+  _calState[calId].month += dir;
+  if (_calState[calId].month > 11) { _calState[calId].month = 0;  _calState[calId].year++; }
+  if (_calState[calId].month < 0)  { _calState[calId].month = 11; _calState[calId].year--; }
+  renderCal(calId);
+}
+function renderCal(calId) {
+  initCal(calId);
+  const { year, month, selected } = _calState[calId];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById(calId + '-label').textContent = months[month] + ' ' + year;
+  const grid    = document.getElementById(calId + '-grid');
+  const first   = new Date(year, month, 1).getDay();
+  const daysInM = new Date(year, month + 1, 0).getDate();
+  const today   = new Date().toISOString().slice(0,10);
+  let html = '';
+  for (let i = 0; i < first; i++) html += '<span></span>';
+  for (let d = 1; d <= daysInM; d++) {
+    const iso = year + '-' + String(month+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    let cls = 'cust-cal-day';
+    if (iso === selected) cls += ' selected';
+    if (iso === today)    cls += ' today';
+    html += `<span class="${cls}" onclick="calPickDay('${calId}','${iso}')">${d}</span>`;
+  }
+  grid.innerHTML = html;
+}
+function calPickDay(calId, iso) {
+  _calState[calId].selected = iso;
+  // write to the hidden input and display span
+  document.getElementById('goal-date-val').value = iso;
+  document.getElementById('goal-date-display').textContent = formatDate(iso);
+  document.getElementById(calId + '-panel').classList.remove('open');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[m-1] + ' ' + d + ', ' + y;
+}
+function signOut() {
+  DB.auth.signOut().then(function() { window.location.href = '../login.html'; });
+}
+</script>
+
+<script>
+// ── SIDEBAR STATE ──────────────────────────────────────────────────────────────
+
+const _app          = document.getElementById('app');
+const _leftSidebar  = document.getElementById('left-sidebar');
+const _rightSidebar = document.getElementById('right-sidebar');
+const _overlay      = document.getElementById('overlay');
+
+(function restoreState() {
+  if (localStorage.getItem('vg-ls-collapsed') === 'true') {
+    _leftSidebar.classList.add('ls-collapsed');
+    _app.classList.add('ls-collapsed');
+    document.getElementById('ls-collapse-btn').textContent = '›';
+  }
+  if (localStorage.getItem('vg-rs-collapsed') === 'true') {
+    _rightSidebar.classList.add('rs-collapsed');
+    _app.classList.add('rs-collapsed');
+    document.getElementById('rs-collapse-btn').textContent = '‹';
+  }
+})();
+
+function toggleLeftCollapse() {
+  const collapsed = _leftSidebar.classList.toggle('ls-collapsed');
+  _app.classList.toggle('ls-collapsed', collapsed);
+  document.getElementById('ls-collapse-btn').textContent = collapsed ? '›' : '‹';
+  localStorage.setItem('vg-ls-collapsed', collapsed);
+}
+
+function toggleRightCollapse() {
+  const collapsed = _rightSidebar.classList.toggle('rs-collapsed');
+  _app.classList.toggle('rs-collapsed', collapsed);
+  document.getElementById('rs-collapse-btn').textContent = collapsed ? '‹' : '›';
+  localStorage.setItem('vg-rs-collapsed', collapsed);
+}
+
+function openLeftMobile() {
+  _leftSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function openRightMobile() {
+  _rightSidebar.classList.add('mobile-open');
+  _overlay.classList.add('show');
+}
+
+function closeMobileMenus() {
+  _leftSidebar.classList.remove('mobile-open');
+  _rightSidebar.classList.remove('mobile-open');
+  _overlay.classList.remove('show');
+}
+
+function toggleSidebar() { openRightMobile(); }
+function closeSidebar()  { closeMobileMenus(); }
+</script>
+<script src="../assets/js/notifications.js"></script>
+<script src="../assets/js/chat.js"></script>
+</body>
+</html>
