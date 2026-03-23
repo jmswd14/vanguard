@@ -1009,16 +1009,54 @@
 .cust-cal-day.selected { background: var(--retro-c1, #00FF41); color: var(--bg, #000); font-weight: bold; }
 .cust-cal-day.selected:hover { background: var(--retro-c1, #00FF41); }
 
-.quit-time-input {
-  flex: 1;
-  padding: 8px 10px;
-  background: var(--surface2);
+/* ── TIME PICKER ── */
+.quit-tp {
+  display: flex;
+  align-items: center;
+  gap: 0;
   border: 1px solid var(--border2);
+  background: var(--surface2);
+  flex: 1;
+  transition: border-color 0.15s;
+}
+.quit-tp:focus-within { border-color: var(--retro-c1, #00FF41); }
+.quit-tp-num {
+  width: 36px;
+  padding: 8px 6px;
+  background: transparent;
+  border: none;
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 13px;
+  text-align: center;
   outline: none;
-  transition: border-color 0.15s;
-  min-width: 0;
+  -moz-appearance: textfield;
 }
-.quit-time-input:focus { border-color: var(--retro-c1, #00FF41); }
+.quit-tp-num::-webkit-outer-spin-button,
+.quit-tp-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.quit-tp-colon {
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 0 2px;
+  user-select: none;
+}
+.quit-tp-ampm {
+  display: flex;
+  border-left: 1px solid var(--border2);
+  margin-left: auto;
+}
+.quit-tp-ampm-btn {
+  padding: 8px 9px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+.quit-tp-ampm-btn:first-child { border-right: 1px solid var(--border2); }
+.quit-tp-ampm-btn:hover { color: var(--text); }
+.quit-tp-ampm-btn.active { color: var(--retro-c1, #00FF41); background: var(--surface3); }

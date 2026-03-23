@@ -291,7 +291,15 @@
               <div class="cust-cal-grid" id="quit-since-cal-grid"></div>
             </div>
           </div>
-          <input type="text" id="quit-since-time" class="quit-time-input" placeholder="HH:MM">
+          <div class="quit-tp">
+            <input type="number" id="quit-since-hour" class="quit-tp-num" min="1" max="12" placeholder="12">
+            <span class="quit-tp-colon">:</span>
+            <input type="number" id="quit-since-min" class="quit-tp-num" min="0" max="59" placeholder="00">
+            <div class="quit-tp-ampm">
+              <button class="quit-tp-ampm-btn active" id="quit-since-ampm-am" onclick="setAmPm('quit-since','AM')">AM</button>
+              <button class="quit-tp-ampm-btn" id="quit-since-ampm-pm" onclick="setAmPm('quit-since','PM')">PM</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -338,7 +346,15 @@
               <div class="cust-cal-grid" id="quit-slip-cal-grid"></div>
             </div>
           </div>
-          <input type="text" id="quit-slip-time" class="quit-time-input" placeholder="HH:MM">
+          <div class="quit-tp">
+            <input type="number" id="quit-slip-hour" class="quit-tp-num" min="1" max="12" placeholder="12">
+            <span class="quit-tp-colon">:</span>
+            <input type="number" id="quit-slip-min" class="quit-tp-num" min="0" max="59" placeholder="00">
+            <div class="quit-tp-ampm">
+              <button class="quit-tp-ampm-btn active" id="quit-slip-ampm-am" onclick="setAmPm('quit-slip','AM')">AM</button>
+              <button class="quit-tp-ampm-btn" id="quit-slip-ampm-pm" onclick="setAmPm('quit-slip','PM')">PM</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1460,8 +1476,8 @@ function openSlipModal(id) {
   document.getElementById('quit-slip-title').textContent = 'Log a Slip — ' + t.name;
   document.getElementById('quit-slip-note-input').value  = '';
   document.getElementById('quit-slip-date').value        = '';
-  document.getElementById('quit-slip-time').value        = '';
   document.getElementById('quit-slip-datetime').style.display = 'none';
+  resetTimePicker('quit-slip');
   resetCustSel('quit-slip-sel');
   document.getElementById('quit-slip-modal').classList.add('show');
 }
@@ -1474,11 +1490,9 @@ async function saveSlip() {
     occurred_at = new Date().toISOString();
   } else {
     const date = document.getElementById('quit-slip-date').value.trim();
-    const time = document.getElementById('quit-slip-time').value.trim() || '00:00';
     if (!date) { alert('Please select a date.'); return; }
-    const d = new Date(`${date}T${time}`);
-    if (isNaN(d)) { alert('Invalid time. Use HH:MM'); return; }
-    occurred_at = d.toISOString();
+    const time = getTimeAs24h('quit-slip');
+    occurred_at = new Date(`${date}T${time}`).toISOString();
   }
   const note = document.getElementById('quit-slip-note-input').value.trim() || null;
   const { error } = await _sb.from('quit_events').insert({
@@ -1562,6 +1576,23 @@ document.addEventListener('click', e => {
   }
 });
 
+function setAmPm(prefix, val) {
+  document.getElementById(prefix + '-ampm-am').classList.toggle('active', val === 'AM');
+  document.getElementById(prefix + '-ampm-pm').classList.toggle('active', val === 'PM');
+}
+function getTimeAs24h(prefix) {
+  let h = parseInt(document.getElementById(prefix + '-hour').value) || 12;
+  const m = parseInt(document.getElementById(prefix + '-min').value) || 0;
+  const isPM = document.getElementById(prefix + '-ampm-pm').classList.contains('active');
+  h = h % 12 + (isPM ? 12 : 0);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function resetTimePicker(prefix) {
+  document.getElementById(prefix + '-hour').value = '';
+  document.getElementById(prefix + '-min').value  = '';
+  setAmPm(prefix, 'AM');
+}
+
 function toggleCustSel(id) {
   const el = document.getElementById(id);
   const isOpen = el.classList.contains('open');
@@ -1584,10 +1615,10 @@ document.addEventListener('click', e => {
 });
 
 function openNewQuitTracker() {
-  document.getElementById('quit-name-input').value         = '';
-  document.getElementById('quit-since-date').value         = '';
-  document.getElementById('quit-since-time').value         = '';
+  document.getElementById('quit-name-input').value             = '';
+  document.getElementById('quit-since-date').value             = '';
   document.getElementById('quit-since-datetime').style.display = 'none';
+  resetTimePicker('quit-since');
   resetCustSel('quit-since-sel');
   document.getElementById('quit-new-modal').classList.add('show');
 }
@@ -1601,11 +1632,9 @@ async function saveQuitTracker() {
     started_at = new Date().toISOString();
   } else {
     const date = document.getElementById('quit-since-date').value.trim();
-    const time = document.getElementById('quit-since-time').value.trim() || '00:00';
     if (!date) { alert('Please select a date.'); return; }
-    const d = new Date(`${date}T${time}`);
-    if (isNaN(d)) { alert('Invalid time. Use HH:MM'); return; }
-    started_at = d.toISOString();
+    const time = getTimeAs24h('quit-since');
+    started_at = new Date(`${date}T${time}`).toISOString();
   }
   const { error } = await _sb.from('quit_trackers').insert({
     id: crypto.randomUUID(), user_id: _uid, name, started_at,
