@@ -427,6 +427,7 @@
 
 <script>
 const PRESETS = [
+  // ── DARK ──
   { name: 'Void',      bg: '#000000' },
   { name: 'Near Black',bg: '#0A0A0A' },
   { name: 'Charcoal',  bg: '#111111' },
@@ -443,6 +444,24 @@ const PRESETS = [
   { name: 'Warm Gray', bg: '#111110' },
   { name: 'Purple',    bg: '#0C0814' },
   { name: 'Aubergine', bg: '#0F080F' },
+  // ── MID ──
+  { name: 'Steel',     bg: '#2C3140' },
+  { name: 'Ash',       bg: '#3A3A3A' },
+  { name: 'Stone',     bg: '#3D3835' },
+  { name: 'Deep Sage', bg: '#2A3530' },
+  // ── LIGHT ──
+  { name: 'Silver',    bg: '#E0E0E0' },
+  { name: 'Smoke',     bg: '#F0F0F0' },
+  { name: 'Ghost',     bg: '#F5F5FA' },
+  { name: 'Snow',      bg: '#F8F8F8' },
+  { name: 'Paper',     bg: '#F4F1EA' },
+  { name: 'Linen',     bg: '#FAF0E6' },
+  { name: 'Warm White',bg: '#FAFAF8' },
+  { name: 'Cool White',bg: '#F5F5FF' },
+  { name: 'Mint',      bg: '#F0FAF5' },
+  { name: 'Sky',       bg: '#F0F5FF' },
+  { name: 'Rose',      bg: '#FFF0F3' },
+  { name: 'White',     bg: '#FFFFFF' },
 ];
 
 function hexToRgb(hex) {
@@ -458,15 +477,25 @@ function lighten(hex, amt) {
   const [r,g,b] = hexToRgb(hex);
   return rgbToHex(r+amt, g+amt, b+amt);
 }
+function darken(hex, amt) {
+  const [r,g,b] = hexToRgb(hex);
+  return rgbToHex(r-amt, g-amt, b-amt);
+}
+function isLight(hex) {
+  const [r,g,b] = hexToRgb(hex);
+  return (r + g + b) / 3 > 140;
+}
 
 function computeSurfaces(bg) {
+  const light = isLight(bg);
+  const shift = light ? darken : lighten;
   return {
     bg,
-    surface:  lighten(bg, 10),
-    surface2: lighten(bg, 17),
-    surface3: lighten(bg, 24),
-    border:   lighten(bg, 28),
-    border2:  lighten(bg, 34),
+    surface:  shift(bg, 8),
+    surface2: shift(bg, 14),
+    surface3: shift(bg, 20),
+    border:   shift(bg, 24),
+    border2:  shift(bg, 30),
   };
 }
 
