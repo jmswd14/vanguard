@@ -156,98 +156,97 @@
 </div><!-- /app -->
 
 <!-- ── ADD / EDIT GOAL MODAL ── -->
-<div class="modal-backdrop" id="goal-modal-backdrop" onclick="closeGoalModal()"></div>
-<div class="modal" id="goal-modal" style="max-width:520px;">
-  <div class="modal-title" id="goal-modal-title">New Goal</div>
+<div class="modal-backdrop" id="goal-modal-backdrop" onclick="closeGoalModal()">
+  <div class="modal" id="goal-modal" style="max-width:520px;" onclick="event.stopPropagation()">
+    <div class="modal-title" id="goal-modal-title">New Goal</div>
 
-  <div class="goal-modal-body">
-    <div class="form-group">
-      <label class="form-label">Title</label>
-      <input type="text" class="form-input" id="goal-title" placeholder="What do you want to achieve?" maxlength="120">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Category</label>
-      <!-- custom dropdown -->
-      <div class="cust-sel" id="goal-category-sel">
-        <button type="button" class="cust-sel-trigger" onclick="toggleCustSel('goal-category-sel')">
-          <span class="cust-sel-val">Health</span>
-          <span class="cust-sel-arrow">▾</span>
-        </button>
-        <div class="cust-sel-menu">
-          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Health')">Health</div>
-          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Finance')">Finance</div>
-          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Career')">Career</div>
-          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Personal')">Personal</div>
-          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Education')">Education</div>
-          <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Other')">Other</div>
-        </div>
+    <div class="goal-modal-body">
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="goal-title" placeholder="What do you want to achieve?" maxlength="120">
       </div>
-    </div>
 
-    <div class="form-group">
-      <label class="form-label">Target Date <span style="font-size:10px;color:var(--text-muted)">(optional)</span></label>
-      <div class="cust-cal-wrap" id="goal-date-cal">
-        <div class="cust-cal-field" onclick="toggleCal('goal-date-cal')">
-          <span class="cust-cal-display" id="goal-date-display">No date set</span>
-          <span style="font-size:10px;color:var(--text-muted);">▾</span>
-        </div>
-        <div class="cust-cal-panel" id="goal-date-cal-panel">
-          <div class="cust-cal-header">
-            <button type="button" onclick="calNav('goal-date-cal',-1)">‹</button>
-            <span id="goal-date-cal-label"></span>
-            <button type="button" onclick="calNav('goal-date-cal',1)">›</button>
+      <div class="form-group">
+        <label>Category</label>
+        <div class="cust-sel" id="goal-category-sel">
+          <button type="button" class="cust-sel-trigger" onclick="toggleCustSel('goal-category-sel')">
+            <span class="cust-sel-val">Health</span>
+            <span class="cust-sel-arrow">▾</span>
+          </button>
+          <div class="cust-sel-menu">
+            <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Health')">Health</div>
+            <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Finance')">Finance</div>
+            <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Career')">Career</div>
+            <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Personal')">Personal</div>
+            <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Education')">Education</div>
+            <div class="cust-sel-opt" onclick="pickCustSel('goal-category-sel','Other')">Other</div>
           </div>
-          <div class="cust-cal-dow">Su Mo Tu We Th Fr Sa</div>
-          <div class="cust-cal-grid" id="goal-date-cal-grid"></div>
         </div>
       </div>
-      <!-- hidden text field holds value -->
-      <input type="hidden" id="goal-date-val">
-    </div>
 
-    <div class="form-group">
-      <label class="form-label">Description <span style="font-size:10px;color:var(--text-muted)">(optional)</span></label>
-      <textarea class="form-input" id="goal-desc" rows="3" placeholder="Why does this matter to you?" style="resize:vertical;"></textarea>
-    </div>
+      <div class="form-group">
+        <label>Target Date <span style="font-size:10px;color:var(--text-muted);text-transform:none;">(optional)</span></label>
+        <div class="cust-cal-wrap" id="goal-date-cal">
+          <div class="cust-cal-field" onclick="toggleCal('goal-date-cal')">
+            <span id="goal-date-display">No date set</span>
+            <span style="font-size:10px;color:var(--text-muted);">▾</span>
+          </div>
+          <div class="cust-cal-panel" id="goal-date-cal-panel">
+            <div class="cust-cal-header">
+              <button type="button" onclick="calNav('goal-date-cal',-1)">‹</button>
+              <span id="goal-date-cal-label"></span>
+              <button type="button" onclick="calNav('goal-date-cal',1)">›</button>
+            </div>
+            <div class="cust-cal-dow">Su Mo Tu We Th Fr Sa</div>
+            <div class="cust-cal-grid" id="goal-date-cal-grid"></div>
+          </div>
+        </div>
+        <input type="hidden" id="goal-date-val">
+      </div>
 
-    <div class="form-group" id="goal-status-group" style="display:none;">
-      <label class="form-label">Status</label>
-      <div class="goal-status-opts">
-        <button type="button" class="goal-status-btn active" data-status="active" onclick="pickStatus('active')">Active</button>
-        <button type="button" class="goal-status-btn" data-status="completed" onclick="pickStatus('completed')">Completed</button>
-        <button type="button" class="goal-status-btn" data-status="abandoned" onclick="pickStatus('abandoned')">Abandoned</button>
+      <div class="form-group">
+        <label>Description <span style="font-size:10px;color:var(--text-muted);text-transform:none;">(optional)</span></label>
+        <textarea id="goal-desc" rows="3" placeholder="Why does this matter to you?" style="resize:vertical;"></textarea>
+      </div>
+
+      <div class="form-group" id="goal-status-group" style="display:none;">
+        <label>Status</label>
+        <div class="goal-status-opts">
+          <button type="button" class="goal-status-btn active" data-status="active" onclick="pickStatus('active')">Active</button>
+          <button type="button" class="goal-status-btn" data-status="completed" onclick="pickStatus('completed')">Completed</button>
+          <button type="button" class="goal-status-btn" data-status="abandoned" onclick="pickStatus('abandoned')">Abandoned</button>
+        </div>
+      </div>
+
+      <div id="goal-milestones-section" style="display:none;">
+        <label style="display:block;margin-bottom:8px;">Milestones</label>
+        <div class="milestone-list" id="milestone-list"></div>
+        <div class="milestone-add-row">
+          <input type="text" class="milestone-add-input" id="milestone-new-input" placeholder="Add a milestone…" maxlength="120"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();addMilestone();}">
+          <button class="btn" onclick="addMilestone()">Add</button>
+        </div>
       </div>
     </div>
 
-    <!-- Milestones — only shown when editing existing goal -->
-    <div id="goal-milestones-section" style="display:none;">
-      <label class="form-label" style="display:block;margin-bottom:8px;">Milestones</label>
-      <div class="milestone-list" id="milestone-list"></div>
-      <div class="milestone-add-row">
-        <input type="text" class="milestone-add-input" id="milestone-new-input" placeholder="Add a milestone…" maxlength="120"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();addMilestone();}">
-        <button class="btn" onclick="addMilestone()">Add</button>
-      </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="goal-delete-btn" onclick="confirmDeleteGoal()" style="display:none;">Delete</button>
+      <div style="flex:1;"></div>
+      <button class="btn" onclick="closeGoalModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGoal()">Save</button>
     </div>
-  </div>
-
-  <div class="modal-actions">
-    <button class="btn btn-danger" id="goal-delete-btn" onclick="confirmDeleteGoal()" style="display:none;">Delete</button>
-    <div style="flex:1;"></div>
-    <button class="btn" onclick="closeGoalModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveGoal()">Save</button>
   </div>
 </div>
 
 <!-- ── CONFIRM DELETE MODAL ── -->
-<div class="modal-backdrop" id="confirm-modal-backdrop" onclick="closeConfirmModal()"></div>
-<div class="modal" id="confirm-modal" style="max-width:400px;">
-  <div class="modal-title" id="confirm-modal-title">Confirm Delete</div>
-  <p id="confirm-modal-msg" style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:4px;"></p>
-  <div class="modal-actions">
-    <button class="btn" onclick="closeConfirmModal()">Cancel</button>
-    <button class="btn btn-danger" id="confirm-modal-ok">Delete</button>
+<div class="modal-backdrop" id="confirm-modal-backdrop" onclick="closeConfirmModal()">
+  <div class="modal" style="max-width:400px;" onclick="event.stopPropagation()">
+    <div class="modal-title" id="confirm-modal-title">Confirm Delete</div>
+    <p id="confirm-modal-msg" style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:4px;"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-modal-ok">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -481,13 +480,11 @@ function openEditModal(goalId) {
 
 function openGoalModal() {
   document.getElementById('goal-modal-backdrop').classList.add('show');
-  document.getElementById('goal-modal').classList.add('show');
   setTimeout(function(){ document.getElementById('goal-title').focus(); }, 50);
 }
 
 function closeGoalModal() {
   document.getElementById('goal-modal-backdrop').classList.remove('show');
-  document.getElementById('goal-modal').classList.remove('show');
   editingGoalId = null;
 }
 
@@ -572,7 +569,6 @@ async function executeDeleteGoal() {
 
 function closeConfirmModal() {
   document.getElementById('confirm-modal-backdrop').classList.remove('show');
-  document.getElementById('confirm-modal').classList.remove('show');
   _pendingDeleteId = null;
 }
 
