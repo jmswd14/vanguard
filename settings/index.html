@@ -339,6 +339,9 @@ async function init() {
   if (!session) { window.location.href = '../login.html'; return; }
   currentUser = session.user;
 
+  // Build bg presets immediately from localStorage so they show without waiting for Supabase
+  buildBgPresets(localStorage.getItem('vg-bg') || '#000000');
+
   loadProfile();
   buildTimePickers();
   await Promise.all([
