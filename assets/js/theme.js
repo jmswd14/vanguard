@@ -10,17 +10,20 @@ window.VG_THEME = {
     function toHex(r,g,b) {
       return '#' + [r,g,b].map(function(v){ return Math.min(255,Math.max(0,Math.round(v))).toString(16).padStart(2,'0'); }).join('');
     }
-    function lighten(h, amt) {
+    function shift(h, amt) {
       var rgb = hexToRgb(h);
       return toHex(rgb[0]+amt, rgb[1]+amt, rgb[2]+amt);
     }
+    var rgb = hexToRgb(hex);
+    var isLight = (rgb[0]+rgb[1]+rgb[2]) / 3 > 140;
+    var s = isLight ? -1 : 1;
     return {
       bg:       hex,
-      surface:  lighten(hex, 10),
-      surface2: lighten(hex, 17),
-      surface3: lighten(hex, 24),
-      border:   lighten(hex, 28),
-      border2:  lighten(hex, 34),
+      surface:  shift(hex, s*8),
+      surface2: shift(hex, s*14),
+      surface3: shift(hex, s*20),
+      border:   shift(hex, s*24),
+      border2:  shift(hex, s*30),
     };
   },
 
