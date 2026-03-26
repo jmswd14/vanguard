@@ -150,7 +150,7 @@ const DEFAULT_LAYOUT = [
 
 const WIDGET_LABELS = {
   'greeting':        'Greeting',
-  'tasks-today':     "Today's Tasks",
+  'tasks-today':     "Outstanding Tasks",
   'habit-checkin':   'Habit Check-in',
   'upcoming-events': 'Upcoming Events',
   'habit-streaks':   'Habit Streaks',
@@ -163,7 +163,7 @@ const WIDGET_LABELS = {
 
 const WIDGET_CATALOG = [
   { type: 'greeting',        size: 'wide',  icon: '◌', name: 'Greeting',        desc: 'Time, date & welcome' },
-  { type: 'tasks-today',     size: 'large', icon: '☑', name: "Today's Tasks",   desc: 'Tasks due today' },
+  { type: 'tasks-today',     size: 'large', icon: '☑', name: "Outstanding Tasks", desc: 'All incomplete tasks' },
   { type: 'habit-checkin',   size: 'wide',  icon: '◉', name: 'Habit Check-in',  desc: "Check off today's habits" },
   { type: 'upcoming-events', size: 'large', icon: '◫', name: 'Upcoming Events', desc: 'Next 7 days of events' },
   { type: 'habit-streaks',   size: 'wide',  icon: '↑', name: 'Habit Streaks',   desc: 'Your top habit streaks' },
@@ -956,7 +956,7 @@ async function loadTasksToday(widget) {
 
   try {
     let q = DB.from('tasks').select('id, name, priority, done')
-      .eq('due', todayStr).eq('done', false).order('position').limit(limit);
+      .eq('done', false).order('position').limit(limit);
     if (listId) q = q.eq('category_id', listId);
     if (priorityFilter === 'high_medium') q = q.in('priority', ['high', 'medium']);
     else if (priorityFilter === 'high') q = q.eq('priority', 'high');
@@ -968,7 +968,7 @@ async function loadTasksToday(widget) {
       el.innerHTML = `
         <div class="widget-empty">
           <div class="widget-empty-icon">☑</div>
-          <div class="widget-empty-text">No tasks due today</div>
+          <div class="widget-empty-text">No outstanding tasks</div>
         </div>
         <a href="tasks/index.html" class="widget-footer-link">Open Tasks →</a>
       `;
