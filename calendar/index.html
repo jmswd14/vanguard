@@ -1173,14 +1173,22 @@ document.addEventListener('keydown', e => {
 });
 
 // ── GOOGLE CALENDAR FUNCTIONS ──
-function connectGoogle() {
+async function connectGoogle() {
+  // Only force consent screen (to get refresh token) if we don't already have one stored.
+  // Using prompt=consent every time causes the unverified-app warning on every connect.
+  let hasRefreshToken = false;
+  try {
+    const { data } = await _sb.from('google_tokens').select('refresh_token').eq('user_id', _uid).maybeSingle();
+    hasRefreshToken = !!data?.refresh_token;
+  } catch(_) {}
+
   const url = 'https://accounts.google.com/o/oauth2/v2/auth'
     + '?client_id='     + encodeURIComponent(GCAL_CLIENT_ID)
     + '&redirect_uri='  + encodeURIComponent(GCAL_REDIRECT)
     + '&response_type=code'
     + '&scope='         + encodeURIComponent(GCAL_SCOPE)
     + '&access_type=offline'
-    + '&prompt=consent'
+    + (hasRefreshToken ? '&prompt=select_account' : '&prompt=consent')
     + '&state=gcal_auth';
   window.location.href = url;
 }
