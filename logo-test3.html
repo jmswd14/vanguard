@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motherboard — Logo #9 All Colors</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Share Tech Mono', monospace;
+  background: #080808;
+  color: #fff;
+  padding: 44px 40px 80px;
+}
+h1 {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  margin-bottom: 44px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 24px 16px;
+}
+@media (max-width: 700px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 400px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.85);
+  flex-shrink: 0;
+}
+.icon svg { display: block; width: 100%; height: 100%; }
+.lbl {
+  font-size: 7.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.18);
+  text-align: center;
+}
+.hex {
+  font-size: 7px;
+  color: rgba(255,255,255,0.1);
+  letter-spacing: 0.05em;
+}
+</style>
+</head>
+<body>
+<h1>Logo #9 — M + Underline — Every Color</h1>
+<div class="grid" id="grid"></div>
+
+<script>
+const colors = [
+  { name: 'Violet',       hex: '#9B4FFF', bg: '#000000' },
+  { name: 'Purple',       hex: '#AA66FF', bg: '#08001A' },
+  { name: 'Lavender',     hex: '#C4A0FF', bg: '#0A0010' },
+  { name: 'Electric Blue',hex: '#4D7CFF', bg: '#000918' },
+  { name: 'Sky Blue',     hex: '#00BFFF', bg: '#000810' },
+  { name: 'Cyan',         hex: '#00E8FF', bg: '#000C10' },
+  { name: 'Mint',         hex: '#00FFC8', bg: '#001510' },
+  { name: 'Teal',         hex: '#00FFCC', bg: '#001A16' },
+  { name: 'Neon Green',   hex: '#39FF14', bg: '#001400' },
+  { name: 'Terminal Green',hex:'#00FF41', bg: '#000B00' },
+  { name: 'Lime',         hex: '#B8FF00', bg: '#080A00' },
+  { name: 'Yellow',       hex: '#FFE600', bg: '#0D0C00' },
+  { name: 'Amber',        hex: '#FFB800', bg: '#0D0800' },
+  { name: 'Gold',         hex: '#FFD700', bg: '#0D0B00' },
+  { name: 'Orange',       hex: '#FF6600', bg: '#0D0400' },
+  { name: 'Warm Orange',  hex: '#FF8C00', bg: '#0D0500' },
+  { name: 'Coral',        hex: '#FF6B6B', bg: '#100303' },
+  { name: 'Red',          hex: '#FF3333', bg: '#100000' },
+  { name: 'Crimson',      hex: '#FF1744', bg: '#0F0003' },
+  { name: 'Hot Pink',     hex: '#FF2D6B', bg: '#0F0008' },
+  { name: 'Magenta',      hex: '#FF00CC', bg: '#0D000D' },
+  { name: 'Pink',         hex: '#FF69B4', bg: '#0D0009' },
+  { name: 'Rose',         hex: '#FF4DFF', bg: '#0D000D' },
+  { name: 'White',        hex: '#FFFFFF', bg: '#000000' },
+  { name: 'Silver',       hex: '#C8C8C8', bg: '#0C0C0C' },
+  { name: 'Ice',          hex: '#E8F4FF', bg: '#080C10' },
+];
+
+const grid = document.getElementById('grid');
+colors.forEach(c => {
+  const item = document.createElement('div');
+  item.className = 'item';
+  item.innerHTML = `
+    <div class="icon">
+      <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <rect width="400" height="400" fill="${c.bg}"/>
+        <text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="${c.hex}" text-anchor="middle" letter-spacing="-4">M</text>
+        <rect x="60" y="292" width="280" height="7" fill="${c.hex}"/>
+      </svg>
+    </div>
+    <div class="lbl">${c.name}</div>
+    <div class="hex">${c.hex}</div>
+  `;
+  grid.appendChild(item);
+});
+</script>
+</body>
+</html>
