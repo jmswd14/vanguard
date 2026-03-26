@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motherboard — Logo Test 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Share Tech Mono', monospace;
+  background: #080808;
+  color: #fff;
+  padding: 44px 40px 80px;
+}
+h1 {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  margin-bottom: 44px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 28px 20px;
+}
+@media (max-width: 600px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.icon {
+  width: 100px;
+  height: 100px;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.8);
+  flex-shrink: 0;
+}
+.icon svg { display: block; width: 100%; height: 100%; }
+.lbl {
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<h1>Motherboard — Logo Concepts Vol. 2</h1>
+<div class="grid">
+
+  <!-- 01 — White Minimal -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><text x="200" y="270" font-family="'Share Tech Mono',monospace" font-size="260" fill="#ffffff" text-anchor="middle" letter-spacing="-4">M</text></svg></div>
+    <div class="lbl">01 — White</div>
+  </div>
+
+  <!-- 02 — Orange bar top -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><rect x="0" y="0" width="400" height="6" fill="#FF6600"/><text x="200" y="270" font-family="'Share Tech Mono',monospace" font-size="260" fill="#FF6600" text-anchor="middle" letter-spacing="-4">M</text></svg></div>
+    <div class="lbl">02 — Orange</div>
+  </div>
+
+  <!-- 03 — Cyan mb lowercase -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><text x="200" y="210" font-family="'Share Tech Mono',monospace" font-size="130" fill="#00E8FF" text-anchor="middle" letter-spacing="4">mb</text><rect x="60" y="230" width="280" height="3" fill="#00E8FF" opacity="0.25"/><text x="200" y="295" font-family="'Share Tech Mono',monospace" font-size="36" fill="#00E8FF" text-anchor="middle" opacity="0.3" letter-spacing="10">OS</text></svg></div>
+    <div class="lbl">03 — Cyan</div>
+  </div>
+
+  <!-- 04 — Electric blue brackets -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#0A0F2C"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="200" fill="#4D7CFF" text-anchor="middle">[M]</text></svg></div>
+    <div class="lbl">04 — Navy Blue</div>
+  </div>
+
+  <!-- 05 — Slash prefix, two-tone -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><text x="90" y="262" font-family="'Share Tech Mono',monospace" font-size="230" fill="#FF6600" opacity="0.9">/</text><text x="220" y="262" font-family="'Share Tech Mono',monospace" font-size="230" fill="#ffffff">M</text></svg></div>
+    <div class="lbl">05 — Slash</div>
+  </div>
+
+  <!-- 06 — Lime M. -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><text x="155" y="272" font-family="'Share Tech Mono',monospace" font-size="240" fill="#B8FF00" text-anchor="middle" letter-spacing="-6">M</text><circle cx="295" cy="265" r="18" fill="#B8FF00"/></svg></div>
+    <div class="lbl">06 — Lime</div>
+  </div>
+
+  <!-- 07 — Hot pink double rule -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><rect x="50" y="90" width="300" height="4" fill="#FF2D6B" opacity="0.5"/><text x="200" y="268" font-family="'Share Tech Mono',monospace" font-size="240" fill="#FF2D6B" text-anchor="middle" letter-spacing="-4">M</text><rect x="50" y="300" width="300" height="4" fill="#FF2D6B" opacity="0.5"/></svg></div>
+    <div class="lbl">07 — Pink</div>
+  </div>
+
+  <!-- 08 — Amber MB stacked -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><text x="200" y="200" font-family="'Share Tech Mono',monospace" font-size="170" fill="#FFB800" text-anchor="middle" letter-spacing="8">MB</text><rect x="50" y="215" width="300" height="2" fill="#FFB800" opacity="0.3"/><text x="200" y="290" font-family="'Share Tech Mono',monospace" font-size="34" fill="#FFB800" text-anchor="middle" opacity="0.35" letter-spacing="12">SYSTEM</text></svg></div>
+    <div class="lbl">08 — Amber</div>
+  </div>
+
+  <!-- 09 — Violet underline -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#9B4FFF" text-anchor="middle" letter-spacing="-4">M</text><rect x="60" y="290" width="280" height="6" fill="#9B4FFF"/></svg></div>
+    <div class="lbl">09 — Violet</div>
+  </div>
+
+  <!-- 10 — Mint corner dots -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><circle cx="55"  cy="55"  r="10" fill="#00FFC8" opacity="0.4"/><circle cx="345" cy="55"  r="10" fill="#00FFC8" opacity="0.4"/><circle cx="55"  cy="345" r="10" fill="#00FFC8" opacity="0.4"/><circle cx="345" cy="345" r="10" fill="#00FFC8" opacity="0.4"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#00FFC8" text-anchor="middle" letter-spacing="-4">M</text></svg></div>
+    <div class="lbl">10 — Mint</div>
+  </div>
+
+  <!-- 11 — Red background white M -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#1a0004"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#ffffff" text-anchor="middle" letter-spacing="-4">M</text><rect x="0" y="0" width="6" height="400" fill="#FF3333"/></svg></div>
+    <div class="lbl">11 — Red Bg</div>
+  </div>
+
+  <!-- 12 — Split M two-tone diagonal -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/>
+      <defs><clipPath id="cl"><polygon points="0,0 400,0 400,400"/></clipPath><clipPath id="cr"><polygon points="0,0 0,400 400,400"/></clipPath></defs>
+      <text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#ffffff" text-anchor="middle" letter-spacing="-4" clip-path="url(#cl)">M</text>
+      <text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#FF6600" text-anchor="middle" letter-spacing="-4" clip-path="url(#cr)">M</text>
+    </svg></div>
+    <div class="lbl">12 — Split</div>
+  </div>
+
+  <!-- 13 — Curly braces white -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#111"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="190" fill="#ffffff" text-anchor="middle" letter-spacing="-2">{M}</text></svg></div>
+    <div class="lbl">13 — Curly</div>
+  </div>
+
+  <!-- 14 — Deep sky blue, right accent bar -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><rect x="370" y="0" width="6" height="400" fill="#00BFFF" opacity="0.5"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#00BFFF" text-anchor="middle" letter-spacing="-4">M</text></svg></div>
+    <div class="lbl">14 — Sky Blue</div>
+  </div>
+
+  <!-- 15 — Ghost double M (layered) -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/>
+      <text x="212" y="272" font-family="'Share Tech Mono',monospace" font-size="256" fill="#FF6600" text-anchor="middle" letter-spacing="-4" opacity="0.18">M</text>
+      <text x="196" y="258" font-family="'Share Tech Mono',monospace" font-size="256" fill="#ffffff" text-anchor="middle" letter-spacing="-4">M</text>
+    </svg></div>
+    <div class="lbl">15 — Ghost</div>
+  </div>
+
+  <!-- 16 — Yellow diamond accent -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/><polygon points="200,52 216,70 200,88 184,70" fill="#FFFF00"/><text x="200" y="282" font-family="'Share Tech Mono',monospace" font-size="256" fill="#FFFF00" text-anchor="middle" letter-spacing="-4">M</text></svg></div>
+    <div class="lbl">16 — Yellow</div>
+  </div>
+
+  <!-- 17 — Dark teal monochrome -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#001a16"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#00FFCC" text-anchor="middle" letter-spacing="-4">M</text></svg></div>
+    <div class="lbl">17 — Teal Mono</div>
+  </div>
+
+  <!-- 18 — Magenta pixel block -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#000"/>
+      <rect x="50" y="90" width="300" height="220" fill="#FF0080" opacity="0.12"/>
+      <text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#FF0080" text-anchor="middle" letter-spacing="-4">M</text>
+    </svg></div>
+    <div class="lbl">18 — Magenta</div>
+  </div>
+
+  <!-- 19 — Dark purple + lighter M -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#08001A"/><text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#AA66FF" text-anchor="middle" letter-spacing="-4">M</text></svg></div>
+    <div class="lbl">19 — Purple</div>
+  </div>
+
+  <!-- 20 — Silver, bottom-left bracket mark -->
+  <div class="item">
+    <div class="icon"><svg viewBox="0 0 400 400"><rect width="400" height="400" fill="#0C0C0C"/>
+      <text x="200" y="262" font-family="'Share Tech Mono',monospace" font-size="256" fill="#C8C8C8" text-anchor="middle" letter-spacing="-4">M</text>
+      <!-- corner L-bracket bottom left -->
+      <polyline points="30,320 30,370 80,370" fill="none" stroke="#C8C8C8" stroke-width="5" opacity="0.4"/>
+    </svg></div>
+    <div class="lbl">20 — Silver</div>
+  </div>
+
+</div>
+</body>
+</html>
