@@ -454,15 +454,102 @@ function debouncedSave() {
 
 // ── GRID RENDER ───────────────────────────────────────────────────────────────
 
+// ── GRID PLACEMENT HELPERS ────────────────────────────────────────────────────
+
+function getSizeSpan(size) {
+  if (size === 'large') return { col: 2, row: 2 };
+  if (size === 'wide')  return { col: 2, row: 1 };
+  return { col: 1, row: 1 };
+}
+
+function computeOccupied(excludeIdx) {
+  const occ = new Set();
+  widgets.forEach((w, i) => {
+    if (i === excludeIdx || !w.col || !w.row) return;
+    const sp = getSizeSpan(w.size);
+    for (let r = w.row; r < w.row + sp.row; r++)
+      for (let c = w.col; c < w.col + sp.col; c++)
+        occ.add(`${r},${c}`);
+  });
+  return occ;
+}
+
+function isCellFree(occ, col, row, colSpan, rowSpan) {
+  for (let r = row; r < row + rowSpan; r++)
+    for (let c = col; c < col + colSpan; c++)
+      if (occ.has(`${r},${c}`)) return false;
+  return true;
+}
+
+function snapWidgetPositions(grid) {
+  const gridRect = grid.getBoundingClientRect();
+  if (!gridRect.width) return;
+  const gap  = 16;
+  const colW = (gridRect.width - 3 * gap) / 4;
+  const rowH = 212;
+  widgets.forEach(w => {
+    if (w.col && w.row) return;
+    const el = grid.querySelector(`[data-id="${w.id}"]`);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    w.col = Math.max(1, Math.round((r.left - gridRect.left) / (colW + gap)) + 1);
+    w.row = Math.max(1, Math.round((r.top  - gridRect.top)  / (rowH + gap)) + 1);
+    const sp = getSizeSpan(w.size);
+    el.style.gridColumn = `${w.col} / span ${sp.col}`;
+    el.style.gridRow    = `${w.row} / span ${sp.row}`;
+  });
+}
+
+function showDragSlots(size, excludeIdx) {
+  const grid = document.getElementById('widget-grid');
+  const occ  = computeOccupied(excludeIdx);
+  const sp   = getSizeSpan(size);
+  let maxRow = 1;
+  widgets.forEach((w, i) => {
+    if (i !== excludeIdx && w.row) maxRow = Math.max(maxRow, w.row + getSizeSpan(w.size).row - 1);
+  });
+  const colStarts = sp.col === 2 ? [1, 3] : [1, 2, 3, 4];
+  for (let row = 1; row <= maxRow + 1; row++) {
+    colStarts.forEach(col => {
+      if (isCellFree(occ, col, row, sp.col, sp.row)) {
+        const slot = document.createElement('div');
+        slot.className = 'widget-drop-slot';
+        slot.dataset.slotCol = String(col);
+        slot.dataset.slotRow = String(row);
+        slot.style.gridColumn = `${col} / span ${sp.col}`;
+        slot.style.gridRow    = `${row} / span ${sp.row}`;
+        grid.appendChild(slot);
+      }
+    });
+  }
+}
+
+function hideDragSlots() {
+  document.querySelectorAll('.widget-drop-slot').forEach(s => s.remove());
+}
+
+// ── GRID RENDER ───────────────────────────────────────────────────────────────
+
 function renderGrid() {
   const grid = document.getElementById('widget-grid');
   grid.innerHTML = '';
-  if (editMode) grid.classList.add('edit-mode');
-  else grid.classList.remove('edit-mode');
+  grid.classList.toggle('edit-mode', editMode);
 
+  const mobile = window.innerWidth <= 740;
   widgets.forEach((w, idx) => {
-    grid.appendChild(createWidgetEl(w, idx));
+    const div = createWidgetEl(w, idx);
+    if (!mobile && w.col && w.row) {
+      const sp = getSizeSpan(w.size);
+      div.style.gridColumn = `${w.col} / span ${sp.col}`;
+      div.style.gridRow    = `${w.row} / span ${sp.row}`;
+    }
+    grid.appendChild(div);
   });
+
+  // First load: snap auto-placed widgets to explicit positions
+  if (!mobile && widgets.some(w => !w.col || !w.row)) {
+    requestAnimationFrame(() => snapWidgetPositions(grid));
+  }
 }
 
 function createWidgetEl(widget, idx) {
@@ -490,22 +577,27 @@ function createWidgetEl(widget, idx) {
   return div;
 }
 
+// ── DRAG & DROP ───────────────────────────────────────────────────────────────
+
 function _dragStart(e) {
   e.preventDefault();
   const div = e.currentTarget.closest('.widget');
-  const r = div.getBoundingClientRect();
-  _dragSrc = div;
-  _dragOX = e.clientX - r.left;
-  _dragOY = e.clientY - r.top;
+  const r   = div.getBoundingClientRect();
+  _dragSrc  = div;
+  _dragOX   = e.clientX - r.left;
+  _dragOY   = e.clientY - r.top;
 
   _dragGhost = document.createElement('div');
   _dragGhost.className = div.className;
   _dragGhost.style.cssText =
     `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;` +
-    `opacity:0.75;pointer-events:none;z-index:9999;border:1px solid var(--accent);background:var(--surface2);`;
+    `opacity:0.7;pointer-events:none;z-index:9999;border:1px solid var(--accent);background:var(--surface2);`;
   _dragGhost.innerHTML = div.querySelector('.widget-header').outerHTML;
   document.body.appendChild(_dragGhost);
-  div.style.opacity = '0.25';
+  div.style.opacity = '0.2';
+
+  const si = parseInt(div.dataset.idx);
+  showDragSlots(widgets[si].size, si);
 
   document.addEventListener('pointermove', _dragMove);
   document.addEventListener('pointerup', _dragEnd, { once: true });
@@ -516,32 +608,52 @@ function _dragMove(e) {
   _dragGhost.style.left = (e.clientX - _dragOX) + 'px';
   _dragGhost.style.top  = (e.clientY - _dragOY) + 'px';
 
-  // find widget under cursor (hide ghost so it doesn't block elementFromPoint)
   _dragGhost.style.visibility = 'hidden';
-  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.widget');
+  const el = document.elementFromPoint(e.clientX, e.clientY);
   _dragGhost.style.visibility = '';
 
-  if (_dragOver && _dragOver !== target) _dragOver.classList.remove('drag-over');
-  _dragOver = (target && target !== _dragSrc) ? target : null;
-  if (_dragOver) _dragOver.classList.add('drag-over');
+  const targetWidget = el?.closest('.widget:not(.widget-drop-slot)');
+  const targetSlot   = el?.closest('.widget-drop-slot');
+  const newTarget    = (targetWidget && targetWidget !== _dragSrc) ? targetWidget
+                     : targetSlot ? targetSlot : null;
+
+  if (_dragOver && _dragOver !== newTarget) {
+    _dragOver.classList.remove('drag-over', 'slot-hover');
+  }
+  _dragOver = newTarget;
+  if (_dragOver) {
+    _dragOver.classList.add(_dragOver.classList.contains('widget-drop-slot') ? 'slot-hover' : 'drag-over');
+  }
 }
 
 function _dragEnd() {
   document.removeEventListener('pointermove', _dragMove);
   if (_dragGhost) { _dragGhost.remove(); _dragGhost = null; }
   if (_dragSrc)   { _dragSrc.style.opacity = ''; }
+  hideDragSlots();
 
   if (_dragOver) {
-    _dragOver.classList.remove('drag-over');
+    _dragOver.classList.remove('drag-over', 'slot-hover');
     const si = parseInt(_dragSrc.dataset.idx);
-    const di = parseInt(_dragOver.dataset.idx);
-    if (si !== di) {
-      [widgets[si], widgets[di]] = [widgets[di], widgets[si]];
-      widgets.forEach((w, i) => { w.position = i; });
-      renderGrid();
-      loadAllWidgetData();
-      debouncedSave();
+
+    if (_dragOver.classList.contains('widget-drop-slot')) {
+      // Move to empty slot
+      widgets[si].col = parseInt(_dragOver.dataset.slotCol);
+      widgets[si].row = parseInt(_dragOver.dataset.slotRow);
+    } else {
+      // Swap positions with target widget
+      const di = parseInt(_dragOver.dataset.idx);
+      if (si !== di) {
+        const tc = widgets[di].col, tr = widgets[di].row;
+        widgets[di].col = widgets[si].col; widgets[di].row = widgets[si].row;
+        widgets[si].col = tc;             widgets[si].row = tr;
+      }
     }
+
+    widgets.forEach((w, i) => { w.position = i; });
+    renderGrid();
+    loadAllWidgetData();
+    debouncedSave();
   }
 
   _dragSrc = null;
