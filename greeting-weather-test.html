@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greeting Widget — Weather Layout Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #000;
+  --surface: #0A0A0A;
+  --surface2: #111;
+  --surface3: #181818;
+  --border: #1C1C1C;
+  --border2: #252525;
+  --text: #00FF41;
+  --text-dim: rgba(0,255,65,0.7);
+  --text-muted: rgba(0,255,65,0.35);
+  --font: 'Share Tech Mono', monospace;
+}
+
+body {
+  font-family: var(--font);
+  background: #0D0D0D;
+  color: var(--text);
+  padding: 32px 40px;
+  min-height: 100vh;
+}
+
+h1 { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.subtitle { font-size: 11px; color: var(--text-muted); margin-bottom: 40px; }
+
+.size-section { margin-bottom: 56px; }
+.size-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border2);
+  padding-bottom: 10px;
+  margin-bottom: 28px;
+}
+
+.variants-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* ── WIDGET SHELL ── */
+.widget {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  display: flex;
+  flex-direction: column;
+}
+.widget-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 7px 12px 5px;
+  border-bottom: 1px solid var(--border);
+  opacity: 0.6;
+}
+.widget-body {
+  padding: 14px 16px;
+  flex: 1;
+  position: relative;
+}
+
+/* Wide = full row */
+.widget-wide  { width: 480px; }
+.widget-large { width: 220px; min-height: 240px; }
+
+/* ── SHARED TEXT STYLES (mimic real widget) ── */
+.g-time  { font-size: 28px; color: var(--text); letter-spacing: 0.02em; margin-bottom: 4px; }
+.g-msg   { font-size: 13px; color: var(--text-dim); margin-bottom: 2px; }
+.g-date  { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.g-loc   { font-size: 10px; color: var(--text-muted); margin-top: 3px; opacity: 0.7; }
+
+/* ── WEATHER SVG ICONS ── */
+.wi { display: block; }
+.wi svg { display: block; width: 100%; height: 100%; }
+
+/* ══════════════════════════════════════════
+   WIDE — 5 VERSIONS
+══════════════════════════════════════════ */
+
+/* W1 — Split: text left | weather right, bold vertical accent */
+.w1-body { display: flex; align-items: center; gap: 0; }
+.w1-text { flex: 1; }
+.w1-weather {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 90px;
+  flex-shrink: 0;
+  padding-left: 18px;
+  margin-left: 18px;
+  border-left: 1px solid var(--border2);
+}
+.w1-icon { width: 40px; height: 40px; color: var(--text); opacity: 0.8; }
+.w1-temp { font-size: 22px; color: var(--text); }
+.w1-cond { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 1px; }
+
+/* W2 — Inline: icon + temp float right on greeting line */
+.w2-body { }
+.w2-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+.w2-time { font-size: 28px; color: var(--text); }
+.w2-weather-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.w2-icon { width: 20px; height: 20px; color: var(--text-dim); }
+.w2-temp { font-size: 16px; color: var(--text-dim); letter-spacing: 0.04em; }
+
+/* W3 — Weather bar across top, greeting below */
+.w3-body { padding: 0; }
+.w3-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--surface2);
+}
+.w3-bar-icon { width: 18px; height: 18px; color: var(--text); flex-shrink: 0; }
+.w3-bar-temp { font-size: 14px; color: var(--text); }
+.w3-bar-cond { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.w3-bar-loc  { font-size: 10px; color: var(--text-muted); margin-left: auto; opacity: 0.7; }
+.w3-content  { padding: 14px 16px; }
+
+/* W4 — Oversized temp right, icon above it, like a dashboard stat */
+.w4-body { display: flex; align-items: stretch; }
+.w4-text { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.w4-weather {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-left: 20px;
+}
+.w4-icon { width: 32px; height: 32px; color: var(--text-muted); margin-bottom: 4px; margin-left: auto; }
+.w4-temp { font-size: 40px; color: var(--text); line-height: 1; letter-spacing: -0.02em; opacity: 0.85; }
+.w4-unit { font-size: 14px; color: var(--text-muted); vertical-align: super; }
+
+/* W5 — Location line replaced with weather + location on one row */
+.w5-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.w5-loc { font-size: 10px; color: var(--text-muted); opacity: 0.7; }
+.w5-weather {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.w5-icon { width: 16px; height: 16px; color: var(--text-dim); }
+.w5-temp { font-size: 13px; color: var(--text-dim); }
+.w5-cond { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ══════════════════════════════════════════
+   LARGE — 5 VERSIONS
+══════════════════════════════════════════ */
+
+/* L1 — Weather row above solar, full width strip */
+.l1-weather-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.l1-icon { width: 16px; height: 16px; color: var(--text-dim); flex-shrink: 0; }
+.l1-temp { font-size: 12px; color: var(--text-dim); }
+.l1-dot  { font-size: 10px; color: var(--text-muted); }
+.l1-cond { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+.l1-solar { margin-top: 10px; }
+
+/* L2 — Weather inline with location on same line */
+.l2-loc-weather {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+.l2-loc  { font-size: 10px; color: var(--text-muted); opacity: 0.7; }
+.l2-weather { display: flex; align-items: center; gap: 5px; }
+.l2-icon { width: 13px; height: 13px; color: var(--text-muted); }
+.l2-temp { font-size: 11px; color: var(--text-muted); }
+
+/* L3 — Weather as top card inside widget, content below */
+.l3-body { padding: 0; display: flex; flex-direction: column; min-height: 240px; }
+.l3-weather-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border2);
+}
+.l3-weather-left { display: flex; flex-direction: column; gap: 2px; }
+.l3-temp { font-size: 28px; color: var(--text); line-height: 1; }
+.l3-cond { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 3px; }
+.l3-icon { width: 36px; height: 36px; color: var(--text); opacity: 0.6; }
+.l3-content { padding: 14px 16px; flex: 1; }
+.l3-solar { padding: 0 16px 14px; }
+
+/* L4 — Corner badge: small solid block top-right */
+.l4-badge {
+  position: absolute;
+  top: 0; right: 0;
+  background: var(--surface3);
+  border-left: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.l4-icon { width: 22px; height: 22px; color: var(--text); opacity: 0.75; }
+.l4-temp { font-size: 12px; color: var(--text); }
+
+/* L5 — Weather floated right of time, vertical stack */
+.l5-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.l5-time-block {}
+.l5-time { font-size: 26px; color: var(--text); }
+.l5-ampm { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.l5-weather-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+.l5-icon { width: 26px; height: 26px; color: var(--text-dim); }
+.l5-temp { font-size: 15px; color: var(--text-dim); }
+
+/* ── MOCK SOLAR ARC ── */
+.mock-solar {
+  width: 100%;
+  height: 40px;
+  margin-top: 8px;
+  opacity: 0.3;
+}
+
+</style>
+</head>
+<body>
+
+<h1>Greeting Widget — Weather Layout Test</h1>
+<p class="subtitle">5 designs × 2 sizes. Real weather loads from your location. Pick your favourite from each row.</p>
+
+<!-- ══════════════════════════════════════════════════════
+     WIDE
+══════════════════════════════════════════════════════ -->
+<div class="size-section">
+  <div class="size-label">Wide Widget</div>
+  <div class="variants-row" id="wide-row">
+
+    <!-- W1 -->
+    <div>
+      <div class="widget widget-wide">
+        <div class="widget-label">W1 — Split column</div>
+        <div class="widget-body w1-body">
+          <div class="w1-text">
+            <div class="g-time" id="w-time1">9:42 AM</div>
+            <div class="g-msg">Good morning, James.</div>
+            <div class="g-date">Thursday, March 26</div>
+            <div class="g-loc">New York, NY</div>
+          </div>
+          <div class="w1-weather">
+            <div class="w1-icon wi" id="icon-w1"></div>
+            <div class="w1-temp" id="temp-w1">—°</div>
+            <div class="w1-cond" id="cond-w1">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- W2 -->
+    <div>
+      <div class="widget widget-wide">
+        <div class="widget-label">W2 — Icon + temp beside time</div>
+        <div class="widget-body w2-body">
+          <div class="w2-top">
+            <div class="w2-time" id="w-time2">9:42 AM</div>
+            <div class="w2-weather-inline">
+              <div class="w2-icon wi" id="icon-w2"></div>
+              <div class="w2-temp" id="temp-w2">—°</div>
+            </div>
+          </div>
+          <div class="g-msg">Good morning, James.</div>
+          <div class="g-date">Thursday, March 26</div>
+          <div class="g-loc">New York, NY</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- W3 -->
+    <div>
+      <div class="widget widget-wide">
+        <div class="widget-label">W3 — Weather bar across top</div>
+        <div class="widget-body w3-body">
+          <div class="w3-bar">
+            <div class="w3-bar-icon wi" id="icon-w3"></div>
+            <div class="w3-bar-temp" id="temp-w3">—°</div>
+            <div class="w3-bar-cond" id="cond-w3">—</div>
+            <div class="w3-bar-loc">New York, NY</div>
+          </div>
+          <div class="w3-content">
+            <div class="g-time" id="w-time3">9:42 AM</div>
+            <div class="g-msg">Good morning, James.</div>
+            <div class="g-date">Thursday, March 26</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- W4 -->
+    <div>
+      <div class="widget widget-wide">
+        <div class="widget-label">W4 — Oversized temp stat right</div>
+        <div class="widget-body w4-body">
+          <div class="w4-text">
+            <div class="g-time" id="w-time4">9:42 AM</div>
+            <div class="g-msg">Good morning, James.</div>
+            <div class="g-date">Thursday, March 26</div>
+            <div class="g-loc">New York, NY</div>
+          </div>
+          <div class="w4-weather">
+            <div class="w4-icon wi" id="icon-w4"></div>
+            <div class="w4-temp"><span id="temp-w4">—</span><span class="w4-unit">°F</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- W5 -->
+    <div>
+      <div class="widget widget-wide">
+        <div class="widget-label">W5 — Weather + location bottom strip</div>
+        <div class="widget-body">
+          <div class="g-time" id="w-time5">9:42 AM</div>
+          <div class="g-msg">Good morning, James.</div>
+          <div class="g-date">Thursday, March 26</div>
+          <div class="w5-bottom-row">
+            <div class="w5-loc">New York, NY</div>
+            <div class="w5-weather">
+              <div class="w5-icon wi" id="icon-w5"></div>
+              <div class="w5-temp" id="temp-w5">—°</div>
+              <div class="w5-cond" id="cond-w5">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     LARGE
+══════════════════════════════════════════════════════ -->
+<div class="size-section">
+  <div class="size-label">Large Widget</div>
+  <div class="variants-row" id="large-row">
+
+    <!-- L1 -->
+    <div>
+      <div class="widget widget-large">
+        <div class="widget-label">L1 — Weather row above solar</div>
+        <div class="widget-body">
+          <div class="g-time" id="l-time1">9:42 AM</div>
+          <div class="g-msg">Good morning, James.</div>
+          <div class="g-date">Thursday, March 26</div>
+          <div class="g-loc">New York, NY</div>
+          <div class="l1-weather-row">
+            <div class="l1-icon wi" id="icon-l1"></div>
+            <div class="l1-temp" id="temp-l1">—°</div>
+            <div class="l1-dot">·</div>
+            <div class="l1-cond" id="cond-l1">—</div>
+          </div>
+          <svg class="mock-solar" viewBox="0 0 200 40">
+            <path d="M10,35 Q100,-20 190,35" stroke="currentColor" stroke-width="1" fill="none" stroke-dasharray="3,3"/>
+            <circle cx="155" cy="16" r="4" fill="currentColor"/>
+            <line x1="10" y1="35" x2="190" y2="35" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- L2 -->
+    <div>
+      <div class="widget widget-large">
+        <div class="widget-label">L2 — Weather inline with location</div>
+        <div class="widget-body">
+          <div class="g-time" id="l-time2">9:42 AM</div>
+          <div class="g-msg">Good morning, James.</div>
+          <div class="g-date">Thursday, March 26</div>
+          <div class="l2-loc-weather">
+            <div class="l2-loc">New York, NY</div>
+            <div class="l2-weather">
+              <div class="l2-icon wi" id="icon-l2"></div>
+              <div class="l2-temp" id="temp-l2">—°</div>
+            </div>
+          </div>
+          <svg class="mock-solar" viewBox="0 0 200 40">
+            <path d="M10,35 Q100,-20 190,35" stroke="currentColor" stroke-width="1" fill="none" stroke-dasharray="3,3"/>
+            <circle cx="155" cy="16" r="4" fill="currentColor"/>
+            <line x1="10" y1="35" x2="190" y2="35" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- L3 -->
+    <div>
+      <div class="widget widget-large">
+        <div class="widget-label">L3 — Weather card tops widget</div>
+        <div class="widget-body l3-body">
+          <div class="l3-weather-card">
+            <div class="l3-weather-left">
+              <div class="l3-temp" id="temp-l3">—°</div>
+              <div class="l3-cond" id="cond-l3">—</div>
+            </div>
+            <div class="l3-icon wi" id="icon-l3"></div>
+          </div>
+          <div class="l3-content">
+            <div class="g-time" id="l-time3">9:42 AM</div>
+            <div class="g-msg">Good morning, James.</div>
+            <div class="g-date">Thursday, March 26</div>
+            <div class="g-loc">New York, NY</div>
+          </div>
+          <div class="l3-solar">
+            <svg class="mock-solar" style="margin-top:0" viewBox="0 0 200 40">
+              <path d="M10,35 Q100,-20 190,35" stroke="currentColor" stroke-width="1" fill="none" stroke-dasharray="3,3"/>
+              <circle cx="155" cy="16" r="4" fill="currentColor"/>
+              <line x1="10" y1="35" x2="190" y2="35" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- L4 -->
+    <div>
+      <div class="widget widget-large">
+        <div class="widget-label">L4 — Corner badge block</div>
+        <div class="widget-body" style="position:relative;">
+          <div class="l4-badge">
+            <div class="l4-icon wi" id="icon-l4"></div>
+            <div class="l4-temp" id="temp-l4">—°</div>
+          </div>
+          <div class="g-time" id="l-time4" style="padding-right:56px;">9:42 AM</div>
+          <div class="g-msg">Good morning, James.</div>
+          <div class="g-date">Thursday, March 26</div>
+          <div class="g-loc">New York, NY</div>
+          <svg class="mock-solar" viewBox="0 0 200 40">
+            <path d="M10,35 Q100,-20 190,35" stroke="currentColor" stroke-width="1" fill="none" stroke-dasharray="3,3"/>
+            <circle cx="155" cy="16" r="4" fill="currentColor"/>
+            <line x1="10" y1="35" x2="190" y2="35" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- L5 -->
+    <div>
+      <div class="widget widget-large">
+        <div class="widget-label">L5 — Temp beside time, top row</div>
+        <div class="widget-body">
+          <div class="l5-top-row">
+            <div class="l5-time-block">
+              <div class="l5-time" id="l-time5">9:42 AM</div>
+            </div>
+            <div class="l5-weather-block">
+              <div class="l5-icon wi" id="icon-l5"></div>
+              <div class="l5-temp" id="temp-l5">—°</div>
+            </div>
+          </div>
+          <div class="g-msg">Good morning, James.</div>
+          <div class="g-date">Thursday, March 26</div>
+          <div class="g-loc">New York, NY</div>
+          <svg class="mock-solar" viewBox="0 0 200 40">
+            <path d="M10,35 Q100,-20 190,35" stroke="currentColor" stroke-width="1" fill="none" stroke-dasharray="3,3"/>
+            <circle cx="155" cy="16" r="4" fill="currentColor"/>
+            <line x1="10" y1="35" x2="190" y2="35" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── ICONS ──────────────────────────────────────────────────────────────────────
+function weatherIcon(code) {
+  if (code === 0) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>`;
+  if (code <= 2)  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="4.64" y1="4.64" x2="6.05" y2="6.05"/><path d="M15 14H9a4 4 0 0 0 0 8h6a3 3 0 0 0 0-6z"/></svg>`;
+  if (code <= 48) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`;
+  if (code <= 67) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/></svg>`;
+  if (code <= 77) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="16" x2="8" y2="20"/><line x1="8" y1="20" x2="6" y2="18"/><line x1="8" y1="20" x2="10" y2="18"/><line x1="16" y1="16" x2="16" y2="20"/><line x1="16" y1="20" x2="14" y2="18"/><line x1="16" y1="20" x2="18" y2="18"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="12" y1="22" x2="10" y2="20"/><line x1="12" y1="22" x2="14" y2="20"/></svg>`;
+  if (code <= 82) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/></svg>`;
+  if (code <= 86) return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"/><line x1="8" y1="16" x2="8" y2="20"/><line x1="8" y1="20" x2="6" y2="18"/><line x1="8" y1="20" x2="10" y2="18"/><line x1="16" y1="16" x2="16" y2="20"/><line x1="16" y1="20" x2="14" y2="18"/><line x1="16" y1="20" x2="18" y2="18"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="12" y1="22" x2="10" y2="20"/><line x1="12" y1="22" x2="14" y2="20"/></svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/></svg>`;
+}
+
+function weatherLabel(code) {
+  if (code === 0) return 'Clear';
+  if (code <= 1)  return 'Mostly Clear';
+  if (code <= 2)  return 'Partly Cloudy';
+  if (code <= 3)  return 'Overcast';
+  if (code <= 48) return 'Foggy';
+  if (code <= 55) return 'Drizzle';
+  if (code <= 67) return 'Rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Showers';
+  if (code <= 86) return 'Snow Showers';
+  return 'Storm';
+}
+
+// ── CLOCK ──────────────────────────────────────────────────────────────────────
+function updateClocks() {
+  const t = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  ['w-time1','w-time2','w-time3','w-time4','w-time5','l-time1','l-time2','l-time3','l-time4','l-time5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t;
+  });
+}
+updateClocks();
+setInterval(updateClocks, 10000);
+
+// ── WEATHER ───────────────────────────────────────────────────────────────────
+function applyWeather(temp, code) {
+  const icon = weatherIcon(code);
+  const cond = weatherLabel(code);
+  const tempStr = Math.round(temp) + '°';
+
+  const sets = [
+    { icon: 'icon-w1', temp: 'temp-w1', cond: 'cond-w1' },
+    { icon: 'icon-w2', temp: 'temp-w2' },
+    { icon: 'icon-w3', temp: 'temp-w3', cond: 'cond-w3' },
+    { icon: 'icon-w4', temp: 'temp-w4' },
+    { icon: 'icon-w5', temp: 'temp-w5', cond: 'cond-w5' },
+    { icon: 'icon-l1', temp: 'temp-l1', cond: 'cond-l1' },
+    { icon: 'icon-l2', temp: 'temp-l2' },
+    { icon: 'icon-l3', temp: 'temp-l3', cond: 'cond-l3' },
+    { icon: 'icon-l4', temp: 'temp-l4' },
+    { icon: 'icon-l5', temp: 'temp-l5' },
+  ];
+
+  sets.forEach(s => {
+    const iEl = document.getElementById(s.icon);
+    const tEl = document.getElementById(s.temp);
+    const cEl = s.cond ? document.getElementById(s.cond) : null;
+    if (iEl) iEl.innerHTML = icon;
+    if (tEl) tEl.textContent = tempStr;
+    if (cEl) cEl.textContent = cond;
+  });
+
+  // W4 shows raw number (unit suffix is hardcoded)
+  const w4t = document.getElementById('temp-w4');
+  if (w4t) w4t.textContent = Math.round(temp);
+}
+
+async function loadWeather() {
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000 })
+    );
+    const { latitude: lat, longitude: lng } = pos.coords;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code&temperature_unit=fahrenheit&forecast_days=1`;
+    const r = await fetch(url);
+    const j = await r.json();
+    applyWeather(j.current.temperature_2m, j.current.weather_code);
+  } catch(e) {
+    // fallback: show sunny 72° so designs are visible
+    applyWeather(72, 0);
+  }
+}
+
+loadWeather();
+</script>
+</body>
+</html>
