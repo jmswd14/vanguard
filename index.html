@@ -692,10 +692,13 @@ function pickGreeting(h) {
 function loadGreeting(widget) {
   const el = document.getElementById(`wb-${widget.id}`);
   if (!el) return;
-  const config = widget.config || {};
+  const config   = widget.config || {};
   const showTime  = config.show_time  !== false;
   const showDate  = config.show_date  !== false;
   const showSolar = config.show_solar !== false;
+  const isLarge   = widget.size === 'large';
+  const isWide    = widget.size === 'wide';
+  const showWeather = isLarge || isWide;
   const now = new Date();
   const h = now.getHours();
   const name = currentUser?.user_metadata?.display_name;
@@ -703,18 +706,34 @@ function loadGreeting(widget) {
   const msg = name ? `${greeting}, ${name}.` : `${greeting}.`;
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  el.style.position = 'relative';
-  el.innerHTML = `
-    <div class="greeting-weather-corner" id="gw-${widget.id}"></div>
-    ${showTime ? `<div class="greeting-time" data-clock="true">${timeStr}</div>` : ''}
-    <div class="greeting-msg">${msg}</div>
-    ${showDate ? `<div class="greeting-date">${dateStr}</div>` : ''}
-    <div class="greeting-location" id="gl-${widget.id}"></div>
-  `;
 
-  // Populate location, solar arc, and weather async
+  if (isWide) {
+    // Wide: flex row — text left, weather right
+    el.innerHTML = `
+      <div class="greeting-wide-layout">
+        <div class="greeting-wide-left">
+          ${showTime ? `<div class="greeting-time" data-clock="true">${timeStr}</div>` : ''}
+          <div class="greeting-msg">${msg}</div>
+          ${showDate ? `<div class="greeting-date">${dateStr}</div>` : ''}
+          <div class="greeting-location" id="gl-${widget.id}"></div>
+        </div>
+        <div class="greeting-wide-weather" id="gw-${widget.id}"></div>
+      </div>
+    `;
+  } else {
+    // Large / small: stacked, weather corner top-right (large only)
+    el.style.position = 'relative';
+    el.innerHTML = `
+      ${isLarge ? `<div class="greeting-weather-corner" id="gw-${widget.id}"></div>` : ''}
+      ${showTime ? `<div class="greeting-time" data-clock="true">${timeStr}</div>` : ''}
+      <div class="greeting-msg">${msg}</div>
+      ${showDate ? `<div class="greeting-date">${dateStr}</div>` : ''}
+      <div class="greeting-location" id="gl-${widget.id}"></div>
+    `;
+  }
+
   function appendSolar(lat, lng) {
-    if (!(widget.size === 'large' && showSolar)) return;
+    if (!(isLarge && showSolar)) return;
     const solarDiv = document.createElement('div');
     solarDiv.className = 'greeting-solar';
     solarDiv.dataset.solarUpdate = widget.id;
@@ -731,10 +750,12 @@ function loadGreeting(widget) {
         const locEl = document.getElementById(`gl-${widget.id}`);
         if (locEl && locName) locEl.textContent = locName;
       });
-      fetchWeather(lat, lng).then(w => {
-        const wEl = document.getElementById(`gw-${widget.id}`);
-        if (wEl && w) wEl.innerHTML = renderWeatherCorner(w);
-      });
+      if (showWeather) {
+        fetchWeather(lat, lng).then(w => {
+          const wEl = document.getElementById(`gw-${widget.id}`);
+          if (wEl && w) wEl.innerHTML = isWide ? renderWeatherWide(w) : renderWeatherCorner(w);
+        });
+      }
       appendSolar(lat, lng);
     })
     .catch(() => appendSolar(null, null));
@@ -764,6 +785,14 @@ async function fetchWeather(lat, lng) {
 function renderWeatherCorner(w) {
   const icon = weatherIcon(w.code);
   return `<div class="weather-icon">${icon}</div><div class="weather-temp">${w.temp}°</div>`;
+}
+
+function renderWeatherWide(w) {
+  const icon = weatherIcon(w.code);
+  return `
+    <div class="weather-wide-icon">${icon}</div>
+    <div class="weather-wide-temp">${w.temp}°</div>
+  `;
 }
 
 function weatherIcon(code) {

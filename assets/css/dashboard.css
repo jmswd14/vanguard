@@ -304,7 +304,7 @@
 .widget-footer-link:hover { color: var(--accent); }
 
 /* ── GREETING ── */
-/* ── GREETING WEATHER CORNER ── */
+/* ── GREETING WEATHER — LARGE (corner) ── */
 .greeting-weather-corner {
   position: absolute;
   top: 0;
@@ -312,20 +312,48 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 .weather-icon {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   color: var(--text-dim);
 }
-.weather-icon svg {
-  width: 100%;
+.weather-icon svg { width: 100%; height: 100%; }
+.weather-temp {
+  font-size: 16px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+/* ── GREETING WEATHER — WIDE (right column) ── */
+.greeting-wide-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   height: 100%;
 }
-.weather-temp {
-  font-size: 13px;
+.greeting-wide-left { flex: 1; min-width: 0; }
+.greeting-wide-weather {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding-left: 16px;
+  border-left: 1px solid var(--border);
+}
+.weather-wide-icon {
+  width: 44px;
+  height: 44px;
   color: var(--text-dim);
+}
+.weather-wide-icon svg { width: 100%; height: 100%; }
+.weather-wide-temp {
+  font-size: 22px;
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
