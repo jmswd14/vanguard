@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var el=document.documentElement;el.style.setProperty('--retro-c1',localStorage.getItem('vg-retro-c1')||'#00FF41');el.style.setProperty('--retro-c2',localStorage.getItem('vg-retro-c2')||'#FF6600');['bg','surface','surface2','surface3','border','border2'].forEach(function(k){var v=localStorage.getItem('vg-'+k);if(v)el.style.setProperty('--'+k,v);});})()</script>
+<script src="../assets/js/theme.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Notes">
+<link rel="apple-touch-icon" href="/motherboard/apple-touch-icon.png">
+<link rel="manifest" href="/motherboard/manifest.json">
+<title>Notes — Motherboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/shared.css">
+<link rel="stylesheet" href="../assets/css/notes.css">
+</head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabase-client.js"></script>
+<body>
+
+<!-- Overlay (mobile) -->
+<div class="overlay" id="overlay" onclick="closeMobileMenus()"></div>
+
+<!-- Mobile toggles -->
+<button class="hamburger" onclick="openLeftMobile()" title="Menu">☰</button>
+
+<div class="app left-only" id="app">
+
+  <!-- ── LEFT SIDEBAR — global nav ── -->
+  <nav class="left-sidebar" id="left-sidebar">
+    <div class="left-sidebar-brand">
+      <button class="ls-collapse-btn" id="ls-collapse-btn" onclick="toggleLeftCollapse()" title="Collapse sidebar">‹</button>
+    </div>
+
+    <div class="left-nav">
+      <a class="left-nav-item" href="../index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+        <span class="left-nav-label">Dashboard</span>
+      </a>
+      <a class="left-nav-item" href="../tasks/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        <span class="left-nav-label">Tasks</span>
+      </a>
+      <a class="left-nav-item" href="../calendar/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+        <span class="left-nav-label">Calendar</span>
+      </a>
+      <a class="left-nav-item" href="../habits/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+        <span class="left-nav-label">Habits</span>
+      </a>
+      <a class="left-nav-item" href="../journal/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+        <span class="left-nav-label">Journal</span>
+      </a>
+      <a class="left-nav-item active" href="index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+        <span class="left-nav-label">Notes</span>
+      </a>
+      <a class="left-nav-item" href="../goals/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+        <span class="left-nav-label">Goals</span>
+      </a>
+      <a class="left-nav-item" href="../finance/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>
+        <span class="left-nav-label">Finance</span>
+      </a>
+      <a class="left-nav-item" href="#" onclick="toggleNotifPanel(); return false;">
+        <span class="left-nav-icon notif-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-badge" id="notif-badge" style="display:none"></span></span>
+        <span class="left-nav-label">Notifications</span>
+      </a>
+      <a class="left-nav-item" href="../settings/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/><line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/><line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/><line x1="14" y1="2" x2="14" y2="6"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="16" y1="18" x2="16" y2="22"/></svg></span>
+        <span class="left-nav-label">Settings</span>
+      </a>
+    </div>
+
+    <div class="left-sidebar-footer">
+      <span class="ls-signout" onclick="signOut()">Sign out</span>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <main class="content">
+    <div class="retro-page-brand">MOTHERBOARD</div>
+
+    <div class="topbar">
+      <div class="topbar-left">
+        <h2>Notes</h2>
+        <p id="notes-subheading">Loading…</p>
+      </div>
+    </div>
+
+    <!-- Current note editor -->
+    <div class="notes-editor-wrap">
+      <div class="notes-editor-toolbar">
+        <div class="notes-editor-meta">Page started <span id="note-started-date">—</span></div>
+        <button class="notes-new-page-btn" onclick="newPage()">New Page →</button>
+      </div>
+      <textarea
+        class="notes-textarea"
+        id="notes-textarea"
+        placeholder="Start writing…"
+        spellcheck="false"
+      ></textarea>
+      <div class="notes-save-status" id="notes-save-status">—</div>
+    </div>
+
+    <!-- Archive -->
+    <div class="notes-archive-header">
+      <div class="notes-archive-title">Archive</div>
+      <div class="notes-archive-count" id="archive-count"></div>
+    </div>
+    <div class="notes-archive-list" id="archive-list">
+      <div class="notes-archive-empty">No archived pages yet.</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Confirm modal (new page) -->
+<div class="modal-backdrop" id="confirm-backdrop" style="display:none" onclick="closeConfirm()"></div>
+<div class="modal" id="confirm-modal" style="display:none">
+  <div class="modal-title">New Page</div>
+  <p style="font-size:13px;color:var(--text-dim);margin:12px 0 20px;line-height:1.55;">Archive this page and start fresh?</p>
+  <div class="modal-actions">
+    <button class="btn" onclick="closeConfirm()">Cancel</button>
+    <button class="btn btn-primary" onclick="confirmNewPage()">Archive &amp; New Page</button>
+  </div>
+</div>
+
+<script>
+const DB = window.supabaseClient;
+let _uid = null;
+let _activeNote = null; // { id, content, created_at }
+let _saveTimer = null;
+let _dirty = false;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await DB.auth.getSession();
+  if (!session) { window.location.href = '../login.html'; return; }
+  _uid = session.user.id;
+  await loadNote();
+  updateSubheading();
+}
+
+// ── LOAD ──────────────────────────────────────────────────────────────────────
+async function loadNote() {
+  const { data, error } = await DB
+    .from('notes')
+    .select('id, content, created_at')
+    .eq('user_id', _uid)
+    .is('archived_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!error && data) {
+    _activeNote = data;
+  } else {
+    // No active note — create one
+    const { data: created } = await DB
+      .from('notes')
+      .insert({ user_id: _uid, content: '' })
+      .select('id, content, created_at')
+      .single();
+    _activeNote = created;
+  }
+
+  const ta = document.getElementById('notes-textarea');
+  ta.value = _activeNote?.content || '';
+  document.getElementById('note-started-date').textContent = fmtDate(_activeNote?.created_at);
+  setSaveStatus('saved');
+  loadArchive();
+}
+
+// ── SAVE (debounced) ──────────────────────────────────────────────────────────
+function onType() {
+  _dirty = true;
+  setSaveStatus('unsaved');
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(save, 1200);
+}
+
+async function save() {
+  if (!_activeNote || !_dirty) return;
+  const content = document.getElementById('notes-textarea').value;
+  const { error } = await DB
+    .from('notes')
+    .update({ content })
+    .eq('id', _activeNote.id);
+  if (!error) {
+    _activeNote.content = content;
+    _dirty = false;
+    setSaveStatus('saved');
+  } else {
+    setSaveStatus('error saving');
+  }
+}
+
+function setSaveStatus(msg) {
+  const el = document.getElementById('notes-save-status');
+  if (el) el.textContent = msg;
+}
+
+// ── NEW PAGE ──────────────────────────────────────────────────────────────────
+function newPage() {
+  // Always save current before prompting
+  clearTimeout(_saveTimer);
+  if (_dirty) save();
+  // Only show confirm if there's actual content
+  const content = document.getElementById('notes-textarea').value.trim();
+  if (!content) {
+    // blank page already — just reset created_at by re-creating
+    confirmNewPage();
+    return;
+  }
+  document.getElementById('confirm-backdrop').style.display = 'block';
+  document.getElementById('confirm-modal').style.display = 'block';
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-backdrop').style.display = 'none';
+  document.getElementById('confirm-modal').style.display = 'none';
+}
+
+async function confirmNewPage() {
+  closeConfirm();
+  // Archive current note (set archived_at)
+  if (_activeNote) {
+    const content = document.getElementById('notes-textarea').value;
+    await DB.from('notes').update({
+      content,
+      archived_at: new Date().toISOString()
+    }).eq('id', _activeNote.id);
+  }
+  // Create new blank note
+  const { data } = await DB
+    .from('notes')
+    .insert({ user_id: _uid, content: '' })
+    .select('id, content, created_at')
+    .single();
+  _activeNote = data;
+  _dirty = false;
+  const ta = document.getElementById('notes-textarea');
+  ta.value = '';
+  ta.focus();
+  document.getElementById('note-started-date').textContent = fmtDate(_activeNote?.created_at);
+  setSaveStatus('saved');
+  loadArchive();
+}
+
+// ── ARCHIVE ───────────────────────────────────────────────────────────────────
+async function loadArchive() {
+  const { data, error } = await DB
+    .from('notes')
+    .select('id, content, created_at, archived_at')
+    .eq('user_id', _uid)
+    .not('archived_at', 'is', null)
+    .order('archived_at', { ascending: false });
+
+  const list = document.getElementById('archive-list');
+  const countEl = document.getElementById('archive-count');
+
+  if (error || !data || data.length === 0) {
+    list.innerHTML = '<div class="notes-archive-empty">No archived pages yet.</div>';
+    countEl.textContent = '';
+    return;
+  }
+
+  countEl.textContent = `${data.length} page${data.length === 1 ? '' : 's'}`;
+  list.innerHTML = data.map(n => {
+    const preview = (n.content || '').replace(/\n/g, ' ').slice(0, 80) + ((n.content || '').length > 80 ? '…' : '');
+    const full = esc(n.content || '');
+    return `
+      <div class="notes-archive-item" onclick="toggleArchiveItem(this)">
+        <div class="notes-archive-item-header">
+          <div class="notes-archive-date">${fmtDate(n.archived_at)}</div>
+          <div class="notes-archive-preview">${esc(preview) || '<span style="opacity:0.4">Empty page</span>'}</div>
+          <div class="notes-archive-chevron">›</div>
+        </div>
+        <div class="notes-archive-full">${full}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleArchiveItem(el) {
+  el.classList.toggle('expanded');
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateSubheading() {
+  const d = new Date();
+  document.getElementById('notes-subheading').textContent =
+    d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ── TEXTAREA EVENTS ───────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('notes-textarea');
+  ta.addEventListener('input', onType);
+  // Save on blur
+  ta.addEventListener('blur', () => { if (_dirty) { clearTimeout(_saveTimer); save(); } });
+});
+
+// ── SIDEBAR COLLAPSE ──────────────────────────────────────────────────────────
+function toggleLeftCollapse() {
+  const app = document.getElementById('app');
+  const btn = document.getElementById('ls-collapse-btn');
+  const collapsed = app.classList.toggle('ls-collapsed');
+  btn.textContent = collapsed ? '›' : '‹';
+  localStorage.setItem('vg-ls-collapsed', collapsed ? '1' : '');
+}
+function openLeftMobile() {
+  document.getElementById('left-sidebar').classList.add('mobile-open');
+  document.getElementById('overlay').style.display = 'block';
+}
+function closeMobileMenus() {
+  document.getElementById('left-sidebar').classList.remove('mobile-open');
+  document.getElementById('overlay').style.display = 'none';
+}
+if (localStorage.getItem('vg-ls-collapsed')) {
+  const app = document.getElementById('app');
+  app.classList.add('ls-collapsed');
+  const btn = document.getElementById('ls-collapse-btn');
+  if (btn) btn.textContent = '›';
+}
+
+// ── NOTIFICATIONS (stub) ──────────────────────────────────────────────────────
+function toggleNotifPanel() {}
+
+// ── SIGN OUT ──────────────────────────────────────────────────────────────────
+async function signOut() {
+  await DB.auth.signOut();
+  window.location.href = '../login.html';
+}
+
+init();
+</script>
+</body>
+</html>

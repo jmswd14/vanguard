@@ -55,6 +55,10 @@
         <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
         <span class="left-nav-label">Journal</span>
       </a>
+      <a class="left-nav-item" href="notes/index.html">
+        <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
+        <span class="left-nav-label">Notes</span>
+      </a>
       <a class="left-nav-item" href="goals/index.html">
         <span class="left-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
         <span class="left-nav-label">Goals</span>
@@ -159,6 +163,7 @@ const WIDGET_LABELS = {
   'goals-progress':  'Goals Progress',
   'history-today':   'On This Day',
   'news-feed':       'Top Stories',
+  'notes-pad':       'Notes',
 };
 
 const WIDGET_CATALOG = [
@@ -172,6 +177,7 @@ const WIDGET_CATALOG = [
   { type: 'goals-progress',  size: 'large', icon: '◎', name: 'Goals Progress',  desc: 'Track long-term goals' },
   { type: 'history-today',   size: 'wide',  icon: '◷', name: 'On This Day',      desc: 'Historical event from today' },
   { type: 'news-feed',       size: 'wide',  icon: '◈', name: 'Top Stories',      desc: 'Latest headlines' },
+  { type: 'notes-pad',       size: 'wide',  icon: '▤', name: 'Notes',             desc: 'Quick scratchpad' },
 ];
 
 const JOURNAL_PROMPTS = [
@@ -786,6 +792,7 @@ function loadAllWidgetData() {
     'goals-progress':  loadGoalsProgress,
     'history-today':   loadHistoryToday,
     'news-feed':       loadNewsFeed,
+    'notes-pad':       loadNotesPad,
   };
   widgets.forEach(w => {
     if (loaders[w.widget_type]) loaders[w.widget_type](w);
@@ -2040,6 +2047,116 @@ function renderNewsFeed(el, payload, size) {
         </div>
       </div>`;
   }
+}
+
+// ── NOTES PAD ─────────────────────────────────────────────────────────────────
+
+// Per-widget note state (keyed by widget id)
+const _noteState = {}; // { [wid]: { noteId, dirty, saveTimer } }
+
+async function loadNotesPad(widget) {
+  const el = document.getElementById(`wb-${widget.id}`);
+  if (!el) return;
+  const wid = widget.id;
+
+  // Load or create active note
+  const { data } = await DB
+    .from('notes')
+    .select('id, content, created_at')
+    .eq('user_id', currentUser.id)
+    .is('archived_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let note = data;
+  if (!note) {
+    const { data: created } = await DB
+      .from('notes')
+      .insert({ user_id: currentUser.id, content: '' })
+      .select('id, content, created_at')
+      .single();
+    note = created;
+  }
+
+  _noteState[wid] = { noteId: note?.id, dirty: false, saveTimer: null };
+  const content = note?.content || '';
+
+  el.innerHTML = `
+    <div class="notes-widget-body">
+      <textarea
+        class="notes-widget-textarea"
+        id="nw-ta-${wid}"
+        placeholder="Start writing…"
+        spellcheck="false"
+        oninput="noteWidgetType('${wid}')"
+        onblur="noteWidgetSaveNow('${wid}')"
+      >${esc(content)}</textarea>
+      <div class="notes-widget-footer">
+        <span class="notes-widget-status" id="nw-status-${wid}">saved</span>
+        <button class="notes-widget-new-btn" onclick="noteWidgetNewPage('${wid}')">New Page</button>
+      </div>
+    </div>
+  `;
+}
+
+function noteWidgetType(wid) {
+  const state = _noteState[wid];
+  if (!state) return;
+  state.dirty = true;
+  const statusEl = document.getElementById(`nw-status-${wid}`);
+  if (statusEl) statusEl.textContent = '…';
+  clearTimeout(state.saveTimer);
+  state.saveTimer = setTimeout(() => noteWidgetSave(wid), 1200);
+}
+
+async function noteWidgetSave(wid) {
+  const state = _noteState[wid];
+  if (!state || !state.dirty || !state.noteId) return;
+  const ta = document.getElementById(`nw-ta-${wid}`);
+  if (!ta) return;
+  const content = ta.value;
+  const { error } = await DB.from('notes').update({ content }).eq('id', state.noteId);
+  if (!error) {
+    state.dirty = false;
+    const statusEl = document.getElementById(`nw-status-${wid}`);
+    if (statusEl) statusEl.textContent = 'saved';
+  }
+}
+
+function noteWidgetSaveNow(wid) {
+  const state = _noteState[wid];
+  if (!state || !state.dirty) return;
+  clearTimeout(state.saveTimer);
+  noteWidgetSave(wid);
+}
+
+async function noteWidgetNewPage(wid) {
+  const state = _noteState[wid];
+  if (!state) return;
+  // Save current content first
+  await noteWidgetSave(wid);
+  const ta = document.getElementById(`nw-ta-${wid}`);
+  const content = ta ? ta.value.trim() : '';
+  // Archive current note
+  if (state.noteId) {
+    await DB.from('notes').update({
+      content: ta ? ta.value : '',
+      archived_at: new Date().toISOString()
+    }).eq('id', state.noteId);
+  }
+  // Create new blank note
+  const { data } = await DB
+    .from('notes')
+    .insert({ user_id: currentUser.id, content: '' })
+    .select('id, content, created_at')
+    .single();
+  state.noteId = data?.id;
+  state.dirty = false;
+  if (ta) ta.value = '';
+  if (ta) ta.focus();
+  const statusEl = document.getElementById(`nw-status-${wid}`);
+  if (statusEl) statusEl.textContent = 'new page';
 }
 
 // ── WIDGET OPTIONS ────────────────────────────────────────────────────────────
