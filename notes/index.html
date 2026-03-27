@@ -120,24 +120,26 @@
 </div>
 
 <!-- Confirm modal (delete archive note) -->
-<div class="modal-backdrop" id="delete-note-backdrop" style="display:none" onclick="closeDeleteNote()"></div>
-<div class="modal" id="delete-note-modal" style="display:none">
-  <div class="modal-title">Delete Page</div>
-  <p style="font-size:13px;color:var(--text-dim);margin:12px 0 20px;line-height:1.55;">Permanently delete this archived page? This cannot be undone.</p>
-  <div class="modal-actions">
-    <button class="btn" onclick="closeDeleteNote()">Cancel</button>
-    <button class="btn btn-danger" onclick="confirmDeleteNote()">Delete</button>
+<div class="modal-backdrop" id="delete-note-backdrop" onclick="closeDeleteNote()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Delete Page</div>
+    <p style="font-size:13px;color:var(--text-dim);margin:12px 0 20px;line-height:1.55;">Permanently delete this archived page? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeDeleteNote()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDeleteNote()">Delete</button>
+    </div>
   </div>
 </div>
 
 <!-- Confirm modal (new page) -->
-<div class="modal-backdrop" id="confirm-backdrop" style="display:none" onclick="closeConfirm()"></div>
-<div class="modal" id="confirm-modal" style="display:none">
-  <div class="modal-title">New Page</div>
-  <p style="font-size:13px;color:var(--text-dim);margin:12px 0 20px;line-height:1.55;">Archive this page and start fresh?</p>
-  <div class="modal-actions">
-    <button class="btn" onclick="closeConfirm()">Cancel</button>
-    <button class="btn btn-primary" onclick="confirmNewPage()">Archive &amp; New Page</button>
+<div class="modal-backdrop" id="confirm-backdrop" onclick="closeConfirm()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">New Page</div>
+    <p style="font-size:13px;color:var(--text-dim);margin:12px 0 20px;line-height:1.55;">Archive this page and start fresh?</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmNewPage()">Archive &amp; New Page</button>
+    </div>
   </div>
 </div>
 
@@ -228,13 +230,11 @@ function newPage() {
     confirmNewPage();
     return;
   }
-  document.getElementById('confirm-backdrop').style.display = 'block';
-  document.getElementById('confirm-modal').style.display = 'block';
+  document.getElementById('confirm-backdrop').classList.add('show');
 }
 
 function closeConfirm() {
-  document.getElementById('confirm-backdrop').style.display = 'none';
-  document.getElementById('confirm-modal').style.display = 'none';
+  document.getElementById('confirm-backdrop').classList.remove('show');
 }
 
 async function confirmNewPage() {
@@ -308,13 +308,11 @@ function toggleArchiveItem(el) {
 let _deleteNoteId = null;
 function promptDeleteNote(id) {
   _deleteNoteId = id;
-  document.getElementById('delete-note-backdrop').style.display = 'block';
-  document.getElementById('delete-note-modal').style.display = 'block';
+  document.getElementById('delete-note-backdrop').classList.add('show');
 }
 function closeDeleteNote() {
   _deleteNoteId = null;
-  document.getElementById('delete-note-backdrop').style.display = 'none';
-  document.getElementById('delete-note-modal').style.display = 'none';
+  document.getElementById('delete-note-backdrop').classList.remove('show');
 }
 async function confirmDeleteNote() {
   if (!_deleteNoteId) return;
