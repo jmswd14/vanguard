@@ -93,13 +93,19 @@
     </div>
     <div class="right-sidebar-body">
 
+      <!-- View toggle (World / USA) -->
+      <div class="map-mode-toggle" style="margin-bottom:8px;">
+        <button class="map-mode-btn active" id="view-btn-world" onclick="setMapView('world')">World</button>
+        <button class="map-mode-btn" id="view-btn-usa" onclick="setMapView('usa')">USA</button>
+      </div>
+
       <!-- Mode toggle -->
       <div class="map-mode-toggle">
-        <button class="map-mode-btn active" id="mode-btn-countries" onclick="setMode('countries')">Countries</button>
+        <button class="map-mode-btn active" id="mode-btn-countries" onclick="setMode('countries')"><span id="mode-label-countries">Countries</span></button>
         <button class="map-mode-btn" id="mode-btn-pins" onclick="setMode('pins')">Pins</button>
       </div>
 
-      <!-- Country filters -->
+      <!-- Country / State filters -->
       <div id="rs-countries-section">
         <div class="sidebar-section">Show</div>
         <div class="map-filter-row" id="filter-visited" onclick="toggleFilter('visited')">
@@ -127,15 +133,15 @@
         <hr class="sidebar-divider">
         <div class="sidebar-section">Stats</div>
         <div class="map-stat-row">
-          <span class="map-stat-label">Countries Visited</span>
+          <span class="map-stat-label" id="stat-label-visited">Countries Visited</span>
           <span class="map-stat-value" id="stat-visited">0</span>
         </div>
         <div class="map-stat-row">
-          <span class="map-stat-label">Countries Planned</span>
+          <span class="map-stat-label" id="stat-label-planned">Countries Planned</span>
           <span class="map-stat-value" id="stat-planned">0</span>
         </div>
         <div class="map-stat-row">
-          <span class="map-stat-label">Want to Visit</span>
+          <span class="map-stat-label" id="stat-label-want">Want to Visit</span>
           <span class="map-stat-value" id="stat-want">0</span>
         </div>
       </div>
@@ -275,14 +281,45 @@ const COUNTRY_NAMES = {
   ST:'São Tomé & Príncipe',
 };
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
+// ── US FIPS → STATE CODE ──────────────────────────────────────────────────────
+const FIPS_TO_STATE = {
+  1:'US-AL',2:'US-AK',4:'US-AZ',5:'US-AR',6:'US-CA',8:'US-CO',9:'US-CT',
+  10:'US-DE',11:'US-DC',12:'US-FL',13:'US-GA',15:'US-HI',16:'US-ID',17:'US-IL',
+  18:'US-IN',19:'US-IA',20:'US-KS',21:'US-KY',22:'US-LA',23:'US-ME',24:'US-MD',
+  25:'US-MA',26:'US-MI',27:'US-MN',28:'US-MS',29:'US-MO',30:'US-MT',31:'US-NE',
+  32:'US-NV',33:'US-NH',34:'US-NJ',35:'US-NM',36:'US-NY',37:'US-NC',38:'US-ND',
+  39:'US-OH',40:'US-OK',41:'US-OR',42:'US-PA',44:'US-RI',45:'US-SC',46:'US-SD',
+  47:'US-TN',48:'US-TX',49:'US-UT',50:'US-VT',51:'US-VA',53:'US-WA',54:'US-WV',
+  55:'US-WI',56:'US-WY',
+};
+
+const STATE_NAMES = {
+  'US-AL':'Alabama','US-AK':'Alaska','US-AZ':'Arizona','US-AR':'Arkansas',
+  'US-CA':'California','US-CO':'Colorado','US-CT':'Connecticut','US-DE':'Delaware',
+  'US-DC':'Washington D.C.','US-FL':'Florida','US-GA':'Georgia','US-HI':'Hawaii',
+  'US-ID':'Idaho','US-IL':'Illinois','US-IN':'Indiana','US-IA':'Iowa',
+  'US-KS':'Kansas','US-KY':'Kentucky','US-LA':'Louisiana','US-ME':'Maine',
+  'US-MD':'Maryland','US-MA':'Massachusetts','US-MI':'Michigan','US-MN':'Minnesota',
+  'US-MS':'Mississippi','US-MO':'Missouri','US-MT':'Montana','US-NE':'Nebraska',
+  'US-NV':'Nevada','US-NH':'New Hampshire','US-NJ':'New Jersey','US-NM':'New Mexico',
+  'US-NY':'New York','US-NC':'North Carolina','US-ND':'North Dakota','US-OH':'Ohio',
+  'US-OK':'Oklahoma','US-OR':'Oregon','US-PA':'Pennsylvania','US-RI':'Rhode Island',
+  'US-SC':'South Carolina','US-SD':'South Dakota','US-TN':'Tennessee','US-TX':'Texas',
+  'US-UT':'Utah','US-VT':'Vermont','US-VA':'Virginia','US-WA':'Washington',
+  'US-WV':'West Virginia','US-WI':'Wisconsin','US-WY':'Wyoming',
+};
+
+// ── APP STATE ─────────────────────────────────────────────────────────────────
 let _uid = null;
 let _visitedColor = '#00E676'; // loaded from user_preferences
+let _mapView = 'world';          // 'world' | 'usa'
 let _mode = 'countries';         // 'countries' | 'pins'
 let _hiddenStatuses = new Set(); // statuses toggled off in sidebar
-let _countries = {};             // { 'US': { id, status }, ... }
+let _countries = {};             // { 'US': { id, status }, 'US-CA': { id, status }, ... }
 let _pins = [];                  // [{ id, lat, lng, title, notes }, ...]
 let _countryLayers = {};         // { 'US': L.geoJSON layer }
+let _stateLayers = {};           // { 'US-CA': L.geoJSON layer }
+let _statesLoaded = false;
 let _pinMarkers = {};            // { pinId: L.marker }
 let _editingPinId = null;
 let _pendingPinLatLng = null;
@@ -393,17 +430,95 @@ function initMap() {
   });
 }
 
+// ── US STATES LAYER ───────────────────────────────────────────────────────────
+function loadStateLayer() {
+  if (_statesLoaded) return;
+  _statesLoaded = true;
+  fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+    .then(function(r) { return r.json(); })
+    .then(function(us) {
+      const geojson = topojson.feature(us, us.objects.states);
+      geojson.features.forEach(function(feature) {
+        const code = FIPS_TO_STATE[parseInt(feature.id, 10)];
+        if (!code) return;
+        const layer = L.geoJSON(feature, {
+          style: function() { return regionStyle(code); },
+          onEachFeature: function(feat, lyr) {
+            lyr.on('click', function(e) {
+              if (_mode !== 'countries') return;
+              L.DomEvent.stopPropagation(e);
+              openRegionPopup(code, e.latlng);
+            });
+            lyr.on('mouseover', function() {
+              if (_mode !== 'countries') return;
+              const s = _countries[code] ? _countries[code].status : null;
+              lyr.setStyle({ fillOpacity: s ? 0.75 : 0.25 });
+            });
+            lyr.on('mouseout', function() {
+              lyr.setStyle(regionStyle(code));
+            });
+          }
+        });
+        _stateLayers[code] = layer;
+      });
+      // Show layers if we're already in USA view
+      if (_mapView === 'usa') {
+        Object.values(_stateLayers).forEach(function(l) { l.addTo(_map); });
+      }
+    });
+}
+
+// ── VIEW TOGGLE (World / USA) ─────────────────────────────────────────────────
+function setMapView(view) {
+  _mapView = view;
+  document.getElementById('view-btn-world').classList.toggle('active', view === 'world');
+  document.getElementById('view-btn-usa').classList.toggle('active', view === 'usa');
+
+  if (view === 'world') {
+    // Show country layers, hide state layers
+    Object.values(_countryLayers).forEach(function(l) { l.addTo(_map); });
+    Object.values(_stateLayers).forEach(function(l) { _map.removeLayer(l); });
+    _map.flyTo([20, 0], 2);
+    document.getElementById('mode-label-countries').textContent = 'Countries';
+    document.getElementById('stat-label-visited').textContent = 'Countries Visited';
+    document.getElementById('stat-label-planned').textContent = 'Countries Planned';
+  } else {
+    // Hide country layers, show/load state layers
+    Object.values(_countryLayers).forEach(function(l) { _map.removeLayer(l); });
+    loadStateLayer();
+    if (_statesLoaded) {
+      Object.values(_stateLayers).forEach(function(l) { l.addTo(_map); });
+    }
+    _map.flyTo([39, -96], 4);
+    document.getElementById('mode-label-countries').textContent = 'States';
+    document.getElementById('stat-label-visited').textContent = 'States Visited';
+    document.getElementById('stat-label-planned').textContent = 'States Planned';
+  }
+
+  // Update badge if in countries/states mode
+  if (_mode === 'countries') {
+    document.getElementById('mode-badge').textContent =
+      view === 'world' ? 'COUNTRY MODE' : 'STATES MODE';
+  }
+
+  updateSidebarCounts();
+}
+
 function countryStyle(alpha2) {
-  const entry = _countries[alpha2];
+  return regionStyle(alpha2);
+}
+
+function regionStyle(code) {
+  const entry = _countries[code];
   const status = entry ? entry.status : null;
   const hidden = status && _hiddenStatuses.has(status);
-  const color = status ? statusColor(status) : '#fff';
+  const isState = code.startsWith('US-');
   return {
-    fillColor: status ? color : 'transparent',
-    fillOpacity: (status && !hidden) ? 0.55 : (status ? 0.0 : 0.0),
-    color: '#333',
-    weight: 0.5,
-    opacity: 0.5
+    fillColor: status ? statusColor(status) : 'transparent',
+    fillOpacity: (status && !hidden) ? 0.55 : 0,
+    color: isState ? '#444' : '#333',
+    weight: isState ? 0.8 : 0.5,
+    opacity: isState ? 0.7 : 0.5
   };
 }
 
@@ -422,10 +537,12 @@ async function loadPins() {
   _pins.forEach(function(pin) { addPinMarker(pin); });
 }
 
-// ── COUNTRY POPUP ─────────────────────────────────────────────────────────────
-function openCountryPopup(alpha2, latlng) {
-  const name = COUNTRY_NAMES[alpha2] || alpha2;
-  const current = _countries[alpha2] ? _countries[alpha2].status : null;
+// ── REGION POPUP (countries + states) ────────────────────────────────────────
+function openCountryPopup(alpha2, latlng) { openRegionPopup(alpha2, latlng); }
+
+function openRegionPopup(code, latlng) {
+  const name = STATE_NAMES[code] || COUNTRY_NAMES[code] || code;
+  const current = _countries[code] ? _countries[code].status : null;
 
   function btnCls(s) {
     if (current === s) {
@@ -436,13 +553,14 @@ function openCountryPopup(alpha2, latlng) {
     return 'country-popup-btn';
   }
 
+  const safeCode = code.replace(/'/g, "\\'");
   const html = `<div class="country-popup">
     <div class="country-popup-name">${escHtml(name)}</div>
     <div class="country-popup-btns">
-      <button class="${btnCls('visited')}" onclick="setCountryStatus('${alpha2}','visited')">Visited</button>
-      <button class="${btnCls('planned')}" onclick="setCountryStatus('${alpha2}','planned')">Planned</button>
-      <button class="${btnCls('want')}" onclick="setCountryStatus('${alpha2}','want')">Want</button>
-      ${current ? `<button class="country-popup-btn clear-btn" onclick="clearCountryStatus('${alpha2}')">Clear</button>` : ''}
+      <button class="${btnCls('visited')}" onclick="setRegionStatus('${safeCode}','visited')">Visited</button>
+      <button class="${btnCls('planned')}" onclick="setRegionStatus('${safeCode}','planned')">Planned</button>
+      <button class="${btnCls('want')}" onclick="setRegionStatus('${safeCode}','want')">Want</button>
+      ${current ? `<button class="country-popup-btn clear-btn" onclick="clearRegionStatus('${safeCode}')">Clear</button>` : ''}
     </div>
   </div>`;
 
@@ -452,34 +570,39 @@ function openCountryPopup(alpha2, latlng) {
     .openOn(_map);
 }
 
-async function setCountryStatus(alpha2, status) {
+async function setCountryStatus(code, status) { await setRegionStatus(code, status); }
+async function clearCountryStatus(code) { await clearRegionStatus(code); }
+
+async function setRegionStatus(code, status) {
   _map.closePopup();
-  const id = _countries[alpha2] ? _countries[alpha2].id : crypto.randomUUID();
-  const row = { id, user_id: _uid, country_code: alpha2, status };
+  const id = _countries[code] ? _countries[code].id : crypto.randomUUID();
+  const row = { id, user_id: _uid, country_code: code, status };
 
   const { error } = await DB.from('map_countries')
     .upsert(row, { onConflict: 'user_id,country_code' });
   if (error) { alert('Error: ' + error.message); return; }
 
-  _countries[alpha2] = row;
-  refreshCountryLayer(alpha2);
+  _countries[code] = row;
+  refreshRegionLayer(code);
   updateSidebarCounts();
 }
 
-async function clearCountryStatus(alpha2) {
+async function clearRegionStatus(code) {
   _map.closePopup();
-  if (!_countries[alpha2]) return;
+  if (!_countries[code]) return;
   const { error } = await DB.from('map_countries')
-    .delete().eq('id', _countries[alpha2].id).eq('user_id', _uid);
+    .delete().eq('id', _countries[code].id).eq('user_id', _uid);
   if (error) { alert('Error: ' + error.message); return; }
-  delete _countries[alpha2];
-  refreshCountryLayer(alpha2);
+  delete _countries[code];
+  refreshRegionLayer(code);
   updateSidebarCounts();
 }
 
-function refreshCountryLayer(alpha2) {
-  const layer = _countryLayers[alpha2];
-  if (layer) layer.setStyle(countryStyle(alpha2));
+function refreshCountryLayer(code) { refreshRegionLayer(code); }
+
+function refreshRegionLayer(code) {
+  const layer = _countryLayers[code] || _stateLayers[code];
+  if (layer) layer.setStyle(regionStyle(code));
 }
 
 // ── FILTERS ───────────────────────────────────────────────────────────────────
@@ -491,15 +614,17 @@ function toggleFilter(status) {
     _hiddenStatuses.add(status);
     document.getElementById('filter-' + status).classList.add('hidden-filter');
   }
-  // Refresh all countries with that status
-  Object.keys(_countries).forEach(function(alpha2) {
-    if (_countries[alpha2].status === status) refreshCountryLayer(alpha2);
+  Object.keys(_countries).forEach(function(code) {
+    if (_countries[code].status === status) refreshRegionLayer(code);
   });
 }
 
 function updateSidebarCounts() {
+  const inUSA = _mapView === 'usa';
   let v = 0, p = 0, w = 0;
-  Object.values(_countries).forEach(function(row) {
+  Object.entries(_countries).forEach(function([code, row]) {
+    const isState = code.startsWith('US-');
+    if (inUSA !== isState) return; // only count what matches the current view
     if (row.status === 'visited') v++;
     else if (row.status === 'planned') p++;
     else if (row.status === 'want') w++;
@@ -637,7 +762,8 @@ function setMode(mode) {
   document.getElementById('rs-countries-section').style.display = mode === 'countries' ? '' : 'none';
   document.getElementById('rs-pins-section').style.display = mode === 'pins' ? '' : 'none';
   document.getElementById('mode-badge').textContent =
-    mode === 'countries' ? 'COUNTRY MODE' : 'PIN MODE — CLICK TO DROP';
+    mode === 'pins' ? 'PIN MODE — CLICK TO DROP'
+    : _mapView === 'usa' ? 'STATES MODE' : 'COUNTRY MODE';
   document.getElementById('app').classList.toggle('map-pin-mode', mode === 'pins');
 }
 </script>
