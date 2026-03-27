@@ -1609,7 +1609,7 @@ function renderAccountHoldings() {
       <tr class="ht-subtotal-row">${eqSubCells}</tr>
       <tr class="ht-section-header"><td class="ht-section-label" colspan="${nc}">CASH &amp; EQUIVALENTS</td></tr>
       ${ceqRows.map(renderDataRow).join('')}
-      <tr class="ht-cash-row">${cashRowCells}</tr>
+      <tr class="ht-cash-row ht-row" onclick="openCashModal()" style="cursor:pointer">${cashRowCells}</tr>
       <tr class="ht-subtotal-row">${ceqSubCells}</tr>
     </tbody>
     <tfoot><tr class="ht-total-row">${grandTotalCells}</tr></tfoot>
@@ -1676,7 +1676,7 @@ function openLotModal(sym) {
     <td class="ht-td">—</td>
   </tr>`;
 
-  document.getElementById('lot-modal-table').innerHTML = lots.length ? `<div class="ht-wrap"><table class="ht-table">
+  const lotsHtml = lots.length ? `<div class="ht-wrap"><table class="ht-table">
     <thead><tr>
       <th class="ht-th">Date</th>
       <th class="ht-th ht-num">Shares</th><th class="ht-th ht-num">Price/Share</th>
@@ -1686,6 +1686,43 @@ function openLotModal(sym) {
     <tbody>${rowsHtml}</tbody>
     <tfoot>${totalHtml}</tfoot>
   </table></div>` : '<div class="detail-empty-logs">No lots found.</div>';
+
+  // Dividends section
+  const divTxns = currentTransactions
+    .filter(t => t.symbol?.toUpperCase() === sym && ['dividend','dividend_reinvested'].includes(t.type))
+    .sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  let divHtml;
+  if (divTxns.length) {
+    let divTotal = 0;
+    const divRows = divTxns.map(t => {
+      const amt = parseFloat(t.amount) || 0;
+      divTotal += amt;
+      const label = t.type === 'dividend_reinvested' ? 'DRIP' : 'DIV';
+      return `<tr class="ht-row">
+        <td class="ht-td">${t.date || '—'}</td>
+        <td class="ht-td"><span class="txn-type-badge txn-${t.type}">${label}</span></td>
+        <td class="ht-td ht-num holding-gain-pos">${fmtUSD(amt)}</td>
+      </tr>`;
+    }).join('');
+    divHtml = `<div style="margin-top:18px;font-size:11px;color:var(--text-muted);letter-spacing:.08em;margin-bottom:6px;">DIVIDENDS RECEIVED</div>
+    <div class="ht-wrap"><table class="ht-table">
+      <thead><tr>
+        <th class="ht-th">Date</th>
+        <th class="ht-th">Type</th>
+        <th class="ht-th ht-num">Amount</th>
+      </tr></thead>
+      <tbody>${divRows}</tbody>
+      <tfoot><tr class="ht-total-row">
+        <td class="ht-td ht-total-label">TOTAL</td>
+        <td class="ht-td">—</td>
+        <td class="ht-td ht-num holding-gain-pos">${fmtUSD(divTotal)}</td>
+      </tr></tfoot>
+    </table></div>`;
+  } else {
+    divHtml = '<div class="detail-empty-logs" style="margin-top:14px;">No dividends recorded.</div>';
+  }
+
+  document.getElementById('lot-modal-table').innerHTML = lotsHtml + divHtml;
 
   document.getElementById('lot-modal').classList.add('show');
 }
@@ -1698,6 +1735,60 @@ function saveLotModalName() {
   _holdingSymbolNames[sym] = name;
   closeModal('lot-modal');
   renderAccountHoldings();
+}
+
+function openCashModal() {
+  _lotModalSym = null;
+  document.getElementById('lot-modal-title').textContent = 'CASH — Activity';
+  const nameRow = document.querySelector('.lot-modal-name-row');
+  if (nameRow) nameRow.style.display = 'none';
+
+  const CASH_AFFECTING = new Set([...TXN_CASH_POSITIVE, ...TXN_CASH_NEGATIVE]);
+  const cashTxns = currentTransactions
+    .filter(t => CASH_AFFECTING.has(t.type))
+    .sort((a,b) => (a.date||'').localeCompare(b.date||''));
+
+  if (!cashTxns.length) {
+    document.getElementById('lot-modal-table').innerHTML = '<div class="detail-empty-logs">No cash transactions found.</div>';
+    document.getElementById('lot-modal').classList.add('show');
+    return;
+  }
+
+  let netTotal = 0;
+  const rows = cashTxns.map(t => {
+    const amt = parseFloat(t.amount) || 0;
+    const isPos = TXN_CASH_POSITIVE.has(t.type);
+    const signed = isPos ? amt : -amt;
+    netTotal += signed;
+    const amtClass = isPos ? 'holding-gain-pos' : 'holding-gain-neg';
+    const prefix = isPos ? '+' : '−';
+    const label = TXN_LABELS[t.type] || t.type.toUpperCase();
+    return `<tr class="ht-row">
+      <td class="ht-td">${t.date || '—'}</td>
+      <td class="ht-td"><span class="txn-type-badge txn-${t.type}">${label}</span></td>
+      <td class="ht-td ht-sym">${t.symbol ? esc(t.symbol) : '—'}</td>
+      <td class="ht-td ht-num"><span class="${amtClass}">${prefix}${fmtUSD(amt)}</span></td>
+    </tr>`;
+  }).join('');
+
+  const netClass = netTotal >= 0 ? 'holding-gain-pos' : 'holding-gain-neg';
+  const netPrefix = netTotal >= 0 ? '+' : '−';
+
+  document.getElementById('lot-modal-table').innerHTML = `<div class="ht-wrap"><table class="ht-table">
+    <thead><tr>
+      <th class="ht-th">Date</th>
+      <th class="ht-th">Type</th>
+      <th class="ht-th">Symbol</th>
+      <th class="ht-th ht-num">Amount</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr class="ht-total-row">
+      <td class="ht-td ht-total-label" colspan="3">TOTAL NET</td>
+      <td class="ht-td ht-num"><span class="${netClass}">${netPrefix}${fmtUSD(Math.abs(netTotal))}</span></td>
+    </tr></tfoot>
+  </table></div>`;
+
+  document.getElementById('lot-modal').classList.add('show');
 }
 
 function renderAccountTransactions() {
@@ -1845,6 +1936,10 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('show');
   if (id === 'add-asset-modal') resetAssetModal();
   if (id === 'log-value-modal') resetLogModal();
+  if (id === 'lot-modal') {
+    const nameRow = document.querySelector('.lot-modal-name-row');
+    if (nameRow) nameRow.style.display = '';
+  }
 }
 
 function resetAssetModal() {
