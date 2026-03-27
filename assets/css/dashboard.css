@@ -234,7 +234,7 @@
 }
 .add-panel-close:hover { color: var(--text); }
 
-.add-panel-body { padding: 12px 16px 24px; overflow-y: auto; flex: 1; }
+.add-panel-body { padding: 12px 16px 80px; overflow-y: auto; flex: 1; }
 
 .widget-type-item {
   display: flex;
